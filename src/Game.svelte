@@ -1,0 +1,170 @@
+<script lang="ts">
+  import { afterUpdate, onDestroy, onMount } from "svelte";
+  import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
+  import { roleByName, summaryHtml } from "./richtext";
+  import RoleCard from "./RoleCard.svelte";
+
+  export let party: any;
+  export let onHome: () => void;
+  export let onChange: () => void;
+
+  let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
+  let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
+  $: pub = party.public_state;
+  $: phase = pub?.phase;
+  $: me = view && pub?.players.find((p: any) => p.id === view.player_id);
+  $: nameOf = (id: string) => pub?.players.find((p: any) => p.id === id)?.name ?? "";
+  $: living = (pub?.players ?? []).filter((p: any) => p.alive);
+  $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
+  $: myRole = view && roleByName(view.role);
+  $: if (pub && pub.phaseNo !== lastPhase) { lastPhase = pub.phaseNo; picks = []; second = ""; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
+  $: if (view?.action && phase === "night" && !picks.length) { picks = [...(view.action.targets ?? [])]; second = view.action.second?.[0] ?? ""; }
+  $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
+  $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
+  $: canType = view?.channels?.[chatChannel] || (phase === "over" && tab === "town");
+  $: isEvil = view && (view.faction === "Syndicate" || view.faction === "Cartel");
+  $: isDead = view && !view.alive;
+
+  const say = (e: unknown) => { err = (e as Error).message; setTimeout(() => (err = ""), 3500); };
+  async function act(a: string, b: Record<string, unknown> = {}) { busy = true; try { await call(a, { party: party.id, ...b }); await refresh(); } catch (e) { say(e); } busy = false; }
+
+  async function refresh() {
+    const [{ data: p }, { data: v }, { data: me2 }] = await Promise.all([
+      sb.from("parties").select("*").eq("id", party.id).single(),
+      sb.from("player_secrets").select("player_id,view").eq("party_id", party.id).maybeSingle(),
+      sb.from("messages").select("*").eq("party_id", party.id).order("id", { ascending: true }).limit(500),
+    ]);
+    if (p) party = p;
+    if (v) view = { ...v.view, player_id: v.player_id };
+    if (me2) messages = me2;
+    online = true;
+  }
+
+  // Timer. Never counted down locally: it's recalculated from the server's deadline, four times a second.
+  let lastNudge = 0;
+  function tick() {
+    if (!party.ends_at) { remaining = 0; return; }
+    const left = new Date(party.ends_at).getTime() - serverNow();
+    remaining = Math.max(0, Math.ceil(left / 1000));
+    // The server moves the game by itself. A phone that's watching can also nudge it, so it moves the instant time is up.
+    if (left <= 0 && Date.now() - lastNudge > 2500) { lastNudge = Date.now(); call("tick", { party: party.id }).then(refresh).catch(() => (online = false)); }
+  }
+  const keepAwake = async () => { try { if ("wakeLock" in navigator && document.visibilityState === "visible") wake = await (navigator as any).wakeLock.request("screen"); } catch { /* not available */ } };
+  async function wakeUp() { if (document.visibilityState !== "visible") return; await syncClock(); await refresh(); keepAwake(); resubscribe(); tick(); }
+
+  let channel: any;
+  function resubscribe() {
+    if (channel && channel.state === "joined") return;
+    if (channel) sb.removeChannel(channel);
+    channel = sb.channel("game-" + party.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "parties", filter: `id=eq.${party.id}` }, (e: any) => { party = e.new; tick(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "player_secrets", filter: `party_id=eq.${party.id}` }, (e: any) => { if (e.new?.view) view = { ...e.new.view, player_id: e.new.player_id }; })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `party_id=eq.${party.id}` }, (e: any) => { if (!messages.some((m) => m.id === e.new.id)) messages = [...messages, e.new]; })
+      .subscribe();
+  }
+  let t1: any, t2: any;
+  onMount(async () => {
+    await syncClock(); await refresh(); resubscribe(); keepAwake();
+    t1 = setInterval(tick, 250); t2 = setInterval(() => { if (document.visibilityState === "visible") refresh().catch(() => (online = false)); }, 10000);
+    for (const ev of ["visibilitychange", "focus", "pageshow", "online"]) (ev === "visibilitychange" ? document : window).addEventListener(ev, wakeUp);
+  });
+  onDestroy(() => {
+    clearInterval(t1); clearInterval(t2); if (channel) sb.removeChannel(channel); wake?.release?.();
+    for (const ev of ["visibilitychange", "focus", "pageshow", "online"]) (ev === "visibilitychange" ? document : window).removeEventListener(ev, wakeUp);
+  });
+  let lastLen = 0;
+  afterUpdate(() => { if (chatEl && visible.length !== lastLen) { lastLen = visible.length; chatEl.scrollTop = chatEl.scrollHeight; } });
+
+  async function send() { const body = draft.trim(); if (!body) return; draft = ""; try { await call("chat", { party: party.id, channel: chatChannel, body }); } catch (e) { say(e); draft = body; } }
+  function choose(slot: number, id: string) {
+    const next = [...picks]; next[slot] = id; picks = next;
+    const need = view.prompt.slots.length;
+    if (picks.filter(Boolean).length === need && (need < 2 || picks[0] !== picks[1])) act("night", { targets: picks, second: second ? [second] : undefined });
+  }
+  function chooseSecond(id: string) { second = id; if (picks[0]) act("night", { targets: picks, second: [id] }); }
+  const title = (ph: string) => ({ reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
+  $: period = phase === "night" ? `Night ${pub?.night}` : phase === "over" ? "Game over" : `Day ${pub?.day}`;
+</script>
+
+{#if !pub || !view}
+  <main class="center"><p class="dim">Lighting the lanterns...</p></main>
+{:else}
+<main class="game">
+  <header class="bar">
+    <span class="dim">{period}</span>
+    <button class="chip {FACTION_CLASS[view.faction]}" on:click={() => (showRole = !showRole)}>{view.role}</button>
+    <span class="timer" class:low={remaining <= 10 && phase !== 'over'} role="timer">{phase === "over" ? "" : fmt(remaining)}</span>
+  </header>
+  {#if !online}<p class="banner">Reconnecting. The game carries on without you.</p>{/if}
+  <h1 class="ptitle">{title(phase)}</h1>
+
+  <section class="panel">
+    {#if showRole && myRole}
+      <RoleCard role={myRole} />
+      {#if view.ability !== view.role}<p class="dim">You now have the ability of the {view.ability}.</p>{/if}
+      {#if view.allies.length}<h3>Your side</h3><ul class="plain">{#each view.allies as a}<li>{a.name}{#if a.role} <span class={FACTION_CLASS[view.faction]}>({a.role})</span>{/if}</li>{/each}</ul>{/if}
+      {#if phase !== "reveal"}<button class="ghost" on:click={() => (showRole = false)}>Back to the game</button>{/if}
+    {:else if phase === "over"}
+      <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won} <b class="lamp">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
+      <button class="go" on:click={onHome}>Home</button>
+    {:else if isDead}
+      <p class="dim">Your lantern is out. You can read the town and talk with the dead.</p>
+    {:else if phase === "vote"}
+      {#if view.canVote}<p class="dim">Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed.</p>{:else}<p class="dim">You cannot vote today.</p>{/if}
+      <ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}
+        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.revealedRole} <span class="dim">{p.revealedRole}</span>{/if}{#if p.shipped} <span class="dim">sent away</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
+      {/if}{/each}</ul>
+      {#if view.canCondemn}<details><summary>Condemn a player</summary><ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}<li><button on:click={() => act("condemn", { target: p.id })}>{p.name}</button></li>{/if}{/each}</ul></details>{/if}
+    {:else if phase === "defence"}
+      <p class="big">{nameOf(pub.accused)} {pub.accused === view.player_id ? "(you)" : ""} is on trial.</p><p class="dim">{pub.accused === view.player_id ? "Only you can type. Make your case." : "Only the accused can type."}</p>
+    {:else if phase === "verdict"}
+      <p class="big">{nameOf(pub.accused)}</p>
+      {#if view.canVerdict}<div class="pair"><button class:sel={view.myVerdict === "guilty"} disabled={busy} on:click={() => act("verdict", { choice: "guilty" })}>Guilty</button><button class:sel={view.myVerdict === "innocent"} disabled={busy} on:click={() => act("verdict", { choice: "innocent" })}>Innocent</button></div>
+      {:else}<p class="dim">The town decides.</p>{/if}
+    {:else if phase === "night"}
+      {#if view.prompt}
+        <p>{view.prompt.label}</p>
+        {#if view.prompt.toggle}
+          <button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? "On Alert tonight" : view.prompt.toggle}</button>
+        {:else}
+          {#each view.prompt.slots as slot, i}
+            {#if view.prompt.slots.length > 1}<h3>{slot.label}</h3>{/if}
+            <ul class="plain picker">{#each slot.options as o}<li><button class:sel={picks[i] === o.id} disabled={busy} on:click={() => choose(i, o.id)}>{o.name}</button></li>{/each}</ul>
+          {/each}
+          {#if view.commanded && view.prompt.slots.length === 1}
+            <h3>The Kingpin commands a second target</h3>
+            <ul class="plain picker">{#each view.prompt.slots[0].options as o}{#if o.id !== picks[0]}<li><button class:sel={second === o.id} disabled={busy} on:click={() => chooseSecond(o.id)}>{o.name}</button></li>{/if}{/each}</ul>
+          {/if}
+          {#if view.action}<button class="ghost" disabled={busy} on:click={() => { picks = []; second = ""; act("night", { targets: [] }); }}>Clear my choice</button>{/if}
+        {/if}
+      {:else}<p class="dim">You have nothing to do tonight.</p>{/if}
+    {:else if phase === "dawn"}
+      <p class="dim">The sun comes up over the river.</p>
+    {:else if phase === "discussion"}
+      <ul class="plain roster small">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}</span><span class="dim">{#if p.revealedRole}{p.revealedRole}{:else if !p.alive}dead{:else if p.shipped}sent away{/if}</span></li>{/each}</ul>
+    {/if}
+    {#if view.canReveal && !showRole}<button class="ghost" disabled={busy} on:click={() => act("reveal")}>Reveal yourself as the {view.role}</button>{/if}
+  </section>
+
+  <section class="chat">
+    {#if isEvil || isDead}
+      <div class="tabs">
+        <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
+        {#if isEvil}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
+        {#if isDead}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
+      </div>
+    {/if}
+    <div class="log" bind:this={chatEl} aria-live="polite">
+      {#each visible as m (m.id)}
+        <p class:narr={m.sender === "Narrator" && m.channel !== "private"} class:priv={m.channel === "private"}>{#if m.sender !== "Narrator"}<b>{m.sender}:</b> {/if}{@html summaryHtml(m.body)}</p>
+      {/each}
+    </div>
+    {#if canType}
+      <form class="send" on:submit|preventDefault={send}><input bind:value={draft} maxlength="300" placeholder={tab === "town" ? "Type to the town" : tab === "dead" ? "Type to the dead" : "Type to your side"} aria-label="Message" /><button class="go" type="submit">Send</button></form>
+    {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
+  </section>
+
+  {#if hasBots && phase !== "over"}<button class="skip" disabled={busy} on:click={() => act("skip")}>Skip this phase (test games only)</button>{/if}
+  {#if err}<p class="toast" role="alert">{err}</p>{/if}
+</main>
+{/if}
