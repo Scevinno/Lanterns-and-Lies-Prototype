@@ -528,8 +528,7 @@ export function checkWin(s: GameState): boolean {
   if (!lv.length) w = "Nobody";
   else if (!ev.length && !uk.length) w = "The Lanternkeepers";
   else if (ev.length && !uk.length && ev.length >= lv.length - ev.length) w = s.mode === "Syndicate" ? "The Syndicate" : "The Cartel";
-  else if (uk.length === 1 && !ev.length && lv.length <= 2) w = uk[0].role;
-  else if (s.quietDays >= 3) w = "Nobody";
+  else if (uk.length === 1 && lv.length === 1) w = uk[0].role; // An Unbound killer wins only by eliminating everyone (Nik, 6 Nov).
   if (!w) return false;
   finish(s, w); return true;
 }
@@ -582,20 +581,23 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
     case "reveal": setPhase(s, "discussion", s.timers.discussion, now); return [{ channel: "town", text: "Day 1. The town gathers in the square." }];
     case "discussion": return startVote(s, now);
     case "vote": {
-      for (const p of voters(s).filter((x) => x.bot && !s.votes[x.id])) botVote(s, p, r);
-      const m = tryTrial(s, now); if (m) return m;
-      if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [{ channel: "town", text: "No more trials today." }]); }
-      return [{ channel: "town", text: "No majority." }, ...startVote(s, now)];
+      const lines: Msg[] = [];
+      for (const p of voters(s).filter((x) => x.bot && !s.votes[x.id])) { botVote(s, p, r); if (s.votes[p.id]) lines.push({ channel: "town", text: `${p.name} voted for ${byId(s, s.votes[p.id]).name}.` }); }
+      const m = tryTrial(s, now); if (m) return [...lines, ...m];
+      if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [...lines, { channel: "town", text: "No more trials today." }]); }
+      return [...lines, { channel: "town", text: "No majority." }, ...startVote(s, now)];
     }
     case "defence": setPhase(s, "verdict", s.timers.verdict, now); return [{ channel: "town", text: `Decide ${byId(s, s.accused!).name}'s fate: guilty or innocent.` }];
     case "verdict": {
       for (const p of voters(s).filter((x) => x.bot && x.id !== s.accused && !s.verdicts[x.id])) s.verdicts[p.id] = r.next() < 0.5 ? "guilty" : "innocent";
       let g = 0, n = 0; for (const [v, c] of Object.entries(s.verdicts)) { const w = voteWeight(s, byId(s, v)); if (c === "guilty") g += w; else n += w; }
       const a = byId(s, s.accused!);
-      if (g > n) return afterExecutionOrDay(s, now, r, execute(s, a, `was found guilty, ${g} to ${n}, and executed.`));
+      // Verdicts stay anonymous during the stage, then everyone's choice is shown at once.
+      const shown: Msg[] = voters(s).filter((p) => p.id !== a.id).map((p) => ({ channel: "town", text: s.verdicts[p.id] ? `${p.name} voted ${s.verdicts[p.id]}.` : `${p.name} did not vote.` }));
+      if (g > n) return afterExecutionOrDay(s, now, r, [...shown, ...execute(s, a, `was found guilty, ${g} to ${n}, and executed.`)]);
       const m: Msg = { channel: "town", text: `${a.name} was found innocent, ${n} to ${g}.` };
-      if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [m, { channel: "town", text: "No more trials today." }]); }
-      return [m, ...startVote(s, now)];
+      if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [...shown, m, { channel: "town", text: "No more trials today." }]); }
+      return [...shown, m, ...startVote(s, now)];
     }
     case "night": {
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
@@ -630,10 +632,13 @@ function botNight(s: GameState, p: Player, r: Rng) {
 export function cmdVote(s: GameState, id: string, target: string | null, now: number): Msg[] {
   const p = byId(s, id); if (s.phase !== "vote") throw new Error("Voting is closed.");
   if (!p.alive || p.shipped) throw new Error("You cannot vote today.");
-  if (target === null) { delete s.votes[id]; return []; }
+  const prev = s.votes[id];
+  if (target === null) { if (!prev) return []; delete s.votes[id]; return [{ channel: "town", text: `${p.name} withdrew their vote.` }]; }
   const t = byId(s, target); if (!t?.alive || t.id === id || t.shipped) throw new Error("You cannot vote for that player.");
+  if (prev === target) return [];
   s.votes[id] = target;
-  return tryTrial(s, now) ?? [];
+  const line: Msg = { channel: "town", text: prev ? `${p.name} changed their vote to ${t.name}.` : `${p.name} voted for ${t.name}.` };
+  return [line, ...(tryTrial(s, now) ?? [])];
 }
 export function cmdVerdict(s: GameState, id: string, choice: "guilty" | "innocent"): void {
   const p = byId(s, id); if (s.phase !== "verdict" || !p.alive || p.shipped || s.accused === id) throw new Error("You cannot judge now.");
@@ -681,7 +686,7 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
 export function publicView(s: GameState) {
   return {
     phase: s.phase, phaseNo: s.phaseNo, day: s.day, night: s.night, endsAt: s.endsAt, accused: s.accused, trial: s.trial, maxTrials: MAX_TRIALS,
-    needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, verdictsIn: Object.keys(s.verdicts).length,
+    needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
     townChat: s.townChat, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
     players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };

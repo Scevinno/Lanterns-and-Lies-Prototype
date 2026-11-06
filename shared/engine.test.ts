@@ -273,6 +273,17 @@ describe("Syndicate succession and others", () => {
 
 describe("day flow", () => {
   const day = () => { const s = game(["Mayor", "Judge", "Mobster", "Godfather", "Martyr", "Doctor", "Spy", "Seer"], 2); s.phase = "vote"; s.day = 2; s.endsAt = T0 + 30_000; s.trial = 1; return s; };
+  it("votes are public: a chat line for each vote, change and withdrawal, and who voted for whom in the public view", () => {
+    const s = day(); expect(cmdVote(s, "p0", "p2", T0)[0].text).toBe("N0 voted for N2."); expect(publicView(s).votes).toEqual({ p0: "p2" });
+    expect(cmdVote(s, "p0", "p2", T0)).toEqual([]); expect(cmdVote(s, "p0", "p3", T0)[0].text).toBe("N0 changed their vote to N3."); expect(cmdVote(s, "p0", null, T0)[0].text).toBe("N0 withdrew their vote.");
+    expect(cmdVote(s, "p0", null, T0)).toEqual([]);
+  });
+  it("verdicts are anonymous during the stage, then every choice is shown at once", () => {
+    const s = day(); s.phase = "verdict"; s.accused = "p2"; cmdVerdict(s, "p0", "guilty"); cmdVerdict(s, "p1", "innocent");
+    const during = JSON.stringify(publicView(s)); expect(during).not.toContain("guilty"); expect(during).not.toContain("innocent"); expect(privateView(s, "p1").myVerdict).toBe("innocent");
+    const m = forceAdvance(s, T0, seeded(1)).map((x) => x.text);
+    expect(m).toContain("N0 voted guilty."); expect(m).toContain("N1 voted innocent."); expect(m).toContain("N3 did not vote."); expect(m.join()).not.toContain("N2 voted");
+  });
   it("a majority puts a player on trial at once", () => {
     const s = day(); for (const v of ["p0", "p1", "p3", "p5"]) cmdVote(s, v, "p2", T0); expect(s.phase).toBe("vote"); cmdVote(s, "p6", "p2", T0); expect(s.phase).toBe("defence"); expect(s.accused).toBe("p2");
   });
@@ -303,9 +314,13 @@ describe("day flow", () => {
 describe("win conditions and chat", () => {
   const w = (roles: string[], mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, 2, mode); return checkWin(s) ? s.winner : null; };
   it("declares the right winner", () => {
-    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBe("The Syndicate"); expect(w(["Foreman", "Spy"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher", "Spy"])).toBe("Butcher");
-    expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Butcher", "Spy", "Doctor"])).toBeNull();
+    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBe("The Syndicate"); expect(w(["Foreman", "Spy"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher"])).toBe("Butcher");
+    expect(w(["Butcher", "Spy"])).toBeNull(); expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Butcher", "Spy", "Doctor"])).toBeNull();
   });
+  it("night cap: evil and an Unbound killer both alive means evil only", () => {
+    const s = game(["Mobster", "Butcher", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]);
+  });
+  it("quiet days alone no longer end the game", () => { const s = game(["Mobster", "Spy", "Doctor", "Seer"], 2); s.quietDays = 5; expect(checkWin(s)).toBe(false); });
   it("night cap: a living evil side wins after Night 7, and not before", () => {
     const six = game(["Mobster", "Spy", "Doctor", "Seer"], 6); six.endsAt = T0; forceAdvance(six, T0, seeded(1)); expect(six.phase).toBe("dawn");
     const s = game(["Mobster", "Spy", "Doctor", "Seer"], 7); s.endsAt = T0; const m = forceAdvance(s, T0, seeded(1));

@@ -14,6 +14,7 @@
   $: me = view && pub?.players.find((p: any) => p.id === view.player_id);
   $: nameOf = (id: string) => pub?.players.find((p: any) => p.id === id)?.name ?? "";
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
+  $: votersFor = (id: string) => Object.entries(pub?.votes ?? {}).filter(([, t]) => t === id).map(([v]) => nameOf(v));
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
   $: if (pub && pub.phaseNo !== lastPhase) { lastPhase = pub.phaseNo; picks = []; second = ""; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
@@ -111,7 +112,7 @@
     {:else if phase === "vote"}
       {#if view.canVote}<p class="dim">Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed.</p>{:else}<p class="dim">You cannot vote today.</p>{/if}
       <ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}
-        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.revealedRole} <span class="dim">{p.revealedRole}</span>{/if}{#if p.shipped} <span class="dim">sent away</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
+        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.revealedRole} <span class="dim">{p.revealedRole}</span>{/if}{#if p.shipped} <span class="dim">sent away</span>{/if}{#if votersFor(p.id).length}<br /><span class="dim small">{votersFor(p.id).join(", ")}</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
       {/if}{/each}</ul>
       {#if view.canCondemn}<details><summary>Condemn a player</summary><ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}<li><button on:click={() => act("condemn", { target: p.id })}>{p.name}</button></li>{/if}{/each}</ul></details>{/if}
     {:else if phase === "defence"}
