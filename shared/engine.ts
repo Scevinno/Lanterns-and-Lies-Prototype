@@ -8,7 +8,7 @@ export const PUBLIC_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, v
 export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
   discussion: [240, 420, 600, 900], vote: [30, 60], defence: [30, 60, 120], verdict: [15, 30], night: [60, 120, 300],
 };
-export const REVEAL_SECONDS = 20, DAWN_SECONDS = 10, MAX_TRIALS = 3;
+export const REVEAL_SECONDS = 20, DAWN_SECONDS = 10, MAX_TRIALS = 3, MAX_NIGHTS = 7;
 
 export interface Player {
   id: string; name: string; seat: number; bot: boolean; alive: boolean;
@@ -531,10 +531,19 @@ export function checkWin(s: GameState): boolean {
   else if (uk.length === 1 && !ev.length && lv.length <= 2) w = uk[0].role;
   else if (s.quietDays >= 3) w = "Nobody";
   if (!w) return false;
+  finish(s, w); return true;
+}
+function finish(s: GameState, w: string) {
   s.winner = w; s.phase = "over"; s.phaseNo++; s.endsAt = 0;
   const side = w === "The Lanternkeepers" ? "Lanternkeepers" : w === "The Syndicate" ? "Syndicate" : w === "The Cartel" ? "Cartel" : null;
   s.winners = s.players.filter((p) => (side && p.faction === side) || p.won || (p.role === w) || (p.role === "Outcast" && p.alive)).map((p) => p.id);
-  return true;
+}
+/** Night cap (Nik, 6 Nov): after the last Night, a living evil side wins. With no evil left, nobody does. */
+function nightCap(s: GameState): Msg[] | null {
+  if (s.night < MAX_NIGHTS) return null;
+  const evilAlive = alive(s).some(isEvil);
+  finish(s, evilAlive ? `The ${s.mode}` : "Nobody");
+  return [{ channel: "town", text: evilAlive ? `Seven nights have passed, and the ${s.mode} still walks free.` : "Seven nights have passed." }, overMsg(s)];
 }
 function startNight(s: GameState, now: number, r: Rng): Msg[] {
   s.night++; s.actions = {}; s.votes = {}; s.verdicts = {}; s.accused = null; s.trial = 0; s.commanded = null; s.condemned = false;
@@ -542,6 +551,7 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   for (const p of s.players) { p.framed = false; p.disguisedAs = undefined; p.bribed = false; p.bribedBy = undefined; p.shipped = false; }
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
+  if (s.night === MAX_NIGHTS) msgs.push({ channel: "town", text: "This is the last night. If the evil side survives it, they win." });
   setPhase(s, "night", s.timers.night, now);
   for (const p of alive(s).filter((x) => x.bot)) botNight(s, p, r);
   return msgs;
@@ -591,6 +601,7 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
       const msgs = resolveNight(s, r); s.actions = {};
       if (checkWin(s)) return [...msgs, overMsg(s)];
+      const capped = nightCap(s); if (capped) return [...msgs, ...capped];
       setPhase(s, "dawn", DAWN_SECONDS, now); return msgs;
     }
     case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now); return [{ channel: "town", text: `Day ${s.day}.` }];

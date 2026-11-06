@@ -306,6 +306,18 @@ describe("win conditions and chat", () => {
     expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBe("The Syndicate"); expect(w(["Foreman", "Spy"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher", "Spy"])).toBe("Butcher");
     expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Butcher", "Spy", "Doctor"])).toBeNull();
   });
+  it("night cap: a living evil side wins after Night 7, and not before", () => {
+    const six = game(["Mobster", "Spy", "Doctor", "Seer"], 6); six.endsAt = T0; forceAdvance(six, T0, seeded(1)); expect(six.phase).toBe("dawn");
+    const s = game(["Mobster", "Spy", "Doctor", "Seer"], 7); s.endsAt = T0; const m = forceAdvance(s, T0, seeded(1));
+    expect(s.phase).toBe("over"); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]); expect(m.some((x) => x.text.includes("Seven nights"))).toBe(true);
+    const c = game(["Foreman", "Spy", "Doctor", "Seer"], 7, "Cartel"); forceAdvance(c, T0, seeded(1)); expect(c.winner).toBe("The Cartel");
+  });
+  it("night cap: killing the last evil player on Night 7 still wins it for the Lanternkeepers", () => {
+    const s = game(["Mobster", "Rogue", "Doctor"], 7); act(s, 1, 0); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Lanternkeepers");
+  });
+  it("night cap: with no evil left, an Unbound killer still alive means nobody wins", () => {
+    const s = game(["Butcher", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
+  });
   it("a Surviving Outcast wins alongside", () => { const s = game(["Outcast", "Spy"], 2); checkWin(s); expect(s.winners).toContain("p0"); });
   it("limits who can chat", () => {
     const s = game(["Mobster", "Spy", "Doctor"], 2); expect(canChat(s, "p0", "faction")).toBe(true); expect(canChat(s, "p1", "faction")).toBe(false); expect(canChat(s, "p1", "town")).toBe(false);
