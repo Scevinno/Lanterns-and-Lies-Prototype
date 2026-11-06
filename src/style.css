@@ -55,4 +55,5 @@ input:not([type=checkbox]) { width:100%; min-height:44px; padding:8px 10px; back
 .skip { min-height:32px; padding:2px; font-size:13px; background:transparent; border:none; color:var(--dim); text-decoration:underline; }
 .banner { background:#3a2f15; padding:4px 8px; border-radius:6px; font-size:14px; }
 .toast { position:fixed; left:16px; right:16px; bottom:16px; background:#4a1f25; border:1px solid var(--syn); padding:10px; border-radius:8px; z-index:5; }
+.chat.hidden { display:none; } .won { margin-left:8px; } input[type=checkbox] { accent-color:var(--lamp); width:18px; height:18px; vertical-align:-3px; }
 details { margin:10px 0; } summary { cursor:pointer; min-height:32px; color:var(--dim); }

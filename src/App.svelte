@@ -74,7 +74,7 @@
     try { if (navigator.share) await navigator.share({ title: "Lanterns & Lies", text: `Join my party: ${party.code}`, url: link }); else { await navigator.clipboard.writeText(link); copied = true; setTimeout(() => (copied = false), 2000); } } catch { /* cancelled */ }
   }
   async function loadGames() {
-    const { data: mine } = await sb.from("party_players").select("party_id, parties(id, code, status, size, public_state, created_at, finished_at)").eq("user_id", session.user.id).order("joined_at", { ascending: false }).limit(30);
+    const { data: mine } = await sb.from("party_players").select("party_id, parties!party_players_party_id_fkey(id, code, status, size, public_state, created_at, finished_at)").eq("user_id", session.user.id).order("joined_at", { ascending: false }).limit(30);
     games = (mine ?? []).map((m: any) => m.parties).filter(Boolean);
   }
   async function signOut() { await sb.auth.signOut(); go("home"); }
@@ -109,7 +109,7 @@
     <button class="link" on:click={() => (mode = mode === "up" ? "in" : "up")}>{mode === "up" ? "I already have an account" : "Create an account"}</button>
   </main>
 {:else if route === "party" && party && party.status !== "lobby" && party.status !== "starting"}
-  {#key party.id}<Game party={party} onHome={() => go("home")} onChange={() => {}} />{/key}
+  {#key party.id}<Game party={party} onHome={() => go("home")} />{/key}
 {:else if route === "party" && party}
   <main class="narrow">
     <h1 class="ptitle">Private party</h1>

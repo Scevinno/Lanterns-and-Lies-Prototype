@@ -6,7 +6,6 @@
 
   export let party: any;
   export let onHome: () => void;
-  export let onChange: () => void;
 
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
   let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
@@ -105,8 +104,8 @@
       {#if view.allies.length}<h3>Your side</h3><ul class="plain">{#each view.allies as a}<li>{a.name}{#if a.role} <span class={FACTION_CLASS[view.faction]}>({a.role})</span>{/if}</li>{/each}</ul>{/if}
       {#if phase !== "reveal"}<button class="ghost" on:click={() => (showRole = false)}>Back to the game</button>{/if}
     {:else if phase === "over"}
-      <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won} <b class="lamp">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
-      <button class="go" on:click={onHome}>Home</button>
+      <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
+      <button class="go wide" on:click={onHome}>Home</button>
     {:else if isDead}
       <p class="dim">Your lantern is out. You can read the town and talk with the dead.</p>
     {:else if phase === "vote"}
@@ -146,7 +145,7 @@
     {#if view.canReveal && !showRole}<button class="ghost" disabled={busy} on:click={() => act("reveal")}>Reveal yourself as the {view.role}</button>{/if}
   </section>
 
-  <section class="chat">
+  <section class="chat" class:hidden={showRole}>
     {#if isEvil || isDead}
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
