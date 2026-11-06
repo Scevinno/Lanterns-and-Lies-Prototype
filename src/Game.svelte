@@ -112,7 +112,7 @@
     {:else if phase === "vote"}
       {#if view.canVote}<p class="dim">Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed.</p>{:else}<p class="dim">You cannot vote today.</p>{/if}
       <ul class="plain picker">{#each living as p}
-        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped || p.id === view.player_id} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.id === view.player_id} <span class="dim">(you)</span>{/if}{#if p.revealedRole} <span class="dim">{p.revealedRole}</span>{/if}{#if p.shipped} <span class="dim">sent away</span>{/if}{#if votersFor(p.id).length}<br /><span class="dim small">{votersFor(p.id).join(", ")}</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
+        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped || p.id === view.player_id} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if p.revealedRole}<span class="dim tag">{p.revealedRole}</span>{/if}{#if p.shipped}<span class="dim tag">sent away</span>{/if}{#if votersFor(p.id).length}<br /><span class="dim small">{votersFor(p.id).join(", ")}</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
       {/each}</ul>
       {#if view.canCondemn}<details><summary>Condemn a player</summary><ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}<li><button on:click={() => act("condemn", { target: p.id })}>{p.name}</button></li>{/if}{/each}</ul></details>{/if}
     {:else if phase === "defence"}
