@@ -414,6 +414,13 @@ describe("Exterminator and the Swindler", () => {
   });
 });
 
+describe("Kingpin chat", () => {
+  it("the Kingpin has no night chat; other Cartel members do, and do not see him as an ally", () => {
+    const s = game(["Kingpin", "Forger", "Spy"], 1, "Cartel"); expect(canChat(s, "p0", "faction")).toBe(false); expect(canChat(s, "p1", "faction")).toBe(true);
+    expect(privateView(s, "p1").allies.map((a) => a.name)).not.toContain("N0"); expect(privateView(s, "p0").channels.faction).toBe(false);
+  });
+});
+
 describe("Swindler reach", () => {
   it("offers anyone outside the Cartel, plus the unknown Kingpin; a swap touching the Kingpin fails", () => {
     const s = game(["Swindler", "Kingpin", "Foreman", "Spy", "Doctor"], 1, "Cartel"); const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);

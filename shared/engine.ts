@@ -778,7 +778,8 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
     if (s.phase === "defence") return s.accused === id;
     return s.phase === "discussion" || s.phase === "vote" || s.phase === "verdict";
   }
-  if (channel === "faction") return s.phase === "night" && isEvil(p);
+  // The Kingpin works alone: he never sees or uses his side's night chat (Nik, 7 Nov).
+  if (channel === "faction") return s.phase === "night" && isEvil(p) && p.role !== "Kingpin";
   return false;
 }
 

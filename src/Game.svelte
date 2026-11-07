@@ -171,10 +171,10 @@
 
   {#if layout === "select"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
   <section class="chat">
-    {#if (isEvil && phase === "night") || (isDead && !inPerson)}
+    {#if (isEvil && phase === "night" && view.role !== "Kingpin") || (isDead && !inPerson)}
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
-        {#if isEvil && phase === "night"}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
+        {#if isEvil && phase === "night" && view.role !== "Kingpin"}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
         {#if isDead && !inPerson}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
       </div>
     {/if}
