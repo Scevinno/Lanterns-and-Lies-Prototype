@@ -97,7 +97,6 @@
   $: if (typeFilter !== "All" && !types.includes(typeFilter)) typeFilter = "All";
   $: q = search.trim().toLowerCase();
   $: filtered = roles.filter((r) => (factionFilter === "All" || r.faction === factionFilter) && (typeFilter === "All" || r.type === typeFilter) && (!q || r.name.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q)));
-  const showRole = (name: string) => { const r = roles.find((x) => x.name === name); if (r) { openRole = r; scrollTo(0, 0); } };
 
   const onHash = () => route_();
   let authSub: any;
@@ -136,7 +135,7 @@
     <button class="ghost wide" on:click={share}>{copied ? "Link copied" : "Share link"}</button>
     <p class="row"><b>Players</b><span>{players.length} of {party.size}</span></p>
     <ul class="plain roster">{#each players as p}<li><span>{p.name}</span></li>{/each}</ul>
-    <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: town chat off, roles hidden, pause on." : "Online: town chat on."}</p>
+    <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: only the evil side's night chat, roles hidden, pause on." : "Online: town chat on."}</p>
     {#if party.status === "starting"}
       <p class="big tc">Starting in {fmt(remaining)}</p>
       <button class="ghost wide" disabled={busy} on:click={() => partyAct("cancelStart")}>Cancel</button>
@@ -171,7 +170,7 @@
     </div>
     <ul class="dim small effects">
       {#if inPerson}
-        <li>Town chat is off: talk out loud. Evil and dead chats still work.</li>
+        <li>Town and dead chats are off: talk out loud. Only the evil side chats, at night.</li>
         <li>Your role stays hidden after the start. Tap Role to peek; it hides again by itself.</li>
         <li>Anyone can pause the game, for a break or a late arrival.</li>
         <li>Everyone gets a screen to tap at night, so nobody gives away that they have no action.</li>
@@ -187,7 +186,7 @@
     <div class="seg">{#each ["Syndicate", "Cartel", "Random"] as m}<button class:on={evil === m} on:click={() => (evil = m)}>{m}</button>{/each}</div>
     <button type="button" class="link" on:click={() => (showCreateRoster = !showCreateRoster)}>{showCreateRoster ? "Hide roster" : `See the roster for ${size} players`}</button>
     {#if showCreateRoster}
-      {#if evil === "Random"}<p class="dim small">Random picks the Syndicate or the Cartel at the start. Both are shown.</p>{/if}
+      {#if evil === "Random"}<p class="dim small">Random deals the Syndicate or the Cartel, and nobody is told which. Both possible rosters are shown.</p>{/if}
       {#each evil === "Random" ? ["Syndicate", "Cartel"] : [evil] as m}<h3 class="lamp">{m} game</h3><Roster size={size} mode={m === "Cartel" ? "Cartel" : "Syndicate"} />{/each}
     {/if}
     {#each TIMER_ROWS as [k, label]}
@@ -215,7 +214,7 @@
         <NumberStrip bind:value={rSize} valid={SIZES} />
         <h3>Evil side</h3>
         <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button></div>
-        <Roster size={rSize} mode={rMode} onRole={showRole} />
+        <Roster size={rSize} mode={rMode} />
       {/if}
     {/if}
   </main>

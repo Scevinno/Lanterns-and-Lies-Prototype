@@ -357,6 +357,16 @@ describe("in-person pause", () => {
     expect(canChat(s, "p0", "faction")).toBe(false);
     cmdResume(s, "p2", T0 + 500_000); expect(s.endsAt).toBe(T0 + 530_000); expect(canChat(s, "p0", "faction")).toBe(true);
   });
+  it("in person, only the evil side's night chat is open", () => {
+    const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.townChat = false; s.players[2].alive = false;
+    expect(canChat(s, "p0", "faction")).toBe(true); expect(canChat(s, "p2", "dead")).toBe(false);
+    s.phase = "discussion"; expect(canChat(s, "p1", "town")).toBe(false);
+  });
+  it("a Random party's public view does not name the evil side", () => {
+    const players = Array.from({ length: 8 }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: false }));
+    const { state: s } = createGame({ players, mode: "Cartel", timers: PUBLIC_TIMERS, townChat: true, setup: "Random" }, seeded(9), T0);
+    const v = publicView(s); expect(v.setup).toBe("Random"); expect(JSON.stringify(v)).not.toContain("Cartel");
+  });
   it("is refused in online parties", () => { const s = game(["Mobster", "Doctor"], 1); expect(() => cmdPause(s, "p0", T0)).toThrow(); });
 });
 

@@ -28,6 +28,8 @@ export interface GameState {
   commanded: string | null; quietDays: number; hadGodfather: boolean; winner: string | null; winners: string[]; condemned: boolean;
   // In person: everyone is in one room. Town chat is off, roles stay hidden until peeked, and anyone can pause.
   inPerson?: boolean; pausedLeft?: number | null; pausedBy?: string | null;
+  // What the party chose. A Random party never learns which evil side was dealt from the roster.
+  setup?: "Syndicate" | "Cartel" | "Random";
 }
 export interface Rng { next(): number }
 export const mathRng: Rng = { next: () => Math.random() };
@@ -91,7 +93,7 @@ export function dealDeck(size: number, mode: "Syndicate" | "Cartel", r: Rng): st
   throw new Error("No balanced deal found.");
 }
 
-export function createGame(input: { players: { id: string; name: string; bot: boolean }[]; mode: "Syndicate" | "Cartel"; timers: Timers; townChat: boolean; inPerson?: boolean }, r: Rng, now: number): { state: GameState; msgs: Msg[] } {
+export function createGame(input: { players: { id: string; name: string; bot: boolean }[]; mode: "Syndicate" | "Cartel"; timers: Timers; townChat: boolean; inPerson?: boolean; setup?: "Syndicate" | "Cartel" | "Random" }, r: Rng, now: number): { state: GameState; msgs: Msg[] } {
   const deck = shuffle(dealDeck(input.players.length, input.mode, r), r);
   const players: Player[] = input.players.map((p, i) => {
     const d = roleDef(deck[i]);
@@ -99,7 +101,7 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
     if (d.name === "Rogue") pl.bullets = 1; if (d.name === "Doctor") pl.selfHeal = 1; if (d.name === "Veteran") pl.alerts = 2; if (d.name === "Butcher") pl.streak = 0;
     pl.patrol = []; pl.learned = []; return pl;
   });
-  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 1, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null };
+  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 1, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null, setup: input.setup ?? input.mode };
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Exterminator") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.extTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
@@ -703,8 +705,8 @@ export function cmdCondemn(s: GameState, id: string, target: string, now: number
 export function canChat(s: GameState, id: string, channel: string): boolean {
   const p = byId(s, id); if (!p) return false;
   if (s.phase === "over") return true;
-  if (channel === "dead") return !p.alive;
   if (isPaused(s)) return false;
+  if (channel === "dead") return !p.alive && !s.inPerson;
   if (!p.alive) return false;
   if (channel === "town") {
     if (!s.townChat) return false;
@@ -720,7 +722,7 @@ export function publicView(s: GameState) {
   return {
     phase: s.phase, phaseNo: s.phaseNo, day: s.day, night: s.night, endsAt: s.endsAt, accused: s.accused, trial: s.trial, maxTrials: MAX_TRIALS,
     needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
-    townChat: s.townChat, mode: s.mode, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
+    townChat: s.townChat, setup: s.setup ?? s.mode, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
     players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };
 }

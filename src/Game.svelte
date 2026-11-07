@@ -101,7 +101,7 @@
   <header class="bar">
     <span class="dim">{period}</span>
     <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>
-    {#if pub.mode}<button class="icon" aria-label="Roster for this game" on:click={() => (showRoster = true)}>Roster</button>{/if}
+    {#if pub.setup}<button class="icon" aria-label="Roster for this game" on:click={() => (showRoster = true)}>Roster</button>{/if}
     {#if inPerson && phase !== "over"}<button class="icon" aria-label={paused ? "Resume the game" : "Pause the game"} disabled={busy} on:click={() => act(paused ? "resume" : "pause")}>{paused ? "▶" : "❚❚"}</button>{/if}
     <span class="timer" class:low={remaining <= 10 && phase !== 'over' && !paused} role="timer">{phase === "over" ? "" : paused ? fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000)) : fmt(remaining)}</span>
   </header>
@@ -118,7 +118,7 @@
       <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
       <button class="go wide" on:click={onHome}>Home</button>
     {:else if isDead}
-      <p class="dim">Your lantern is out. You can read the town and talk with the dead.</p>
+      <p class="dim">Your lantern is out. {inPerson ? "Stay quiet and watch the town." : "You can read the town and talk with the dead."}</p>
     {:else if phase === "vote"}
       {#if view.canVote}<p class="dim">Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed.</p>{:else}<p class="dim">You cannot vote today.</p>{/if}
       <ul class="plain picker">{#each living as p}
@@ -164,7 +164,7 @@
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
         {#if isEvil}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
-        {#if isDead}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
+        {#if isDead && !inPerson}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
       </div>
     {/if}
     <div class="log" bind:this={chatEl} aria-live="polite">
@@ -182,7 +182,7 @@
       <div class="sheet tc">
         <h2>Paused</h2>
         <p class="dim">{pub.pausedBy ?? "Someone"} paused the game. {fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000))} left in this phase.</p>
-        <p class="dim small">Votes, night choices and chats wait until the game resumes. Anyone can resume it.</p>
+        <p class="dim small">Votes, night choices and the evil side's chat wait until the game resumes. Anyone can resume it.</p>
         <button class="go wide" disabled={busy} on:click={() => act("resume")}>Resume</button>
       </div>
     </div>
@@ -191,8 +191,14 @@
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Roster">
       <div class="sheet scroll">
         <h2>Roster</h2>
-        <p class="dim small">{pub.size} players, {pub.mode} game. These are the categories in play, not who has them.</p>
-        <Roster size={pub.size} mode={pub.mode} />
+        {#if pub.setup === "Random"}
+          <p class="dim small">{pub.size} players. The evil side is Random: the Syndicate or the Cartel, and nobody is told which.</p>
+          <h3 class="lamp">If the Syndicate</h3><Roster size={pub.size} mode="Syndicate" />
+          <h3 class="lamp">If the Cartel</h3><Roster size={pub.size} mode="Cartel" />
+        {:else}
+          <p class="dim small">{pub.size} players, {pub.setup} game.</p>
+          <Roster size={pub.size} mode={pub.setup} />
+        {/if}
         <button class="wide" on:click={() => (showRoster = false)}>Close</button>
       </div>
     </div>
