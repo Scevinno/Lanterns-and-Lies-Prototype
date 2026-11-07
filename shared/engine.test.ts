@@ -403,6 +403,17 @@ describe("night Reveal and Hold-immune swappers", () => {
   });
 });
 
+describe("Exterminator and the Swindler", () => {
+  it("the target handed the Exterminator role becomes the Martyr at once", () => {
+    const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[1].extTarget = "p2"; act(s, 0, 1, 2);
+    run(s); expect(s.players[2].role).toBe("Martyr"); expect(s.players[1].role).toBe("Spy");
+  });
+  it("swapping the target's role keeps the same person as the target", () => {
+    const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[0].extTarget = undefined; s.players[1].extTarget = "p2"; act(s, 0, 2, 3);
+    run(s); expect(s.players[1].extTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
+  });
+});
+
 describe("role view extras", () => {
   it("shows the Exterminator's target and the Assassin's contract to them only", () => {
     const s = game(["Exterminator", "Assassin", "Spy", "Mobster"], 1); s.players[0].extTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
