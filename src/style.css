@@ -103,6 +103,6 @@ input[type=search] { -webkit-appearance:none; }
 .backdrop::after { content:""; position:absolute; inset:0; background:linear-gradient(rgba(10,12,18,.5),rgba(10,12,18,.72)); }
 .backdrop.menu::after { background:linear-gradient(rgba(10,12,18,.25),rgba(10,12,18,.45) 45%,rgba(10,12,18,.8)); }
 .backdrop.day::after { background:linear-gradient(rgba(10,12,18,.62),rgba(10,12,18,.8)); }
-html,body { background:var(--night); }
+html { background:var(--night); } body { background:transparent; } /* body stays clear so the fixed backdrop shows through */
 .home { justify-content:flex-start; padding-top:12vh; } .home .stack { margin-top:auto; padding-bottom:4vh; }
 .log { background:rgba(20,22,28,.82); }
