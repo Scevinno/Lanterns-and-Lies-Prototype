@@ -403,6 +403,14 @@ describe("night Reveal and Hold-immune swappers", () => {
   });
 });
 
+describe("role view extras", () => {
+  it("shows the Exterminator's target and the Assassin's contract to them only", () => {
+    const s = game(["Exterminator", "Assassin", "Spy", "Mobster"], 1); s.players[0].extTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
+    expect(privateView(s, "p0").target).toEqual({ name: "N2", alive: true }); expect(privateView(s, "p1").contract).toEqual(["Spy", "Mobster"]);
+    expect(privateView(s, "p2").target).toBeNull(); expect(privateView(s, "p2").contract).toBeNull();
+  });
+});
+
 describe("7 Nov rulings, part two", () => {
   it("the Medium becomes a dead Lanternkeeper's role with a fresh start", () => {
     const s = game(["Medium", "Rogue", "Mobster", "Spy"], 2); s.players[1].alive = false; s.players[1].bullets = 0; act(s, 0, 1);

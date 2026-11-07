@@ -798,6 +798,9 @@ export function privateView(s: GameState, id: string) {
   const prompt = s.phase === "night" ? nightPrompt(s, p) : null;
   return {
     role: p.role, faction: p.faction, ability: p.ability, alive: p.alive, allies, prompt, action: s.actions[id] ?? null,
+    // Shown with the role, like an evil player's allies: the Exterminator's target and the Assassin's contract.
+    target: p.role === "Exterminator" && p.extTarget ? { name: byId(s, p.extTarget).name, alive: byId(s, p.extTarget).alive } : null,
+    contract: p.role === "Assassin" && p.contract ? p.contract : null,
     commanded: s.commanded === id, myVote: s.votes[id] ?? null, myVerdict: s.verdicts[id] ?? null,
     canVote: s.phase === "vote" && p.alive && !p.shipped, canVerdict: s.phase === "verdict" && p.alive && !p.shipped && s.accused !== id,
     canReveal: false, // Reveal is a Night action now; see nightPrompt
