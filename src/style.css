@@ -41,6 +41,8 @@ input:not([type=checkbox]) { width:100%; min-height:44px; padding:8px 10px; back
 .pair { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .lib li { margin:6px 0; } .lib button { width:100%; display:flex; gap:10px; align-items:center; text-align:left; padding:6px; } .lib img { border-radius:6px; flex:none; } .lib b { font-weight:700; }
 .rolecard img { width:100%; max-width:300px; height:auto; display:block; margin:0 auto; }
+/* Role names: Alegreya SC (Nik, 7 Nov); the title and screen titles stay Almendra */
+.rolecard h2 { font-family:"Alegreya SC",Georgia,serif; font-size:26px; text-align:center; } .rolecard .meta { text-align:center; }
 .meta { font-weight:600; margin:0 0 6px; }
 .rules ul { padding-left:18px; margin:4px 0 10px; } .rules li { margin:3px 0; } .power { font-weight:700; margin:10px 0 2px; }
 .game { display:flex; flex-direction:column; height:100dvh; padding:8px 12px 8px; gap:4px; }
@@ -82,8 +84,8 @@ details { margin:10px 0; } summary { cursor:pointer; min-height:32px; color:var(
 input[type=search] { -webkit-appearance:none; }
 .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:6px; }
 .tile { width:100%; padding:0 0 10px; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; overflow:hidden; border-width:2px; border-radius:10px; }
-.tile img { width:100%; height:auto; aspect-ratio:1/1; object-fit:cover; display:block; margin-bottom:6px; background:#0d0f14; }
-.tile b { font-family:"Almendra",Georgia,serif; font-size:17px; line-height:1.2; padding:0 6px; }
+.tile img { width:100%; height:auto; aspect-ratio:544/528; display:block; margin-bottom:6px; }
+.tile b { font-family:"Alegreya SC",Georgia,serif; font-size:17px; line-height:1.2; padding:0 6px; }
 .tile .small { font-size:12px; font-style:italic; }
 /* Roster */
 .roster-list h3 { display:flex; justify-content:space-between; margin-top:14px; }
