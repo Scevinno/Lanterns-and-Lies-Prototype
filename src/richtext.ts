@@ -12,6 +12,7 @@ export function setRoles(r: Role[]) {
   pattern = new RegExp(`\\b(${names})\\b`, "g");
 }
 export const roleByName = (n: string) => roles.find((r) => r.name === n);
+export const allRoles = () => roles;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const paint = (s: string) => (pattern ? esc(s).replace(pattern, (m) => `<span class="${words.get(m)}">${m}</span>`) : esc(s));
 

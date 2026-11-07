@@ -145,3 +145,8 @@ button.weak { background:rgba(34,37,46,.45); border-color:rgba(58,62,74,.6); col
 .lantern .flame { transform-origin:24px 40px; animation:flicker 1.6s ease-in-out infinite; filter:drop-shadow(0 0 6px rgba(232,181,83,.8)); }
 @keyframes flicker { 0%,100% { transform:scale(1); opacity:1; } 40% { transform:scale(.88,.94); opacity:.85; } 70% { transform:scale(1.05,.97); opacity:.95; } }
 @media (prefers-reduced-motion: reduce) { .lantern .flame { animation:none; } }
+
+/* Tappable roster lines */
+.slot:has(.slotbtn) { padding:0; }
+.slotbtn { width:100%; display:flex; gap:10px; align-items:center; background:transparent; border:none; text-align:left; padding:10px 12px; min-height:44px; }
+.slotbtn .cat { flex:1; } .slotbtn:hover .cat { text-decoration:underline; text-underline-offset:3px; }

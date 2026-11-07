@@ -1,16 +1,19 @@
 <script lang="ts">
   import { afterUpdate, onDestroy, onMount } from "svelte";
   import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
-  import { roleByName, summaryHtml } from "./richtext";
+  import { allRoles, roleByName, summaryHtml, type Role } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
+  import Library from "./Library.svelte";
 
   export let party: any;
   export let onHome: () => void;
 
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
   let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
+  let rosterView: "roster" | "roles" = "roster", libF = "All", libT = "All", libSearch = "", libRole: Role | null = null;
+  const closeRoster = () => { showRoster = false; rosterView = "roster"; libRole = null; };
   let showRoster = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
   $: pub = party.public_state;
   $: phase = pub?.phase;
@@ -196,10 +199,17 @@
   {#if showRoster}
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Roster">
       <div class="sheet scroll">
-        <h2>Roster</h2>
-        <p class="dim small">{pub.size} players · evil side: {pub.setup}</p>
-        <Roster size={pub.size} mode={pub.setup} />
-        <button class="wide" on:click={() => (showRoster = false)}>Close</button>
+        {#if !libRole}<h2>{rosterView === "roles" ? "Roles" : "Roster"}</h2>{/if}
+        {#if libRole}
+          <button class="link back" on:click={() => (libRole = null)}>Back</button><RoleCard role={libRole} />
+        {:else if rosterView === "roles"}
+          <button class="link back" on:click={() => (rosterView = "roster")}>Back to the roster</button>
+          <Library roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => (libRole = r)} />
+        {:else}
+          <p class="dim small">{pub.size} players · evil side: {pub.setup}. Tap a line to see its roles.</p>
+          <Roster size={pub.size} mode={pub.setup} onPick={(f, t) => { libF = f; libT = t; libSearch = ""; rosterView = "roles"; }} />
+        {/if}
+        <button class="wide" on:click={closeRoster}>Close</button>
       </div>
     </div>
   {/if}
