@@ -442,7 +442,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
         if (!lkAlive) { res(a.actor, "text", "Your power can no longer be used.", "", false); break; }
         const bad = shuffle(pool2.filter((p) => !good(p)), r), rest = shuffle(pool2.filter((p) => !bad.slice(0, 1).includes(p)), r);
         const trio = [t, ...(good(t) && bad[0] ? [bad[0]] : []), ...rest].slice(0, 3);
-        res(a.actor, "names", names(shuffle(trio.map((p) => p.id), r)), "Your Vision shows"); break;
+        res(a.actor, "names", names(shuffle(trio.map((p) => p.id), r)), "Your Vision shows"); results[results.length - 1].targetName = t.name; break;
       }
       case "Loan Shark": res(a.actor, "role", t.role, t.name); break;
       case "Warden": { const pa = P(a.actor).patrol ?? []; P(a.actor).patrol = [...pa, t.id].slice(-2); break; }
@@ -458,6 +458,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       if (roles.length) { const c = pick(roles, r); p.learned = [...(p.learned ?? []), c]; const n = living.filter((x) => x.role === c).length; res(p.id, "role", c + (n > 1 ? ` (${n} alive)` : ""), "A living role:"); }
     }
   }
+  const gameRoles = [...new Set(s.players.map((p) => p.role))];
   const allRoles = ROLES.map((x) => x.name), TYPES = ["Investigative", "Protective", "Support", "Killing", "Power", "Deceptive", "Chaos"];
   const falsify = (x: Result): Result => {
     const others = s.players.map((p) => p.name);
@@ -465,13 +466,30 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       case "evil": return { ...x, value: !x.value };
       case "friends": return { ...x, value: !x.value };
       case "type": return { ...x, value: pick(TYPES.filter((t) => t !== x.value), r) };
-      case "role": return { ...x, value: pick(allRoles.filter((t) => t !== x.value), r) };
+      case "role": return { ...x, value: pick((gameRoles.length > 1 ? gameRoles : allRoles).filter((t) => t !== x.value), r) };
       case "count": return { ...x, value: Number(x.value) + 1 + Math.floor(r.next() * 2) };
       case "names": { const cur = (x.value as string[]); const n = Math.max(1, cur.length); return { ...x, value: shuffle(others.filter((o) => !cur.includes(o)), r).slice(0, n) }; }
       default: return x;
     }
   };
-  const finalResults = results.map((x) => (x.info && (fog || forged.has(x.to)) ? falsify(x) : x));
+  // Fog Night (Nik, 7 Nov): results are random, so they may be right or wrong and can't be decoded by flipping them.
+  // A Forged result is always wrong (falsify above), Fog or not. Nobody's choices or visits change, only the result text.
+  const evilAlive = living.filter(isEvil).length;
+  const randomise = (x: Result): Result => {
+    const pool = living.filter((p) => p.id !== x.to).map((p) => p.name);
+    switch (x.kind) {
+      case "evil": case "friends": return { ...x, value: r.next() < 0.5 };
+      case "type": return { ...x, value: pick(TYPES, r) };
+      case "role": return { ...x, value: pick(gameRoles, r) };
+      case "count": return { ...x, value: Math.floor(r.next() * (evilAlive + 1)) };
+      case "names": {
+        if (x.targetName) return { ...x, value: shuffle([x.targetName, ...shuffle(pool.filter((n) => n !== x.targetName), r).slice(0, 2)], r) };
+        return { ...x, value: shuffle(pool, r).slice(0, Math.floor(r.next() * 3)) };
+      }
+      default: return x;
+    }
+  };
+  const finalResults = results.map((x) => (!x.info ? x : forged.has(x.to) ? falsify(x) : fog ? randomise(x) : x));
   const render = (x: Result) => {
     switch (x.kind) {
       case "evil": return `${x.pre} is ${x.value ? "Evil" : "Innocent"}.`;

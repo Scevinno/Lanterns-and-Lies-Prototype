@@ -110,9 +110,17 @@ describe("attacks and defence", () => {
     const a = game(["Hollowman", "Spy", "Detective"], 1); act(a, 0, 1); act(a, 2, 1); run(a); expect(dead(a, 1)).toBe(true); expect(dead(a, 2)).toBe(true);
     const b = game(["Hollowman", "Spy", "Doctor"], 1); act(b, 0, 1); act(b, 2, 1); run(b); expect(dead(b, 1)).toBe(false); expect(dead(b, 2)).toBe(true);
   });
-  it("Hollowman: no attack on a Fog Night; every result false", () => {
-    const s = game(["Hollowman", "Foreman", "Constable"], 2, "Cartel"); expect(nightPrompt(s, s.players[0])).toBeNull();
-    act(s, 2, 1); const m = run(s); expect(said(m, 2)).toContain("Innocent");
+  it("Hollowman: no attack on a Fog Night; results are random, not flipped", () => {
+    const s0 = game(["Hollowman", "Foreman", "Constable"], 2, "Cartel"); expect(nightPrompt(s0, s0.players[0])).toBeNull();
+    const seen = new Set<string>(), hollow = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      const s = game(["Hollowman", "Foreman", "Constable"], 2, "Cartel"); act(s, 2, 1); seen.add(said(resolveNight(s, seeded(i)), 2).includes("Evil") ? "Evil" : "Innocent");
+      const h = game(["Hollowman", "Foreman", "Constable"], 2, "Cartel"); act(h, 2, 0); hollow.add(said(resolveNight(h, seeded(i)), 2).includes("Evil") ? "Evil" : "Innocent");
+    }
+    expect([...seen].sort()).toEqual(["Evil", "Innocent"]); expect([...hollow].sort()).toEqual(["Evil", "Innocent"]);
+  });
+  it("a Forged result is always wrong, even on a Fog Night", () => {
+    for (let i = 0; i < 20; i++) { const s = game(["Hollowman", "Foreman", "Constable", "Forger"], 2, "Cartel"); act(s, 2, 1); act(s, 3, 2); expect(said(resolveNight(s, seeded(i)), 2)).toContain("Innocent"); }
   });
   it("Hollowman reads Evil on clear Nights", () => {
     const s = game(["Hollowman", "Constable"], 1); act(s, 1, 0); expect(said(run(s), 1)).toContain("Evil");
