@@ -4,6 +4,7 @@
   import { roleByName, summaryHtml } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
   import Roster from "./Roster.svelte";
+  import Loading from "./Loading.svelte";
 
   export let party: any;
   export let onHome: () => void;
@@ -59,7 +60,7 @@
     if (left <= 0 && Date.now() - lastNudge > 2500) { lastNudge = Date.now(); call("tick", { party: party.id }).then(refresh).catch(() => (online = false)); }
   }
   const keepAwake = async () => { try { if ("wakeLock" in navigator && document.visibilityState === "visible") wake = await (navigator as any).wakeLock.request("screen"); } catch { /* not available */ } };
-  async function wakeUp() { if (document.visibilityState !== "visible") return; await syncClock(); await refresh(); keepAwake(); resubscribe(); tick(); }
+  async function wakeUp() { if (document.visibilityState !== "visible") return; await Promise.all([syncClock(true), refresh()]); keepAwake(); resubscribe(); tick(); }
 
   let channel: any;
   function resubscribe() {
@@ -73,7 +74,7 @@
   }
   let t1: any, t2: any;
   onMount(async () => {
-    await syncClock(); await refresh(); resubscribe(); keepAwake();
+    resubscribe(); await Promise.all([syncClock(), refresh()]); keepAwake();
     t1 = setInterval(tick, 250); t2 = setInterval(() => { if (document.visibilityState === "visible") refresh().catch(() => (online = false)); }, 10000);
     for (const ev of ["visibilitychange", "focus", "pageshow", "online"]) (ev === "visibilitychange" ? document : window).addEventListener(ev, wakeUp);
   });
@@ -96,7 +97,7 @@
 </script>
 
 {#if !pub || !view}
-  <main class="center"><p class="dim">Lighting the lanterns...</p></main>
+  <Loading />
 {:else}
 <div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}.webp)" aria-hidden="true"></div>
 <main class="game l-{layout}">

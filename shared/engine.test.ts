@@ -284,6 +284,12 @@ describe("Syndicate succession and others", () => {
 
 describe("day flow", () => {
   const day = () => { const s = game(["Mayor", "Judge", "Mobster", "Godfather", "Martyr", "Doctor", "Spy", "Seer"], 2); s.phase = "vote"; s.day = 2; s.endsAt = T0 + 30_000; s.trial = 1; return s; };
+  it("a bribed player still votes but counts 0; the Paymaster counts 2; the chat line names no weight", () => {
+    const s = game(["Paymaster", "Doctor", "Spy", "Detective", "Mobster"], 2, "Cartel"); s.phase = "vote"; s.day = 2; s.trial = 1; s.endsAt = T0 + 30_000;
+    s.players[1].bribed = true; s.players[1].bribedBy = "p0";
+    const line = cmdVote(s, "p1", "p3", T0); expect(line[0].text).toBe("N1 voted for N3."); expect(voteTally(s).p3).toBe(0);
+    cmdVote(s, "p0", "p2", T0); expect(voteTally(s).p2).toBe(2); expect(privateView(s, "p1").canVote).toBe(true);
+  });
   it("no majority when the vote closes ends the Day", () => {
     const s = day(); const m = forceAdvance(s, T0 + 30_000, seeded(1)); expect(s.phase).toBe("night"); expect(m.some((x) => x.text.includes("No majority. The Day ends."))).toBe(true);
   });

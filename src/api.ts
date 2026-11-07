@@ -21,16 +21,18 @@ export async function call(action: string, body: Record<string, unknown> = {}) {
 // ---- The clock ----
 // The phone's clock is only used to measure how far it is from the server's. The countdown is always
 // "deadline minus server time now", never a number being ticked down, so a phone that sleeps can't drift.
-let offset = 0;
+let offset = 0, syncedAt = 0;
 export const serverNow = () => Date.now() + offset;
-export async function syncClock() {
+/** Measures the gap to the server's clock. Reused for 5 minutes unless forced (after the phone wakes, it is forced). */
+export async function syncClock(force = false) {
+  if (!force && Date.now() - syncedAt < 300_000) return;
   let bestRtt = Infinity;
   for (let i = 0; i < 3; i++) {
     const t0 = Date.now();
     const { data, error } = await sb.rpc("server_time");
     const t1 = Date.now();
     if (error || !data) continue;
-    if (t1 - t0 < bestRtt) { bestRtt = t1 - t0; offset = new Date(data as string).getTime() - (t0 + t1) / 2; }
+    if (t1 - t0 < bestRtt) { bestRtt = t1 - t0; offset = new Date(data as string).getTime() - (t0 + t1) / 2; syncedAt = Date.now(); }
   }
 }
 

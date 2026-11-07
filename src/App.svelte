@@ -8,6 +8,7 @@
   import Game from "./Game.svelte";
   import NumberStrip from "./NumberStrip.svelte";
   import Roster from "./Roster.svelte";
+  import Loading from "./Loading.svelte";
 
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
@@ -70,7 +71,7 @@
     if (p) party = p; players = pl ?? [];
   }
   async function openParty(id: string) {
-    leaveChannel(); route = "party"; await syncClock(); await loadLobby(id);
+    leaveChannel(); route = "party"; await Promise.all([syncClock(), loadLobby(id)]);
     if (!party) { fail(new Error("You are not in that party.")); go("play"); return; }
     qr = await QRCode.toDataURL(shareLink(party.code), { margin: 1, width: 360, color: { dark: "#14161C", light: "#EDE6D6" } });
     chan = sb.channel("lobby-" + id)
@@ -107,8 +108,11 @@
   const onHash = () => route_();
   let authSub: any;
   onMount(async () => {
-    const { data } = await sb.from("roles").select("*").order("id"); roles = (data ?? []) as Role[]; setRoles(roles);
-    const { data: { session: s } } = await sb.auth.getSession(); session = s; ready = true;
+    // Roles come from the last visit at once, then refresh; the session check runs at the same time.
+    try { const c = JSON.parse(localStorage.getItem("lnl-roles") ?? "null"); if (c?.length) { roles = c; setRoles(roles); } } catch { /* storage blocked */ }
+    const [{ data }, { data: { session: s } }] = await Promise.all([sb.from("roles").select("*").order("id"), sb.auth.getSession()]);
+    if (data?.length) { roles = data as Role[]; setRoles(roles); try { localStorage.setItem("lnl-roles", JSON.stringify(data)); } catch { /* storage blocked */ } }
+    session = s; ready = true;
     await route_();
     window.addEventListener("hashchange", onHash);
     authSub = sb.auth.onAuthStateChange(async (_e, s2) => { const was = session; session = s2; if (!was && s2) { await svelteTick(); route_(); } }).data.subscription;
@@ -118,7 +122,7 @@
 
 {#if !inGame}<div class="backdrop {bg}" style="background-image:url({import.meta.env.BASE_URL}bg/{bg}.webp)" aria-hidden="true"></div>{/if}
 {#if !ready}
-  <main class="center"><p class="dim">Lighting the lanterns...</p></main>
+  <Loading />
 {:else if !session}
   <main class="center narrow signin">
     <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
@@ -152,6 +156,8 @@
     <button class="link" on:click={async () => { await partyAct("leaveParty"); go("home"); }}>Leave party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
+{:else if route === "party"}
+  <Loading />
 {:else if route === "play"}
   <main class="narrow">
     <button class="link back" on:click={() => go("home")}>Back</button>
@@ -238,7 +244,7 @@
       <button class="go wide" on:click={() => go("play")}>Play</button>
       <button class="wide" on:click={() => go("guide")}>Role guide</button>
       <button class="wide" on:click={() => go("games")}>My games</button>
-      <button class="wide" on:click={signOut}>Sign out</button>
+      <button class="wide weak" on:click={signOut}>Sign out</button>
     </div>
     <p class="dim small tc">Prototype</p>
   </main>
