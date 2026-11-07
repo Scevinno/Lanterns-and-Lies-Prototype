@@ -26,6 +26,8 @@ export interface GameState {
   day: number; night: number; players: Player[]; votes: Record<string, string>; verdicts: Record<string, "guilty" | "innocent">;
   accused: string | null; trial: number; actions: Record<string, Action>; trap: { hunter: string; target: string } | null;
   commanded: string | null; quietDays: number; hadGodfather: boolean; winner: string | null; winners: string[]; condemned: boolean;
+  // In person: everyone is in one room. Town chat is off, roles stay hidden until peeked, and anyone can pause.
+  inPerson?: boolean; pausedLeft?: number | null; pausedBy?: string | null;
 }
 export interface Rng { next(): number }
 export const mathRng: Rng = { next: () => Math.random() };
@@ -42,6 +44,20 @@ const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
 const LK = { Power: [1,1,1,1,1,1,1,1], Investigative: [1,2,2,2,2,2,2,2], Protective: [1,1,1,1,1,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,1,2,3,3,4,4] };
 const SYN = { Power: [1,1,1,1,1,1,1,1], Killing: [0,0,1,1,1,1,1,1], Random: [1,1,1,1,1,2,2,2] };
 const CAR = { Power: [0,0,0,0,0,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,2,2,2,1,1,2] };
+/** The categories dealt for a player count and evil side, for the roster screen. Same tables as dealDeck. */
+export interface RosterSlot { faction: Faction; category: string; count: number; roles: string[] }
+export function rosterFor(size: number, mode: "Syndicate" | "Cartel"): RosterSlot[] {
+  const i = SIZES.indexOf(size); if (i < 0) return [];
+  const out: RosterSlot[] = [];
+  const add = (faction: Faction, category: string, count: number, types: string[]) => { if (count > 0) out.push({ faction, category, count, roles: pool(faction, types) }); };
+  const extra = mode === "Cartel" ? SYN.Power[i] + SYN.Killing[i] + SYN.Random[i] - (CAR.Power[i] + CAR.Killing[i] + CAR.Random[i]) : 0;
+  for (const cat of ["Power", "Investigative", "Protective", "Killing"] as const) add("Lanternkeepers", cat, LK[cat][i], [cat]);
+  if (LK.Random[i] + extra > 0) out.push({ faction: "Lanternkeepers", category: "Random", count: LK.Random[i] + extra, roles: ROLES.filter((x) => x.faction === "Lanternkeepers" && x.type !== "Power").map((x) => x.name) });
+  const t = mode === "Syndicate" ? SYN : CAR;
+  add(mode, "Power", t.Power[i], ["Power"]); add(mode, "Killing", t.Killing[i], ["Killing"]); add(mode, "Random", t.Random[i], ["Support", "Deceptive"]);
+  add("Unbound", "Chaos", 1, ["Chaos"]); add("Unbound", "Killing", size === 15 ? 1 : 0, ["Killing"]);
+  return out;
+}
 const UNIQUE_EXTRA = new Set(["Veteran", "Ferryman", "Priest", "Swindler"]);
 export const isUnique = (n: string) => { const r = roleDef(n); return r.type === "Power" || r.type === "Protective" || r.faction === "Unbound" || ((r.faction === "Syndicate" || r.faction === "Cartel") && r.type === "Killing") || UNIQUE_EXTRA.has(n); };
 const pool = (f: Faction, types: string[]) => ROLES.filter((r) => r.faction === f && types.includes(r.type)).map((r) => r.name);
@@ -75,7 +91,7 @@ export function dealDeck(size: number, mode: "Syndicate" | "Cartel", r: Rng): st
   throw new Error("No balanced deal found.");
 }
 
-export function createGame(input: { players: { id: string; name: string; bot: boolean }[]; mode: "Syndicate" | "Cartel"; timers: Timers; townChat: boolean }, r: Rng, now: number): { state: GameState; msgs: Msg[] } {
+export function createGame(input: { players: { id: string; name: string; bot: boolean }[]; mode: "Syndicate" | "Cartel"; timers: Timers; townChat: boolean; inPerson?: boolean }, r: Rng, now: number): { state: GameState; msgs: Msg[] } {
   const deck = shuffle(dealDeck(input.players.length, input.mode, r), r);
   const players: Player[] = input.players.map((p, i) => {
     const d = roleDef(deck[i]);
@@ -83,7 +99,7 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
     if (d.name === "Rogue") pl.bullets = 1; if (d.name === "Doctor") pl.selfHeal = 1; if (d.name === "Veteran") pl.alerts = 2; if (d.name === "Butcher") pl.streak = 0;
     pl.patrol = []; pl.learned = []; return pl;
   });
-  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 1, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false };
+  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 1, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null };
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Exterminator") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.extTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
@@ -573,8 +589,24 @@ const overMsg = (s: GameState): Msg => ({ channel: "town", text: s.winner === "N
 
 /** Moves the game on when its timer has run out. Safe to call repeatedly: it does nothing before endsAt. */
 export function advance(s: GameState, now: number, r: Rng): Msg[] {
-  if (s.phase === "over" || now < s.endsAt) return [];
+  if (s.phase === "over" || s.pausedLeft != null || now < s.endsAt) return [];
   return forceAdvance(s, now, r);
+}
+export const isPaused = (s: GameState) => s.pausedLeft != null;
+const notPaused = (s: GameState) => { if (isPaused(s)) throw new Error("The game is paused."); };
+/** In-person parties only. The clock stops with the time left saved; resuming starts it again from there. */
+export function cmdPause(s: GameState, id: string, now: number): Msg[] {
+  const p = byId(s, id); if (!p) throw new Error("You are not in this game.");
+  if (!s.inPerson) throw new Error("Only in-person parties can pause.");
+  if (s.phase === "over" || isPaused(s)) return [];
+  s.pausedLeft = Math.max(1000, s.endsAt - now); s.pausedBy = p.name;
+  return [{ channel: "town", text: `${p.name} paused the game.` }];
+}
+export function cmdResume(s: GameState, id: string, now: number): Msg[] {
+  const p = byId(s, id); if (!p) throw new Error("You are not in this game.");
+  if (!isPaused(s) || s.phase === "over") return [];
+  s.endsAt = now + (s.pausedLeft as number); s.pausedLeft = null; s.pausedBy = null;
+  return [{ channel: "town", text: `${p.name} resumed the game.` }];
 }
 export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
   switch (s.phase) {
@@ -630,7 +662,7 @@ function botNight(s: GameState, p: Player, r: Rng) {
 
 // ---- Player commands. All throw on an illegal move. ----
 export function cmdVote(s: GameState, id: string, target: string | null, now: number): Msg[] {
-  const p = byId(s, id); if (s.phase !== "vote") throw new Error("Voting is closed.");
+  const p = byId(s, id); notPaused(s); if (s.phase !== "vote") throw new Error("Voting is closed.");
   if (!p.alive || p.shipped) throw new Error("You cannot vote today.");
   const prev = s.votes[id];
   if (target === null) { if (!prev) return []; delete s.votes[id]; return [{ channel: "town", text: `${p.name} withdrew their vote.` }]; }
@@ -641,11 +673,11 @@ export function cmdVote(s: GameState, id: string, target: string | null, now: nu
   return [line, ...(tryTrial(s, now) ?? [])];
 }
 export function cmdVerdict(s: GameState, id: string, choice: "guilty" | "innocent"): void {
-  const p = byId(s, id); if (s.phase !== "verdict" || !p.alive || p.shipped || s.accused === id) throw new Error("You cannot judge now.");
+  const p = byId(s, id); notPaused(s); if (s.phase !== "verdict" || !p.alive || p.shipped || s.accused === id) throw new Error("You cannot judge now.");
   s.verdicts[id] = choice;
 }
 export function cmdNight(s: GameState, id: string, a: Action, _now: number): void {
-  const p = byId(s, id); const pr = nightPrompt(s, p); if (!pr) throw new Error("You have nothing to do tonight.");
+  const p = byId(s, id); notPaused(s); const pr = nightPrompt(s, p); if (!pr) throw new Error("You have nothing to do tonight.");
   if (pr.toggle) { s.actions[id] = { targets: [], alert: !!a.alert }; return; }
   if (a.targets.length === 0) { delete s.actions[id]; if (p.ability === "Kingpin") s.commanded = null; return; }
   if (a.targets.length !== pr.slots.length) throw new Error("Choose every target.");
@@ -655,12 +687,12 @@ export function cmdNight(s: GameState, id: string, a: Action, _now: number): voi
   if (p.ability === "Kingpin" && byId(s, a.targets[0]).faction === "Cartel") s.commanded = a.targets[0];
 }
 export function cmdReveal(s: GameState, id: string): Msg[] {
-  const p = byId(s, id); if (!p.alive || !["Mayor", "Judge"].includes(p.role) || p.revealed) throw new Error("You cannot Reveal.");
+  const p = byId(s, id); notPaused(s); if (!p.alive || !["Mayor", "Judge"].includes(p.role) || p.revealed) throw new Error("You cannot Reveal.");
   if (s.day === 1 || s.phase === "night" || s.phase === "over" || s.phase === "reveal") throw new Error("You cannot Reveal now.");
   p.revealed = true; return [{ channel: "town", text: `${p.name} has Revealed: they are the ${p.role}.` }];
 }
 export function cmdCondemn(s: GameState, id: string, target: string, now: number, r: Rng): Msg[] {
-  const p = byId(s, id), t = byId(s, target);
+  const p = byId(s, id), t = byId(s, target); notPaused(s);
   if (p.role !== "Judge" || !p.revealed || !p.alive || s.phase !== "vote" || s.condemned) throw new Error("You cannot Condemn now.");
   if (!t?.alive || t.id === id) throw new Error("You cannot Condemn that player.");
   s.condemned = true;
@@ -672,6 +704,7 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
   const p = byId(s, id); if (!p) return false;
   if (s.phase === "over") return true;
   if (channel === "dead") return !p.alive;
+  if (isPaused(s)) return false;
   if (!p.alive) return false;
   if (channel === "town") {
     if (!s.townChat) return false;
@@ -687,7 +720,7 @@ export function publicView(s: GameState) {
   return {
     phase: s.phase, phaseNo: s.phaseNo, day: s.day, night: s.night, endsAt: s.endsAt, accused: s.accused, trial: s.trial, maxTrials: MAX_TRIALS,
     needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
-    townChat: s.townChat, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
+    townChat: s.townChat, mode: s.mode, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
     players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };
 }

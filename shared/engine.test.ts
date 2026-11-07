@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, cmdCondemn, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, cmdCondemn, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -345,6 +345,24 @@ describe("win conditions and chat", () => {
     const { state: s } = createGame({ players, mode: "Syndicate", timers: PUBLIC_TIMERS, townChat: true }, seeded(5), T0);
     const v = JSON.stringify(publicView(s)); for (const p of s.players) expect(v).not.toContain(`"${p.role}"`);
     const kp = game(["Kingpin", "Forger", "Spy"], 1, "Cartel"); expect(privateView(kp, "p1").allies.length).toBe(0); expect(privateView(kp, "p0").allies[0].role).toBe("Forger");
+  });
+});
+
+describe("in-person pause", () => {
+  it("stops the clock, blocks moves and resumes with the time left", () => {
+    const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.endsAt = T0 + 30_000;
+    expect(cmdPause(s, "p1", T0)[0].text).toContain("paused");
+    expect(advance(s, T0 + 999_999, seeded(1))).toEqual([]); expect(s.phase).toBe("night");
+    expect(() => cmdNight(s, "p1", { targets: ["p2"] }, T0)).toThrow("paused");
+    expect(canChat(s, "p0", "faction")).toBe(false);
+    cmdResume(s, "p2", T0 + 500_000); expect(s.endsAt).toBe(T0 + 530_000); expect(canChat(s, "p0", "faction")).toBe(true);
+  });
+  it("is refused in online parties", () => { const s = game(["Mobster", "Doctor"], 1); expect(() => cmdPause(s, "p0", T0)).toThrow(); });
+});
+
+describe("roster", () => {
+  it("adds up to the player count for both modes", () => {
+    for (const mode of ["Syndicate", "Cartel"] as const) for (let n = 8; n <= 15; n++) expect(rosterFor(n, mode).reduce((a, x) => a + x.count, 0)).toBe(n);
   });
 });
 

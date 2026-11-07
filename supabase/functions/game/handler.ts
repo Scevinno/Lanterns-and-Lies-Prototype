@@ -2,7 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { ROLES } from "../../../shared/roles.ts";
 import {
-  advance, canChat, cmdCondemn, cmdNight, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, PRIVATE_OPTIONS, privateView, publicView,
+  advance, canChat, cmdCondemn, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, PRIVATE_OPTIONS, privateView, publicView,
   type GameState, type Msg, type Timers,
 } from "../../../shared/engine.ts";
 
@@ -51,7 +51,7 @@ async function turn(partyId: string, step: (s: GameState) => Msg[]) {
     const msgs = step(s); const rows = await roster(partyId);
     const events = s.phaseNo !== before ? [{ phase_no: s.phaseNo, kind: "phase", data: { phase: s.phase, day: s.day, night: s.night } }] : [];
     if (s.phase === "over" && party.status !== "finished") events.push({ phase_no: s.phaseNo, kind: "over", data: { winner: s.winner, winners: s.winners, players: s.players.map((p) => ({ name: p.name, role: p.role, alive: p.alive })) } as never });
-    const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: iso(s.endsAt), public_state: publicView(s), status: s.phase === "over" ? "finished" : "playing" };
+    const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: isPaused(s) ? null : iso(s.endsAt), public_state: publicView(s), status: s.phase === "over" ? "finished" : "playing" };
     const { data: ok, error } = await db.rpc("apply_turn", { p_party: partyId, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
     if (error) throw error;
     if (ok) return;
@@ -63,7 +63,7 @@ async function beginGame(party: Record<string, any>) {
   const rows = await roster(party.id);
   if (rows.length !== party.size) { await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: { status: "lobby", ends_at: null }, p_state: null, p_secrets: [], p_msgs: [], p_events: [] }); return; }
   const mode = party.mode === "Random" ? (Math.random() < 0.5 ? "Syndicate" : "Cartel") : party.mode;
-  const { state: s, msgs } = createGame({ players: rows.map((r) => ({ id: r.id, name: r.name, bot: r.is_bot })), mode, timers: party.timers as Timers, townChat: party.town_chat }, mathRng, Date.now());
+  const { state: s, msgs } = createGame({ players: rows.map((r) => ({ id: r.id, name: r.name, bot: r.is_bot })), mode, timers: party.timers as Timers, townChat: party.town_chat, inPerson: !!party.in_person }, mathRng, Date.now());
   const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: iso(s.endsAt), public_state: publicView(s), status: "playing" };
   const events = [{ phase_no: s.phaseNo, kind: "start", data: { mode, size: party.size, players: s.players.map((p) => ({ name: p.name, role: p.role })) } }];
   await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
@@ -100,7 +100,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     const { data: prof } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
     const name = prof?.display_name ?? clean(u.user_metadata?.display_name, 20) ?? "Player";
     for (let i = 0; i < 6; i++) {
-      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: validTimers(b.timers), town_chat: b.townChat !== false }).select().single();
+      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: validTimers(b.timers), in_person: b.inPerson === true, town_chat: b.inPerson !== true }).select().single();
       if (error) continue;
       await db.from("party_players").insert({ party_id: data.id, user_id: u.id, name }); return { id: data.id, code: data.code };
     }
@@ -143,11 +143,13 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   async verdict(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { cmdVerdict(s, me.id, b.choice === "guilty" ? "guilty" : "innocent"); return []; }); return { ok: true }; },
   async night(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { cmdNight(s, me.id, { targets: Array.isArray(b.targets) ? b.targets : [], alert: !!b.alert, second: Array.isArray(b.second) ? b.second : undefined }, Date.now()); return []; }); return { ok: true }; },
   async reveal(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdReveal(s, me.id)); return { ok: true }; },
+  async pause(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdPause(s, me.id, Date.now())); return { ok: true }; },
+  async resume(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdResume(s, me.id, Date.now())); return { ok: true }; },
   async condemn(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdCondemn(s, me.id, b.target, Date.now(), mathRng)); return { ok: true }; },
   async skip(b, req) {
     const u = await userOf(req); await myPlayer(b.party, u.id);
     if (!(await roster(b.party)).some((r) => r.is_bot)) throw new Oops("Skipping is only for test games.");
-    await turn(b.party, (s) => forceAdvance(s, Date.now(), mathRng)); return { ok: true };
+    await turn(b.party, (s) => (isPaused(s) ? [] : forceAdvance(s, Date.now(), mathRng))); return { ok: true };
   },
   async chat(b, req) {
     const u = await userOf(req); const me = await myPlayer(b.party, u.id); const body = clean(b.body, 300); if (!body) return { ok: true };

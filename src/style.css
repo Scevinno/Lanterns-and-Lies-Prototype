@@ -57,3 +57,42 @@ input:not([type=checkbox]) { width:100%; min-height:44px; padding:8px 10px; back
 .toast { position:fixed; left:16px; right:16px; bottom:16px; background:#4a1f25; border:1px solid var(--syn); padding:10px; border-radius:8px; z-index:5; }
 .chat.hidden { display:none; } .won { margin-left:8px; } .tag { margin-left:6px; } input[type=checkbox] { accent-color:var(--lamp); width:18px; height:18px; vertical-align:-3px; }
 details { margin:10px 0; } summary { cursor:pointer; min-height:32px; color:var(--dim); }
+/* Card border colours from the visual brief; text colours above are the lighter versions. */
+:root { --lk-edge:#285F4F; --syn-edge:#942A3E; --car-edge:#B5AA92; --ub-edge:#556C94; }
+.f-lk-edge { border-color:var(--lk-edge) !important; } .f-syn-edge { border-color:var(--syn-edge) !important; } .f-car-edge { border-color:var(--car-edge) !important; } .f-ub-edge { border-color:var(--ub-edge) !important; }
+/* In person / online switch */
+.setting { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.setting button { display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; padding:10px 12px; min-height:64px; }
+.setting button.on { border-color:var(--lamp); background:#3a2f15; } .setting .small { color:var(--dim); }
+.effects { margin:8px 0 0; padding-left:18px; } .effects li { margin:2px 0; }
+/* Player count strip */
+.numstrip { outline:none; } .numstrip:focus-visible .track { outline:2px solid var(--lamp); outline-offset:2px; }
+.track { position:relative; display:flex; gap:6px; overflow-x:auto; scroll-snap-type:x proximity; padding:4px 45%; scrollbar-width:none; -webkit-overflow-scrolling:touch; mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent); }
+.track::-webkit-scrollbar { display:none; }
+.track button { flex:none; width:48px; min-height:56px; padding:4px 0 8px; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:20px; font-variant-numeric:tabular-nums; background:transparent; border-color:transparent; }
+.track button:disabled { opacity:.3; }
+.track button.ok { background:var(--panel); border-color:var(--line); }
+.track button.on { background:#3a2f15; border-color:var(--lamp); font-weight:700; }
+.track i { width:6px; height:6px; border-radius:50%; background:var(--lamp); opacity:.55; } .track button.on i { opacity:1; box-shadow:0 0 8px var(--lamp); }
+/* Library */
+.tabs.top { margin:8px 0 12px; } .tabs.top button { min-height:44px; font-weight:600; }
+.chips { display:flex; gap:6px; overflow-x:auto; padding:2px 0; margin:8px 0 2px; scrollbar-width:none; } .chips::-webkit-scrollbar { display:none; }
+.chips button { flex:none; min-height:36px; padding:4px 12px; border-radius:18px; font-size:14px; } .chips button.on { border-color:var(--lamp); background:#3a2f15; }
+input[type=search] { -webkit-appearance:none; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:6px; }
+.tile { width:100%; padding:0 0 10px; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; overflow:hidden; border-width:2px; border-radius:10px; }
+.tile img { width:100%; height:auto; aspect-ratio:1/1; object-fit:cover; display:block; margin-bottom:6px; background:#0d0f14; }
+.tile b { font-family:"Old Standard TT",Georgia,serif; font-size:17px; line-height:1.2; padding:0 6px; }
+.tile .small { font-size:12px; font-style:italic; }
+/* Roster */
+.roster-list h3 { display:flex; justify-content:space-between; margin-top:14px; }
+.slot { border-left:3px solid var(--line); margin:4px 0; background:var(--panel); border-radius:0 8px 8px 0; }
+.slot > button { width:100%; display:flex; gap:10px; align-items:center; background:transparent; border:none; text-align:left; }
+.slot .n { font-weight:700; min-width:28px; font-variant-numeric:tabular-nums; } .slot .cat { flex:1; color:var(--text); }
+.pool { margin:0; padding:0 12px 10px 50px; color:var(--dim); line-height:1.7; }
+.rolelink { min-height:0; padding:0; border:none; background:none; color:var(--text); text-decoration:underline; text-underline-offset:2px; font-size:inherit; }
+/* Game header buttons and overlays */
+.icon { min-height:36px; padding:2px 10px; background:transparent; font-size:14px; }
+.overlay { position:fixed; inset:0; background:rgba(8,9,12,.82); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10; }
+.sheet { background:var(--night); border:1px solid var(--line); border-radius:12px; padding:16px; width:100%; max-width:448px; }
+.sheet.scroll { max-height:90dvh; overflow-y:auto; }

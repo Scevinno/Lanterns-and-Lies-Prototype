@@ -3,12 +3,14 @@
   import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
   import { roleByName, summaryHtml } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
+  import Roster from "./Roster.svelte";
 
   export let party: any;
   export let onHome: () => void;
 
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
   let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
+  let showRoster = false, decoy = "", hideTimer: any = null;
   $: pub = party.public_state;
   $: phase = pub?.phase;
   $: me = view && pub?.players.find((p: any) => p.id === view.player_id);
@@ -17,13 +19,18 @@
   $: votersFor = (id: string) => Object.entries(pub?.votes ?? {}).filter(([, t]) => t === id).map(([v]) => nameOf(v));
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
-  $: if (pub && pub.phaseNo !== lastPhase) { lastPhase = pub.phaseNo; picks = []; second = ""; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
+  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase && pub.inPerson) try { navigator.vibrate?.(180); } catch { /* not supported */ } lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
   $: if (view?.action && phase === "night" && !picks.length) { picks = [...(view.action.targets ?? [])]; second = view.action.second?.[0] ?? ""; }
   $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
   $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
   $: canType = view?.channels?.[chatChannel] || (phase === "over" && tab === "town");
   $: isEvil = view && (view.faction === "Syndicate" || view.faction === "Cartel");
   $: isDead = view && !view.alive;
+  $: inPerson = !!pub?.inPerson;
+  $: paused = !!pub?.paused;
+  // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
+  $: if (showRole && inPerson && phase !== "reveal") { clearTimeout(hideTimer); hideTimer = setTimeout(() => (showRole = false), 6000); }
+  $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
 
   const say = (e: unknown) => { err = (e as Error).message; setTimeout(() => (err = ""), 3500); };
   async function act(a: string, b: Record<string, unknown> = {}) { busy = true; try { await call(a, { party: party.id, ...b }); await refresh(); } catch (e) { say(e); } busy = false; }
@@ -69,7 +76,7 @@
     for (const ev of ["visibilitychange", "focus", "pageshow", "online"]) (ev === "visibilitychange" ? document : window).addEventListener(ev, wakeUp);
   });
   onDestroy(() => {
-    clearInterval(t1); clearInterval(t2); if (channel) sb.removeChannel(channel); wake?.release?.();
+    clearInterval(t1); clearInterval(t2); clearTimeout(hideTimer); if (channel) sb.removeChannel(channel); wake?.release?.();
     for (const ev of ["visibilitychange", "focus", "pageshow", "online"]) (ev === "visibilitychange" ? document : window).removeEventListener(ev, wakeUp);
   });
   let lastLen = 0;
@@ -92,8 +99,10 @@
 <main class="game">
   <header class="bar">
     <span class="dim">{period}</span>
-    <button class="chip {FACTION_CLASS[view.faction]}" on:click={() => (showRole = !showRole)}>{view.role}</button>
-    <span class="timer" class:low={remaining <= 10 && phase !== 'over'} role="timer">{phase === "over" ? "" : fmt(remaining)}</span>
+    <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>
+    {#if pub.mode}<button class="icon" aria-label="Roster for this game" on:click={() => (showRoster = true)}>Roster</button>{/if}
+    {#if inPerson && phase !== "over"}<button class="icon" aria-label={paused ? "Resume the game" : "Pause the game"} disabled={busy} on:click={() => act(paused ? "resume" : "pause")}>{paused ? "▶" : "❚❚"}</button>{/if}
+    <span class="timer" class:low={remaining <= 10 && phase !== 'over' && !paused} role="timer">{phase === "over" ? "" : paused ? fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000)) : fmt(remaining)}</span>
   </header>
   {#if !online}<p class="banner">Reconnecting. The game carries on without you.</p>{/if}
   <h1 class="ptitle">{title(phase)}</h1>
@@ -137,6 +146,9 @@
           {/if}
           {#if view.action}<button class="ghost" disabled={busy} on:click={() => { picks = []; second = ""; act("night", { targets: [] }); }}>Clear my choice</button>{/if}
         {/if}
+      {:else if inPerson}
+        <p class="dim small">You have no action tonight. Tap a name anyway, so nobody in the room can tell. Nothing is sent.</p>
+        <ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}<li><button class:sel={decoy === p.id} on:click={() => (decoy = p.id)}>{p.name}</button></li>{/if}{/each}</ul>
       {:else}<p class="dim">You have nothing to do tonight.</p>{/if}
     {:else if phase === "dawn"}
       <p class="dim">The sun comes up over the river.</p>
@@ -164,6 +176,26 @@
     {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
   </section>
 
+  {#if paused}
+    <div class="overlay" role="dialog" aria-modal="true" aria-label="Game paused">
+      <div class="sheet tc">
+        <h2>Paused</h2>
+        <p class="dim">{pub.pausedBy ?? "Someone"} paused the game. {fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000))} left in this phase.</p>
+        <p class="dim small">Votes, night choices and chats wait until the game resumes. Anyone can resume it.</p>
+        <button class="go wide" disabled={busy} on:click={() => act("resume")}>Resume</button>
+      </div>
+    </div>
+  {/if}
+  {#if showRoster}
+    <div class="overlay" role="dialog" aria-modal="true" aria-label="Roster">
+      <div class="sheet scroll">
+        <h2>Roster</h2>
+        <p class="dim small">{pub.size} players, {pub.mode} game. These are the categories in play, not who has them.</p>
+        <Roster size={pub.size} mode={pub.mode} />
+        <button class="wide" on:click={() => (showRoster = false)}>Close</button>
+      </div>
+    </div>
+  {/if}
   {#if hasBots && phase !== "over"}<button class="skip" disabled={busy} on:click={() => act("skip")}>Skip this phase (test games only)</button>{/if}
   {#if err}<p class="toast" role="alert">{err}</p>{/if}
 </main>
