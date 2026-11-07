@@ -198,8 +198,11 @@ describe("investigations", () => {
   it("Watchman sees visitors; Tracker sees the visit", () => {
     const s = game(["Watchman", "Tracker", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 3); act(s, 1, 2); act(s, 2, 3); const m = run(s); expect(said(m, 0)).toContain("N2"); expect(said(m, 1)).toContain("N3");
   });
-  it("Warden receives the target's result, and learns the killer", () => {
-    const s = game(["Warden", "Detective", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); act(s, 2, 1); const m = run(s); expect(said(m, 0)).toContain("Your target's result"); expect(said(m, 0)).toContain("killed by N2");
+  it("Warden receives the target's result", () => {
+    const s = game(["Warden", "Detective", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); const m = run(s); expect(said(m, 0)).toContain("Your target's result");
+  });
+  it("Warden learns the killer, but no result from a target killed tonight", () => {
+    const s = game(["Warden", "Detective", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); act(s, 2, 1); const m = run(s); expect(said(m, 0)).not.toContain("Your target's result"); expect(said(m, 0)).toContain("killed by N2");
   });
   it("Warden cannot Patrol the same player three Nights in a row", () => {
     const s = game(["Warden", "Spy", "Doctor"]); s.players[0].patrol = ["p1", "p1"]; expect(nightPrompt(s, s.players[0])!.slots[0].options.some((o) => o.id === "p1")).toBe(false);
@@ -345,6 +348,21 @@ describe("win conditions and chat", () => {
     const { state: s } = createGame({ players, mode: "Syndicate", timers: PUBLIC_TIMERS, townChat: true }, seeded(5), T0);
     const v = JSON.stringify(publicView(s)); for (const p of s.players) expect(v).not.toContain(`"${p.role}"`);
     const kp = game(["Kingpin", "Forger", "Spy"], 1, "Cartel"); expect(privateView(kp, "p1").allies.length).toBe(0); expect(privateView(kp, "p0").allies[0].role).toBe("Forger");
+  });
+});
+
+describe("night order", () => {
+  it("a Lanternkeeper investigator killed tonight gets no result", () => {
+    const s = game(["Mobster", "Detective", "Spy"], 1); act(s, 0, 1); act(s, 1, 0);
+    const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 1)).not.toContain("role.");
+  });
+  it("a protected investigator still gets the result", () => {
+    const s = game(["Mobster", "Detective", "Doctor"], 1); act(s, 0, 1); act(s, 1, 0); act(s, 2, 1);
+    const m = run(s); expect(dead(s, 1)).toBe(false); expect(said(m, 1)).toContain("role.");
+  });
+  it("the evil side still gets its result when killed", () => {
+    const s = game(["Notary", "Rogue", "Spy"], 2); act(s, 0, 2); act(s, 1, 0);
+    const m = run(s); expect(dead(s, 0)).toBe(true); expect(said(m, 0)).toContain("Spy");
   });
 });
 

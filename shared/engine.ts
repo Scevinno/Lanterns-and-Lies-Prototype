@@ -465,10 +465,15 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       default: return String(x.value);
     }
   };
-  for (const x of finalResults) say(x.to, render(x));
+  // Night order (Nik, 7 Nov, after the Town of Salem night order): swaps and Holds, then the Unbound, the evil side,
+  // Lanternkeeper Killing and Protective. All of those act even if they die tonight. Lanternkeeper Investigative and
+  // Power roles resolve last, once kills are settled, so one who dies tonight learns nothing.
+  const silenced = (id: string) => { const p = P(id); const t = roleDef(p.ability).type; return dying.has(id) && p.faction === "Lanternkeepers" && (t === "Investigative" || t === "Power"); };
+  const delivered = finalResults.filter((x) => !silenced(x.to));
+  for (const x of delivered) say(x.to, render(x));
   for (const a of has("Warden")) {
-    const t = a.targets[0];
-    for (const x of finalResults) if (x.to === t) say(a.actor, `Your target's result: ${render(x)}`);
+    const t = a.targets[0]; if (silenced(a.actor)) continue;
+    for (const x of delivered) if (x.to === t) say(a.actor, `Your target's result: ${render(x)}`);
     if (dying.has(t)) say(a.actor, `Your target was killed by ${(killers.get(t) ?? []).map((k) => P(k).name).join(", ")}.`);
   }
   for (const id of heldNotes) say(id, "You were Held tonight and could not act.");
