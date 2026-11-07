@@ -208,7 +208,7 @@
         <div class="chips" role="group" aria-label="Faction">{#each ["All", "Lanternkeepers", "Syndicate", "Cartel", "Unbound"] as f}<button class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
         <div class="chips" role="group" aria-label="Type">{#each ["All", ...types] as t}<button class:on={typeFilter === t} on:click={() => (typeFilter = t)}>{t === "All" ? "All types" : t}</button>{/each}</div>
         <p class="dim small">{filtered.length} of {roles.length} roles</p>
-        <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile" on:click={() => { openRole = r; scrollTo(0, 0); }}><img class="{FACTION_CLASS[r.faction]}-edge" src={import.meta.env.BASE_URL + r.image} alt="" width="280" height="280" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
+        <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile" on:click={() => { openRole = r; scrollTo(0, 0); }}><img src={import.meta.env.BASE_URL + r.image} alt="" width="280" height="280" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
         {#if !filtered.length}<p class="dim tc">No roles match.</p>{/if}
       {:else}
         <h3>Players</h3>

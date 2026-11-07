@@ -111,7 +111,7 @@ html { background:var(--night); } body { background:transparent; } /* body stays
 main.signin { max-width:360px; padding-left:20px; padding-right:20px; }
 /* Library: grey card like the old app, faction colour on the picture's outline only */
 .tile { border:none !important; background:rgba(255,255,255,.08); padding:6px 6px 10px; }
-.tile img { border:2px solid var(--line); border-radius:8px; }
+.tile img { border-radius:8px; } /* the picture carries its own faction frame */
 /* Game layouts */
 .l-chat .panel { flex:0 0 auto; max-height:40%; }
 .l-chat .chat { flex:1 1 auto; }
