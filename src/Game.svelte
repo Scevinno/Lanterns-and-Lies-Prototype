@@ -96,6 +96,7 @@
 {#if !pub || !view}
   <main class="center"><p class="dim">Lighting the lanterns...</p></main>
 {:else}
+<div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}.webp)" aria-hidden="true"></div>
 <main class="game">
   <header class="bar">
     <span class="dim">{period}</span>

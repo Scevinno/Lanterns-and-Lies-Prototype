@@ -4,8 +4,9 @@ html,body { margin:0; height:100%; background:var(--night); color:var(--text); f
 button,input { font:inherit; color:inherit; }
 main { padding:16px; max-width:480px; margin:0 auto; min-height:100dvh; }
 .center { display:flex; flex-direction:column; justify-content:center; gap:14px; }
-.mark,.ptitle,h2 { font-family:"Old Standard TT",Georgia,serif; font-weight:700; }
-.mark { font-size:34px; text-align:center; margin:0; }
+.mark,.ptitle,h2 { font-family:"Almendra",Georgia,serif; font-weight:700; }
+.mark { font-size:44px; line-height:1.05; text-align:center; margin:0 0 6px; text-shadow:0 0 18px rgba(232,181,83,.25),0 2px 3px rgba(0,0,0,.85); }
+.mark .amp { color:#E8B553; }
 .ptitle { font-size:24px; text-align:center; margin:8px 0; }
 h2 { font-size:24px; margin:8px 0 0; } h3 { font-size:15px; margin:16px 0 6px; }
 p { margin:0 0 8px; }
@@ -82,7 +83,7 @@ input[type=search] { -webkit-appearance:none; }
 .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:6px; }
 .tile { width:100%; padding:0 0 10px; display:flex; flex-direction:column; align-items:center; gap:2px; text-align:center; overflow:hidden; border-width:2px; border-radius:10px; }
 .tile img { width:100%; height:auto; aspect-ratio:1/1; object-fit:cover; display:block; margin-bottom:6px; background:#0d0f14; }
-.tile b { font-family:"Old Standard TT",Georgia,serif; font-size:17px; line-height:1.2; padding:0 6px; }
+.tile b { font-family:"Almendra",Georgia,serif; font-size:17px; line-height:1.2; padding:0 6px; }
 .tile .small { font-size:12px; font-style:italic; }
 /* Roster */
 .roster-list h3 { display:flex; justify-content:space-between; margin-top:14px; }
@@ -96,3 +97,12 @@ input[type=search] { -webkit-appearance:none; }
 .overlay { position:fixed; inset:0; background:rgba(8,9,12,.82); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10; }
 .sheet { background:var(--night); border:1px solid var(--line); border-radius:12px; padding:16px; width:100%; max-width:448px; }
 .sheet.scroll { max-height:90dvh; overflow-y:auto; }
+
+/* Backgrounds: one compressed picture per screen type, darkened so text reads on top. */
+.backdrop { position:fixed; inset:0; z-index:-1; background-size:cover; background-position:center; pointer-events:none; }
+.backdrop::after { content:""; position:absolute; inset:0; background:linear-gradient(rgba(10,12,18,.5),rgba(10,12,18,.72)); }
+.backdrop.menu::after { background:linear-gradient(rgba(10,12,18,.25),rgba(10,12,18,.45) 45%,rgba(10,12,18,.8)); }
+.backdrop.day::after { background:linear-gradient(rgba(10,12,18,.62),rgba(10,12,18,.8)); }
+html,body { background:var(--night); }
+.home { justify-content:flex-start; padding-top:12vh; } .home .stack { margin-top:auto; padding-bottom:4vh; }
+.log { background:rgba(20,22,28,.82); }

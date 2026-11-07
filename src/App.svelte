@@ -90,6 +90,9 @@
   async function signOut() { await sb.auth.signOut(); go("home"); }
 
   $: full = party && players.length === party.size;
+  // Menu screens get the river port, list screens the quiet river. The game sets its own day or night picture.
+  $: inGame = route === "party" && party && party.status !== "lobby" && party.status !== "starting";
+  $: bg = !ready || !session || route === "home" || route === "play" ? "menu" : "nav";
   $: types = [...new Set(roles.filter((r) => factionFilter === "All" || r.faction === factionFilter).map((r) => r.type))];
   $: if (typeFilter !== "All" && !types.includes(typeFilter)) typeFilter = "All";
   $: q = search.trim().toLowerCase();
@@ -108,11 +111,12 @@
   onDestroy(() => { window.removeEventListener("hashchange", onHash); authSub?.unsubscribe(); leaveChannel(); });
 </script>
 
+{#if !inGame}<div class="backdrop {bg}" style="background-image:url({import.meta.env.BASE_URL}bg/{bg}.webp)" aria-hidden="true"></div>{/if}
 {#if !ready}
   <main class="center"><p class="dim">Lighting the lanterns...</p></main>
 {:else if !session}
   <main class="center narrow">
-    <h1 class="mark">Lanterns &amp; Lies</h1>
+    <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
     <p class="dim tc">{pendingCode ? `Sign in to join party ${pendingCode}.` : "A town, a fog, and someone among you who isn't what they seem."}</p>
     <form on:submit|preventDefault={submitAuth} class="stack">
       {#if mode === "up"}<label>Your name<input bind:value={name} maxlength="20" autocomplete="nickname" required /></label>{/if}
@@ -224,7 +228,7 @@
   </main>
 {:else}
   <main class="center narrow home">
-    <h1 class="mark">Lanterns &amp; Lies</h1>
+    <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
     <p class="dim tc">Signed in as {session.user.user_metadata?.display_name ?? session.user.email}</p>
     <div class="stack">
       <button class="go wide" on:click={() => go("play")}>Play</button>
