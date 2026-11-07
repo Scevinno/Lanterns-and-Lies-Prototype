@@ -8,7 +8,8 @@ export const PUBLIC_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, v
 export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
   discussion: [240, 420, 600, 900], vote: [30, 60], defence: [30, 60, 120], verdict: [15, 30], night: [60, 120, 300],
 };
-export const REVEAL_SECONDS = 20, DAWN_SECONDS = 10, MAX_TRIALS = 3, MAX_NIGHTS = 7;
+// Night comes first (Nik, 7 Nov): reveal, Night 1, Day 1, Night 2, Day 2 ... Night 7, Day 7. The game is decided at the end of Day 7.
+export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, MAX_TRIALS = 3, MAX_DAYS = 7;
 
 export interface Player {
   id: string; name: string; seat: number; bot: boolean; alive: boolean;
@@ -101,7 +102,7 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
     if (d.name === "Rogue") pl.bullets = 1; if (d.name === "Doctor") pl.selfHeal = 1; if (d.name === "Veteran") pl.alerts = 2; if (d.name === "Butcher") pl.streak = 0;
     pl.patrol = []; pl.learned = []; return pl;
   });
-  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 1, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null, setup: input.setup ?? input.mode };
+  const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 0, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null, setup: input.setup ?? input.mode };
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Exterminator") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.extTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
@@ -558,7 +559,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
     if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id)) { say(a.actor, "Your swap failed."); continue; }
     swindledTonight.add(x.id); swindledTonight.add(y.id);
-    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`); }
+    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.extTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.extTarget = q.extTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.extTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`); }
   }
   // Reveals: not if Held (the act was cancelled), not if the role was swapped tonight, not if dead.
   const revealedTonight: string[] = [];
@@ -618,11 +619,11 @@ function finish(s: GameState, w: string) {
   s.winners = s.players.filter((p) => (side && p.faction === side) || p.won || (p.role === w) || (p.role === "Outcast" && p.alive)).map((p) => p.id);
 }
 /** Night cap (Nik, 6 Nov): after the last Night, a living evil side wins. With no evil left, nobody does. */
-function nightCap(s: GameState): Msg[] | null {
-  if (s.night < MAX_NIGHTS) return null;
+/** At the end of Day 7, after the usual win check: a living evil side wins; otherwise nobody does (a draw). */
+function dayCap(s: GameState): Msg[] {
   const evilAlive = alive(s).some(isEvil);
   finish(s, evilAlive ? `The ${s.mode}` : "Nobody");
-  return [{ channel: "town", text: evilAlive ? `Seven nights have passed, and the ${s.mode} still walks free.` : "Seven nights have passed." }, overMsg(s)];
+  return [{ channel: "town", text: evilAlive ? `Seven days have passed, and the ${s.mode} still walks free.` : "Seven days have passed." }, overMsg(s)];
 }
 function startNight(s: GameState, now: number, r: Rng): Msg[] {
   s.night++; s.actions = {}; s.votes = {}; s.verdicts = {}; s.accused = null; s.trial = 0; s.commanded = null; s.condemned = false;
@@ -630,7 +631,6 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   for (const p of s.players) { p.framed = false; p.disguisedAs = undefined; p.bribed = false; p.bribedBy = undefined; p.shipped = false; }
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
-  if (s.night === MAX_NIGHTS) msgs.push({ channel: "town", text: "This is the last night. If the evil side survives it, they win." });
   setPhase(s, "night", s.timers.night, now);
   for (const p of alive(s).filter((x) => x.bot)) botNight(s, p, r);
   return msgs;
@@ -648,7 +648,7 @@ function execute(s: GameState, p: Player, verb: string): Msg[] {
   const say = (to: string, text: string) => msgs.push({ channel: "private", to, text }); succession(s, mathRng, say);
   return msgs;
 }
-const afterExecutionOrDay = (s: GameState, now: number, r: Rng, msgs: Msg[]) => (checkWin(s) ? [...msgs, overMsg(s)] : [...msgs, ...startNight(s, now, r)]);
+const afterExecutionOrDay = (s: GameState, now: number, r: Rng, msgs: Msg[]) => (checkWin(s) ? [...msgs, overMsg(s)] : s.day >= MAX_DAYS ? [...msgs, ...dayCap(s)] : [...msgs, ...startNight(s, now, r)]);
 const overMsg = (s: GameState): Msg => ({ channel: "town", text: s.winner === "Nobody" ? "The town falls silent. Nobody wins." : `${s.winner} ${s.winner?.startsWith("The ") ? "win" : "wins"}.` });
 
 /** Moves the game on when its timer has run out. Safe to call repeatedly: it does nothing before endsAt. */
@@ -674,7 +674,7 @@ export function cmdResume(s: GameState, id: string, now: number): Msg[] {
 }
 export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
   switch (s.phase) {
-    case "reveal": setPhase(s, "discussion", s.timers.discussion, now); return [{ channel: "town", text: "Day 1. The town gathers in the square." }];
+    case "reveal": return startNight(s, now, r);
     case "discussion": return startVote(s, now);
     case "vote": {
       const lines: Msg[] = [];
@@ -699,10 +699,10 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
       const msgs = resolveNight(s, r); s.actions = {};
       if (checkWin(s)) return [...msgs, overMsg(s)];
-      const capped = nightCap(s); if (capped) return [...msgs, ...capped];
       setPhase(s, "dawn", DAWN_SECONDS, now); return msgs;
     }
-    case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now); return [{ channel: "town", text: `Day ${s.day}.` }];
+    case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now);
+      return [{ channel: "town", text: `Day ${s.day}.` }, ...(s.day === MAX_DAYS ? [{ channel: "town" as const, text: "This is the last day. If the evil side survives it, they win." }] : [])];
     default: return [];
   }
 }
