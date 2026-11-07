@@ -121,7 +121,8 @@ const alive = (s: GameState) => s.players.filter((p) => p.alive);
 const isEvil = (p: Player) => p.faction === "Syndicate" || p.faction === "Cartel";
 const isUK = (p: Player) => p.faction === "Unbound" && roleDef(p.role).type === "Killing";
 const fogNight = (n: number) => n % 2 === 0;
-const IMMUNE_HOLD = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
+// The Ferryman and Smuggler are Hold-immune (Nik, 7 Nov): a swap that redirects a Hold onto the swapper could otherwise cancel itself.
+const IMMUNE_HOLD = new Set(["Locksmith", "Enforcer", "Quartermaster", "Ferryman", "Smuggler"]);
 const IMMUNE_DETECT = new Set(["Godfather", "Kingpin", "Loan Shark", "Harbour Master"]);
 const NO_VISIT = new Set(["Innkeeper", "Archivist", "Spy", "Outcast", "Judge", "Mayor", "Martyr", "Exterminator"]);
 const NO_ASTRAY = new Set(["Seer", "Ferryman", "Assassin"]);
@@ -137,7 +138,7 @@ const baseDefence = (s: GameState, p: Player): number => {
 };
 
 export interface Slot { label: string; options: { id: string; name: string }[] }
-export interface Prompt { label: string; slots: Slot[]; toggle?: string; second?: boolean }
+export interface Prompt { label: string; slots: Slot[]; toggle?: string; toggleOn?: string; second?: boolean }
 const opts = (ps: Player[]) => ps.map((p) => ({ id: p.id, name: p.name }));
 
 /** What this player can choose tonight, or null. Candidate lists never reveal hidden roles. */
@@ -165,7 +166,9 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Foreman": return one("Attack a player");
     case "Bodyguard": return one("Guard a player", others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")));
     case "Rogue": return s.night > 1 && (p.bullets ?? 0) > 0 ? one("Shoot a player") : null;
-    case "Veteran": return (p.alerts ?? 0) > 0 ? { label: `Go on Alert (${p.alerts} left)`, slots: [], toggle: "Go on Alert" } : null;
+    case "Veteran": return (p.alerts ?? 0) > 0 ? { label: `Go on Alert (${p.alerts} left)`, slots: [], toggle: "Go on Alert", toggleOn: "On Alert tonight" } : null;
+    // Reveal is a Night action (Nik, 7 Nov), from Night 2, announced at dawn.
+    case "Mayor": case "Judge": return !p.revealed && s.night > 1 ? { label: `Reveal yourself as the ${p.ability}. The town hears it at dawn.`, slots: [], toggle: "Reveal at dawn", toggleOn: "Revealing at dawn" } : null;
     case "Priest": return !p.priestUsed && dead.length ? one("Raise a dead player (once per game)", dead) : null;
     case "Medium": return !p.mediumUsed && dead.length ? one("Channel a dead player (once per game)", dead) : null;
     case "Hunter": return fogNight(s.night) && p.hasTrap ? one("Set your trap on a player") : null;
@@ -189,7 +192,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Ashkeeper": return { label: "Snuff out a lantern, or choose yourself for Lights out", slots: [{ label: "Target", options: opts(all) }] };
     case "Butcher": return s.night > 1 ? one("Murder a player") : null;
     case "Assassin": { const c = s.players.filter((x) => x.id !== p.id); return { label: "Name the two contract targets", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
-    default: return null; // Judge, Mayor, Innkeeper, Archivist, Spy, Exterminator, Martyr, Outcast
+    default: return null; // Innkeeper, Archivist, Spy, Exterminator, Martyr, Outcast
   }
 }
 
@@ -503,6 +506,10 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, "Your recruit failed.");
     }
   }
+  // Reveals: a Held Mayor or Judge does not Reveal (their act was cancelled), nor does one who died tonight.
+  // They resolve before the Swindler, so a player who Reveals tonight can't be swindled tonight.
+  const revealedTonight: string[] = [];
+  for (const a of acts) if (!a.dead && a.alert && (a.ab === "Mayor" || a.ab === "Judge") && P(a.actor).alive && !P(a.actor).revealed) { P(a.actor).revealed = true; revealedTonight.push(a.actor); }
   for (const a of has("Swindler")) {
     P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
     if (!x.revealed && !y.revealed) { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`); }
@@ -513,6 +520,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     s.quietDays = 0;
   } else { msgs.push({ channel: "town", text: "Every lantern is still burning this morning." }); s.quietDays++; }
   for (const id of raised) msgs.push({ channel: "town", text: `${P(id).name}'s lantern has been relit.` });
+  for (const id of revealedTonight) msgs.push({ channel: "town", text: `${P(id).name} has Revealed: they are the ${P(id).role}.` });
   for (const p of s.players) if (p.shipped && p.alive) msgs.push({ channel: "town", text: `${p.name} has been sent away on a ship. They cannot vote or be voted for today.` });
   return msgs;
 }
@@ -693,11 +701,11 @@ export function cmdNight(s: GameState, id: string, a: Action, _now: number): voi
   s.actions[id] = { targets: a.targets, second: a.second };
   if (p.ability === "Kingpin" && byId(s, a.targets[0]).faction === "Cartel") s.commanded = a.targets[0];
 }
-export function cmdReveal(s: GameState, id: string): Msg[] {
-  const p = byId(s, id); notPaused(s); if (!p.alive || !["Mayor", "Judge"].includes(p.role) || p.revealed) throw new Error("You cannot Reveal.");
-  if (s.day === 1 || s.phase === "night" || s.phase === "over" || s.phase === "reveal") throw new Error("You cannot Reveal now.");
-  p.revealed = true; return [{ channel: "town", text: `${p.name} has Revealed: they are the ${p.role}.` }];
+/** Reveal moved to the Night (Nik, 7 Nov): the Mayor and Judge choose it in their night prompt. Kept so old clients get a clear answer. */
+export function cmdReveal(_s: GameState, _id: string): Msg[] {
+  throw new Error("Reveal is chosen at Night now.");
 }
+
 export function cmdCondemn(s: GameState, id: string, target: string, now: number, r: Rng): Msg[] {
   const p = byId(s, id), t = byId(s, target); notPaused(s);
   if (p.role !== "Judge" || !p.revealed || !p.alive || s.phase !== "vote" || s.condemned) throw new Error("You cannot Condemn now.");
@@ -743,7 +751,7 @@ export function privateView(s: GameState, id: string) {
     role: p.role, faction: p.faction, ability: p.ability, alive: p.alive, allies, prompt, action: s.actions[id] ?? null,
     commanded: s.commanded === id, myVote: s.votes[id] ?? null, myVerdict: s.verdicts[id] ?? null,
     canVote: s.phase === "vote" && p.alive && !p.shipped, canVerdict: s.phase === "verdict" && p.alive && !p.shipped && s.accused !== id,
-    canReveal: ["Mayor", "Judge"].includes(p.role) && !p.revealed && p.alive && s.day > 1 && !["night", "over", "reveal"].includes(s.phase),
+    canReveal: false, // Reveal is a Night action now; see nightPrompt
     canCondemn: p.role === "Judge" && !!p.revealed && p.alive && s.phase === "vote" && !s.condemned,
     channels: { town: canChat(s, id, "town"), faction: canChat(s, id, "faction"), dead: canChat(s, id, "dead") },
   };

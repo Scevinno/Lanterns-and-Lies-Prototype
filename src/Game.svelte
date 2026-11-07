@@ -140,7 +140,7 @@
       {#if view.prompt}
         <p>{view.prompt.label}</p>
         {#if view.prompt.toggle}
-          <button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? "On Alert tonight" : view.prompt.toggle}</button>
+          <button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? (view.prompt.toggleOn ?? "Chosen") : view.prompt.toggle}</button>
         {:else}
           {#each view.prompt.slots as slot, i}
             {#if view.prompt.slots.length > 1}<h3>{slot.label}</h3>{/if}

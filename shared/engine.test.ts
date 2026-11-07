@@ -290,8 +290,8 @@ describe("day flow", () => {
   it("a majority puts a player on trial at once", () => {
     const s = day(); for (const v of ["p0", "p1", "p3", "p5"]) cmdVote(s, v, "p2", T0); expect(s.phase).toBe("vote"); cmdVote(s, "p6", "p2", T0); expect(s.phase).toBe("defence"); expect(s.accused).toBe("p2");
   });
-  it("Revealed Mayor's vote counts as 3, and Reveal is blocked on Day 1", () => {
-    const s = day(); s.day = 1; expect(() => cmdReveal(s, "p0")).toThrow(); s.day = 2; cmdReveal(s, "p0"); cmdVote(s, "p0", "p2", T0); expect(voteTally(s).p2).toBe(3);
+  it("Revealed Mayor's vote counts as 3; Reveal is no longer a Day action", () => {
+    const s = day(); s.day = 2; expect(() => cmdReveal(s, "p0")).toThrow(); s.players[0].revealed = true; cmdVote(s, "p0", "p2", T0); expect(voteTally(s).p2).toBe(3);
   });
   it("guilty verdict executes and goes to Night", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p2"; s.endsAt = T0; for (const v of ["p0", "p1", "p3", "p4", "p5"]) cmdVerdict(s, v, "guilty"); cmdVerdict(s, "p6", "innocent"); forceAdvance(s, T0, seeded(1));
@@ -348,6 +348,25 @@ describe("win conditions and chat", () => {
     const { state: s } = createGame({ players, mode: "Syndicate", timers: PUBLIC_TIMERS, townChat: true }, seeded(5), T0);
     const v = JSON.stringify(publicView(s)); for (const p of s.players) expect(v).not.toContain(`"${p.role}"`);
     const kp = game(["Kingpin", "Forger", "Spy"], 1, "Cartel"); expect(privateView(kp, "p1").allies.length).toBe(0); expect(privateView(kp, "p0").allies[0].role).toBe("Forger");
+  });
+});
+
+describe("night Reveal and Hold-immune swappers", () => {
+  const reveal = (s: GameState, i: number) => { s.actions["p" + i] = { targets: [], alert: true }; };
+  it("the Mayor Reveals at dawn from Night 2, not on Night 1", () => {
+    expect(nightPrompt(game(["Mayor", "Mobster", "Spy"], 1), game(["Mayor", "Mobster", "Spy"], 1).players[0])).toBe(null);
+    const s = game(["Mayor", "Mobster", "Spy"], 2); expect(nightPrompt(s, s.players[0])!.toggle).toBeTruthy();
+    reveal(s, 0); const m = run(s); expect(s.players[0].revealed).toBe(true); expect(m.some((x) => x.channel === "town" && x.text.includes("Revealed"))).toBe(true);
+  });
+  it("a Held Mayor does not Reveal", () => {
+    const s = game(["Mayor", "Enforcer", "Spy"], 2); reveal(s, 0); act(s, 1, 0); run(s); expect(s.players[0].revealed).toBeFalsy();
+  });
+  it("a Mayor killed that night does not Reveal", () => {
+    const s = game(["Mayor", "Mobster", "Spy"], 2); reveal(s, 0); act(s, 1, 0); run(s); expect(dead(s, 0)).toBe(true); expect(s.players[0].revealed).toBeFalsy();
+  });
+  it("a Held Ferryman still swaps", () => {
+    const s = game(["Ferryman", "Locksmith", "Foreman", "Spy", "Detective"], 1, "Cartel"); act(s, 0, 3, 4); act(s, 1, 0); act(s, 2, 3); run(s);
+    expect(dead(s, 4)).toBe(true); expect(dead(s, 3)).toBe(false);
   });
 });
 
