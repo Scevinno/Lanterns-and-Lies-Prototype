@@ -154,7 +154,8 @@ export function nightPrompt(s: GameState, p: Player): Prompt | null {
 function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], all: Player[], dead: Player[], one: (l: string, c?: Player[]) => Prompt): Prompt | null {
   switch (ab) {
     case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Cartel"));
-    case "Swindler": return p.swindled ? null : { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(all.filter((x) => !x.revealed)) }, { label: "Second", options: opts(all.filter((x) => !x.revealed)) }] };
+    // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
+    case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter");
     case "Smuggler": case "Ferryman": return { label: "Swap two players", slots: [{ label: "First", options: opts(all) }, { label: "Second", options: opts(all) }] };
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
@@ -557,7 +558,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const swindledTonight = new Set<string>();
   for (const a of has("Swindler")) {
     P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
-    if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id)) { say(a.actor, "Your swap failed."); continue; }
+    if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Cartel" || y.faction === "Cartel") { say(a.actor, "Your swap failed."); continue; }
     swindledTonight.add(x.id); swindledTonight.add(y.id);
     { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.extTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.extTarget = q.extTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.extTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`);
       // Handed the Exterminator role while being its target: become the Martyr at once (Nik, 7 Nov).

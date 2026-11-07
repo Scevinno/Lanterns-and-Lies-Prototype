@@ -249,8 +249,8 @@ describe("Cartel", () => {
     const f = game(["Paymaster", "Mayor"], 1, "Cartel"); act(f, 0, 1); run(f); expect(f.players[1].bribed).toBeFalsy();
   });
   it("Swindler swaps roles, faction goes with the role, statuses stay", () => {
-    const s = game(["Swindler", "Spy", "Doctor"], 1, "Cartel"); s.players[1].debt = true; act(s, 0, 1, 0); run(s);
-    expect(s.players[1].role).toBe("Swindler"); expect(s.players[1].faction).toBe("Cartel"); expect(s.players[0].role).toBe("Spy"); expect(s.players[1].debt).toBe(true);
+    const s = game(["Swindler", "Spy", "Outcast", "Doctor"], 1, "Cartel"); s.players[1].debt = true; act(s, 0, 1, 2); run(s);
+    expect(s.players[1].role).toBe("Outcast"); expect(s.players[1].faction).toBe("Unbound"); expect(s.players[2].role).toBe("Spy"); expect(s.players[2].faction).toBe("Lanternkeepers"); expect(s.players[1].debt).toBe(true);
   });
   it("Coroner learns the dead role and uses its ability; the Priest raising them stops it", () => {
     const s = game(["Coroner", "Doctor", "Foreman", "Spy", "Priest"], 2, "Cartel"); s.players[2].alive = false; s.actions.p0 = { targets: ["p2", "p3"] }; const m = run(s); expect(said(m, 0)).toContain("Foreman"); expect(dead(s, 3)).toBe(true);
@@ -411,6 +411,14 @@ describe("Exterminator and the Swindler", () => {
   it("swapping the target's role keeps the same person as the target", () => {
     const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[0].extTarget = undefined; s.players[1].extTarget = "p2"; act(s, 0, 2, 3);
     run(s); expect(s.players[1].extTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
+  });
+});
+
+describe("Swindler reach", () => {
+  it("offers anyone outside the Cartel, plus the unknown Kingpin; a swap touching the Kingpin fails", () => {
+    const s = game(["Swindler", "Kingpin", "Foreman", "Spy", "Doctor"], 1, "Cartel"); const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);
+    expect(ids).toEqual(["p1", "p3", "p4"]);
+    act(s, 0, 1, 3); const m = run(s); expect(said(m, 0)).toContain("failed"); expect(s.players[1].role).toBe("Kingpin"); expect(s.players[3].role).toBe("Spy");
   });
 });
 
