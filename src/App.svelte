@@ -12,7 +12,7 @@
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
   // Sign-in
-  let mode: "in" | "up" = "in", email = "", password = "", name = "";
+  let mode: "in" | "up" = "in", email = "", password = "", name = "", showPw = false;
   try { email = localStorage.getItem("lnl-email") ?? ""; } catch { /* storage blocked */ }
   // Create
   let size = 8, evil = "Random", inPerson = true, showCreateRoster = false;
@@ -45,7 +45,11 @@
     try {
       if (mode === "up") await call("signup", { name, email, password });
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (!error) try { localStorage.setItem("lnl-email", email); } catch { /* storage blocked */ }
+      if (!error) {
+        try { localStorage.setItem("lnl-email", email); } catch { /* storage blocked */ }
+        // Ask the browser to save the login (Chrome and Android offer it here; Safari offers it from the form itself).
+        try { const PC = (window as any).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: name || email })); } catch { /* declined or unsupported */ }
+      }
       if (error) throw new Error(error.message === "Invalid login credentials" ? "That email and password don't match." : error.message);
     } catch (e) { fail(e); }
     busy = false;
@@ -119,10 +123,10 @@
   <main class="center narrow signin">
     <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
     <p class="dim tc">{pendingCode ? `Sign in to join party ${pendingCode}.` : "A town, a fog, and someone among you who isn't what they seem."}</p>
-    <form on:submit|preventDefault={submitAuth} class="stack">
+    <form on:submit|preventDefault={submitAuth} class="stack" method="post" action="#" autocomplete="on">
       {#if mode === "up"}<label>Your name<input bind:value={name} maxlength="20" autocomplete="nickname" required /></label>{/if}
-      <label>Email<input type="email" bind:value={email} autocomplete="email" required /></label>
-      <label>Password<input type="password" bind:value={password} autocomplete={mode === "up" ? "new-password" : "current-password"} minlength="8" required /></label>
+      <label>Email<input type="email" name="email" id="email" bind:value={email} autocomplete={mode === "up" ? "email" : "username"} required /></label>
+      <label>Password<span class="pw"><input type={showPw ? "text" : "password"} name="password" id="password" value={password} on:input={(e) => (password = e.currentTarget.value)} autocomplete={mode === "up" ? "new-password" : "current-password"} minlength="8" required /><button type="button" class="eye" aria-label={showPw ? "Hide password" : "Show password"} aria-pressed={showPw} on:click={() => (showPw = !showPw)}>{#if showPw}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.1A10 10 0 0112 5c5 0 9 4.5 10 7a12 12 0 01-3.2 4.2M6.1 6.1A12 12 0 002 12c1 2.5 5 7 10 7a10 10 0 004.1-.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>{:else}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M2 12c1-2.5 5-7 10-7s9 4.5 10 7c-1 2.5-5 7-10 7S3 14.5 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>{/if}</button></span></label>
       <button class="go" disabled={busy}>{mode === "up" ? "Create account" : "Sign in"}</button>
     </form>
     <button class="link" on:click={() => (mode = mode === "up" ? "in" : "up")}>{mode === "up" ? "I already have an account" : "Create an account"}</button>

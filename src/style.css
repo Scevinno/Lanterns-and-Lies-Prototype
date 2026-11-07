@@ -122,3 +122,8 @@ main.signin { max-width:360px; padding-left:20px; padding-right:20px; }
 .l-split .panel { flex:1 1 50%; } .l-split .chat { flex:1 1 50%; }
 .chatpeek { min-height:40px; width:100%; background:rgba(20,22,28,.85); font-size:14px; }
 .who summary { min-height:36px; padding:6px 2px; color:var(--text); }
+
+/* Password field with a show/hide eye */
+.pw { position:relative; display:block; } .pw input { padding-right:48px; }
+.eye { position:absolute; right:2px; top:6px; min-height:40px; width:44px; padding:0; border:none; background:transparent; color:var(--dim); display:flex; align-items:center; justify-content:center; }
+.eye:hover { color:var(--text); }
