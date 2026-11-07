@@ -28,7 +28,6 @@
   $: inPerson = !!pub?.inPerson;
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
-  $: if (showRole && inPerson && phase !== "reveal") { clearTimeout(hideTimer); hideTimer = setTimeout(() => (showRole = false), 6000); }
   // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
   $: layout = showRole ? "role" : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : phase === "over" ? "split" : "chat";
   $: if (layout !== "select") seen = visible.length;
@@ -117,8 +116,8 @@
     {:else if showRole && myRole}
       <RoleCard role={myRole} />
       {#if view.ability !== view.role}<p class="dim">You now have the ability of the {view.ability}.</p>{/if}
-      {#if view.allies.length}<h3>Your side</h3><ul class="plain">{#each view.allies as a}<li>{a.name}{#if a.role} <span class={FACTION_CLASS[view.faction]}>({a.role})</span>{/if}</li>{/each}</ul>{/if}
-      {#if phase !== "reveal"}<button class="ghost" on:click={() => (showRole = false)}>Back to the game</button>{/if}
+      {#if view.allies.length}<div class="side"><h3 class={FACTION_CLASS[view.faction]}>Your side</h3><ul class="plain">{#each view.allies as a}<li><b>{a.name}</b>{#if a.role}<span class={FACTION_CLASS[view.faction]}>{a.role}</span>{/if}</li>{/each}</ul></div>{/if}
+      {#if phase !== "reveal"}<button class="ghost backgame" on:click={() => (showRole = false)}>Back to the game</button>{/if}
     {:else if phase === "over"}
       <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
       <button class="go wide" on:click={onHome}>Home</button>
@@ -166,10 +165,10 @@
 
   {#if layout === "select"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
   <section class="chat">
-    {#if isEvil || isDead}
+    {#if (isEvil && phase === "night") || (isDead && !inPerson)}
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
-        {#if isEvil}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
+        {#if isEvil && phase === "night"}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
         {#if isDead && !inPerson}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
       </div>
     {/if}

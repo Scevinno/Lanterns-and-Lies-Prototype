@@ -22,7 +22,7 @@
   const setSetting = (v: boolean) => { inPerson = v; timers = { ...(v ? ROOM_TIMERS : ONLINE_TIMERS) }; };
   const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
   // Rosters screen
-  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Syndicate" | "Cartel" | "Random" = "Syndicate", typeFilter = "All";
+  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Syndicate" | "Cartel" = "Syndicate", typeFilter = "All";
   const TIMER_ROWS: [string, string][] = [["discussion", "Discussion"], ["vote", "Vote"], ["defence", "Defence"], ["verdict", "Verdict"], ["night", "Night"]];
   // Join, party, library
   let code = "", party: any = null, players: any[] = [], qr = "", copied = false, remaining = 0, chan: any = null, clock: any = null;
@@ -218,7 +218,7 @@
         <h3>Players</h3>
         <NumberStrip bind:value={rSize} valid={SIZES} />
         <h3>Evil side</h3>
-        <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button><button class:on={rMode === "Random"} on:click={() => (rMode = "Random")}>Random</button></div>
+        <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button></div>
         <Roster size={rSize} mode={rMode} />
       {/if}
     {/if}

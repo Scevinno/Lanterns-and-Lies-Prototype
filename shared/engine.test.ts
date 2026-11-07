@@ -284,6 +284,13 @@ describe("Syndicate succession and others", () => {
 
 describe("day flow", () => {
   const day = () => { const s = game(["Mayor", "Judge", "Mobster", "Godfather", "Martyr", "Doctor", "Spy", "Seer"], 2); s.phase = "vote"; s.day = 2; s.endsAt = T0 + 30_000; s.trial = 1; return s; };
+  it("no majority when the vote closes ends the Day", () => {
+    const s = day(); const m = forceAdvance(s, T0 + 30_000, seeded(1)); expect(s.phase).toBe("night"); expect(m.some((x) => x.text.includes("No majority. The Day ends."))).toBe(true);
+  });
+  it("an innocent verdict leads to another trial, up to 3", () => {
+    const s = day(); s.phase = "verdict"; s.accused = "p6"; cmdVerdict(s, "p0", "innocent"); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("vote"); expect(s.trial).toBe(2);
+    const t = day(); t.trial = 3; t.phase = "verdict"; t.accused = "p6"; cmdVerdict(t, "p0", "innocent"); forceAdvance(t, T0, seeded(1)); expect(t.phase).toBe("night");
+  });
   it("votes are public: a chat line for each vote, change and withdrawal, and who voted for whom in the public view", () => {
     const s = day(); expect(cmdVote(s, "p0", "p2", T0)[0].text).toBe("N0 voted for N2."); expect(publicView(s).votes).toEqual({ p0: "p2" });
     expect(cmdVote(s, "p0", "p2", T0)).toEqual([]); expect(cmdVote(s, "p0", "p3", T0)[0].text).toBe("N0 changed their vote to N3."); expect(cmdVote(s, "p0", null, T0)[0].text).toBe("N0 withdrew their vote.");

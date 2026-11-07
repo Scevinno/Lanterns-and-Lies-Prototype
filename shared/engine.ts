@@ -204,7 +204,6 @@ function constableEvil(s: GameState, p: Player): boolean {
   if (a.faction === "Lanternkeepers") return false;
   if (IMMUNE_DETECT.has(a.role)) return false;
   if (a.role === "Martyr" || a.role === "Outcast") return false;
-  if (a.role === "Hollowman") return !fogNight(s.night);
   return true;
 }
 const detectiveType = (s: GameState, p: Player) => (p.snuffed ? "Killing" : p.framed ? "Deceptive" : roleDef(appearsRole(s, p).role).type);
@@ -669,8 +668,8 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       const lines: Msg[] = [];
       for (const p of voters(s).filter((x) => x.bot && !s.votes[x.id])) { botVote(s, p, r); if (s.votes[p.id]) lines.push({ channel: "town", text: `${p.name} voted for ${byId(s, s.votes[p.id]).name}.` }); }
       const m = tryTrial(s, now); if (m) return [...lines, ...m];
-      if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [...lines, { channel: "town", text: "No more trials today." }]); }
-      return [...lines, { channel: "town", text: "No majority." }, ...startVote(s, now)];
+      // No majority when the vote closes: the Day ends there (Nik, 7 Nov).
+      s.quietDays++; return afterExecutionOrDay(s, now, r, [...lines, { channel: "town", text: "No majority. The Day ends." }]);
     }
     case "defence": setPhase(s, "verdict", s.timers.verdict, now); return [{ channel: "town", text: `Decide ${byId(s, s.accused!).name}'s fate: guilty or innocent.` }];
     case "verdict": {
