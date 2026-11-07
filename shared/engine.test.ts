@@ -370,6 +370,34 @@ describe("night Reveal and Hold-immune swappers", () => {
   });
 });
 
+describe("7 Nov rulings", () => {
+  it("the Fence leads a Locksmith astray: the Hold lands on a neighbour, not the Fence", () => {
+    // The Locksmith aims at the Fence; the Fence leads him astray, so the Hold falls on the Doctor (the Fence's neighbour) instead.
+    const s = game(["Fence", "Locksmith", "Doctor", "Spy", "Mobster"], 1); act(s, 0, 1); act(s, 1, 0); act(s, 2, 3); act(s, 4, 3);
+    const m = run(s); expect(said(m, 0)).not.toContain("Held"); expect(said(m, 2)).toContain("Held"); expect(dead(s, 3)).toBe(true);
+  });
+  it("a Fence held by a different Holder cannot lead astray", () => {
+    const s = game(["Fence", "Locksmith", "Doctor", "Spy", "Enforcer"], 1); act(s, 0, 1); act(s, 1, 3); act(s, 4, 0);
+    const m = run(s); expect(said(m, 0)).toContain("Held");
+  });
+  it("the Pawnbroker draws a Hold onto himself", () => {
+    const s = game(["Pawnbroker", "Locksmith", "Doctor", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); act(s, 2, 4); act(s, 3, 4);
+    const m = run(s); expect(said(m, 0)).toContain("Held"); expect(said(m, 2)).not.toContain("Held"); expect(dead(s, 4)).toBe(false);
+  });
+  it("a Held debtor cannot pay and dies", () => {
+    const s = game(["Loan Shark", "Doctor", "Locksmith", "Spy"], 2, "Cartel"); s.players[1].debt = true; s.players[1].collection = true;
+    s.actions.p1 = { targets: ["p0"] }; act(s, 2, 1); run(s); expect(dead(s, 1)).toBe(true);
+  });
+  it("a Mayor whose role is swindled tonight does not Reveal", () => {
+    const s = game(["Mayor", "Swindler", "Spy", "Doctor"], 2, "Cartel"); s.actions.p0 = { targets: [], alert: true }; act(s, 1, 0, 2);
+    run(s); expect(s.players[0].revealed).toBeFalsy(); expect(s.players[0].role).toBe("Spy");
+  });
+  it("the Swindler fails on a player who dies tonight", () => {
+    const s = game(["Swindler", "Mobster", "Spy", "Doctor", "Detective"], 1, "Cartel"); act(s, 0, 2, 3); act(s, 1, 2);
+    const m = run(s); expect(said(m, 0)).toContain("failed"); expect(s.players[3].role).toBe("Doctor");
+  });
+});
+
 describe("night order", () => {
   it("a Lanternkeeper investigator killed tonight gets no result", () => {
     const s = game(["Mobster", "Detective", "Spy"], 1); act(s, 0, 1); act(s, 1, 0);

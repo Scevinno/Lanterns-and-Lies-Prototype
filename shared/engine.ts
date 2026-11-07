@@ -276,6 +276,20 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const atks: Atk[] = []; const attack = (target: string, level: number, source: string, reason: string, visitor = true) => atks.push({ target, level, source, reason, visitor });
   for (const [a, sw] of selfRedirectSwapper) attack(sw, 1, a, "a redirected killer");
 
+  // The Fence and Pawnbroker work on a Holder's visit before the Hold lands (Nik, 7 Nov), unless a different Holder holds them.
+  // Fence: the Hold goes to a neighbour instead. Pawnbroker: the Hold lands on the Pawnbroker.
+  const neighbourOf = (cur: Player, actor: string, pool: Player[]) => pool.filter((x) => x.id !== cur.id && x.id !== actor).sort((u, v) => ((u.seat - cur.seat + 99) % s.players.length) - ((v.seat - cur.seat + 99) % s.players.length))[0];
+  const holderActs = acts.filter((x) => HOLDERS.has(x.ab) && x.targets.length);
+  const heldByAnother = (id: string, except: string) => !IMMUNE_HOLD.has(P(id).role) && holderActs.some((h) => h.actor !== except && h.targets[0] === id);
+  for (const f of acts.filter((x) => x.ab === "Fence")) {
+    const h = holderActs.find((x) => x.actor === f.targets[0]); if (!h || heldByAnother(f.actor, h.actor)) continue;
+    const n = neighbourOf(P(h.targets[0]), h.actor, living); if (n) h.targets = [n.id];
+  }
+  for (const pb of acts.filter((x) => x.ab === "Pawnbroker")) {
+    const h = holderActs.find((x) => x.actor === pb.targets[0]); if (!h || heldByAnother(pb.actor, h.actor)) continue;
+    h.targets = [pb.actor];
+  }
+
   // Holds.
   for (const a of acts.filter((x) => HOLDERS.has(x.ab))) {
     const t = P(a.targets[0]);
@@ -285,7 +299,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     held.add(t.id);
   }
   const heldNotes = new Set<string>();
-  const cancelHeld = () => { for (const a of acts) if (!a.dead && held.has(a.actor) && a.ab !== "Pay" && a.ab !== "Hunter-build") { a.dead = true; heldNotes.add(a.actor); } };
+  // A Hold stops every visit, including paying a Debt (Nik, 7 Nov): a Held debtor cannot pay and dies.
+  const cancelHeld = () => { for (const a of acts) if (!a.dead && held.has(a.actor) && a.ab !== "Hunter-build") { a.dead = true; heldNotes.add(a.actor); } };
   cancelHeld();
   const qmHeld = new Set(acts.filter((a) => a.ab === "Quartermaster" && !a.dead).map((a) => a.targets[0]));
 
@@ -499,21 +514,26 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
     say(d.id, "The Priest has raised you from the dead.");
   }
+  const recruitedTonight = new Set<string>();
   for (const a of has("Kingpin")) {
     const me = P(a.actor); if (!me.alive) continue;
     if (!living.some((x) => x.faction === "Cartel" && x.id !== me.id && !deadTonight.includes(x.id)) && !me.recruited && !alive(s).some((x) => x.faction === "Cartel" && x.id !== me.id)) {
       me.recruited = true; const t = P(a.targets[0]); const d = roleDef(t.role);
-      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, "Your recruit failed.");
+      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), recruitedTonight.add(t.id), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, "Your recruit failed.");
     }
   }
-  // Reveals: a Held Mayor or Judge does not Reveal (their act was cancelled), nor does one who died tonight.
-  // They resolve before the Swindler, so a player who Reveals tonight can't be swindled tonight.
-  const revealedTonight: string[] = [];
-  for (const a of acts) if (!a.dead && a.alert && (a.ab === "Mayor" || a.ab === "Judge") && P(a.actor).alive && !P(a.actor).revealed) { P(a.actor).revealed = true; revealedTonight.push(a.actor); }
+  // Swindler (Nik, 7 Nov): fails on a Revealed player, on a player the Kingpin recruited tonight, and on a player who died tonight.
+  // It resolves before Reveals, so a Mayor or Judge whose role is swapped tonight does not Reveal.
+  const swindledTonight = new Set<string>();
   for (const a of has("Swindler")) {
     P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
-    if (!x.revealed && !y.revealed) { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`); }
+    if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id)) { say(a.actor, "Your swap failed."); continue; }
+    swindledTonight.add(x.id); swindledTonight.add(y.id);
+    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`); }
   }
+  // Reveals: not if Held (the act was cancelled), not if the role was swapped tonight, not if dead.
+  const revealedTonight: string[] = [];
+  for (const a of acts) if (!a.dead && a.alert && (a.ab === "Mayor" || a.ab === "Judge") && P(a.actor).alive && !P(a.actor).revealed && !swindledTonight.has(a.actor)) { P(a.actor).revealed = true; revealedTonight.push(a.actor); }
   succession(s, r, say);
   if (deadTonight.length) {
     for (const id of deadTonight.filter((x) => !P(x).alive)) msgs.push({ channel: "town", text: `${P(id).name}'s lantern went out in the night.` });
