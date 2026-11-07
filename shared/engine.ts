@@ -156,7 +156,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Swindler": return p.swindled ? null : { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(all.filter((x) => !x.revealed)) }, { label: "Second", options: opts(all.filter((x) => !x.revealed)) }] };
     case "Pawnbroker": return one("Draw a visitor to your counter");
     case "Smuggler": case "Ferryman": return { label: "Swap two players", slots: [{ label: "First", options: opts(all) }, { label: "Second", options: opts(all) }] };
-    case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
+    case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
     case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
     case "Quartermaster": return one("Hold a player below deck");
     case "Forger": return one("Forge a player's results");
@@ -518,17 +518,29 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const id of deadTonight) { const p = P(id); p.alive = false; p.diedDay = s.day; }
   if (deadTonight.some((id) => P(id).role === "Loan Shark")) for (const p of s.players) { p.debt = false; p.collection = false; }
   for (const p of s.players) if (p.ability === "Hunter" && !p.alive && s.trap?.hunter === p.id) s.trap = null;
+  // An Exterminator whose target dies in the Night becomes the Martyr (Nik, 7 Nov): they win if they are voted out themselves.
+  for (const p of alive(s)) if (p.role === "Exterminator" && p.extTarget && deadTonight.includes(p.extTarget) && !p.won) { setRole(p, "Martyr"); say(p.id, "Your target died in the night. You are now the Martyr: you win if you are voted out."); }
   for (const a of has("Medium")) {
     if (P(a.actor).alive === false) continue; const d = P(a.targets[0]); P(a.actor).mediumUsed = true;
-    const dd = roleDef(d.role);
-    if (dd.type === "Power" || dd.faction === "Unbound") say(a.actor, "Channelling failed.");
-    else { P(a.actor).ability = d.role; say(a.actor, `You now have the ability of the ${d.role}.`); }
+    // The Medium becomes the dead Lanternkeeper's role for the rest of the game, with fresh uses (Nik, 7 Nov).
+    // It fails on anyone who was not a Lanternkeeper, so the Medium can never turn evil, and on any Power role.
+    const dd = roleDef(d.role), m = P(a.actor);
+    if (d.faction !== "Lanternkeepers") say(a.actor, "Channelling failed: they were not a Lanternkeeper.");
+    else if (dd.type === "Power") say(a.actor, "Channelling failed: a Power role cannot be channelled.");
+    else {
+      setRole(m, d.role);
+      m.bullets = d.role === "Rogue" ? 1 : undefined; m.alerts = d.role === "Veteran" ? 2 : undefined; m.selfHeal = d.role === "Doctor" ? 1 : undefined;
+      m.priestUsed = false; m.mediumUsed = false; m.hasTrap = false; m.patrol = []; m.learned = [];
+      say(a.actor, `You are now the ${d.role}.`);
+    }
   }
   const raised: string[] = [];
   for (const a of has("Priest")) {
     if (!P(a.actor).alive) continue; P(a.actor).priestUsed = true; const d = P(a.targets[0]);
     if (deadTonight.includes(d.id)) continue;
     d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
+    // Raised players come back clean (Nik, 7 Nov): no effect from before their death carries over.
+    d.debt = false; d.collection = false; d.debtNotified = false; d.snuffed = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
     say(d.id, "The Priest has raised you from the dead.");
   }
   const recruitedTonight = new Set<string>();

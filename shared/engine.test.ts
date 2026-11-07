@@ -268,8 +268,8 @@ describe("Syndicate succession and others", () => {
   it("Priest raises the dead; Rogue returns with one bullet", () => {
     const s = game(["Priest", "Rogue", "Spy"], 2); s.players[1].alive = false; s.players[1].bullets = 0; act(s, 0, 1); run(s); expect(dead(s, 1)).toBe(false); expect(s.players[1].bullets).toBe(1);
   });
-  it("Medium channels; fails on Power and Unbound", () => {
-    const s = game(["Medium", "Doctor", "Spy"], 2); s.players[1].alive = false; act(s, 0, 1); run(s); expect(s.players[0].ability).toBe("Doctor"); expect(s.players[0].role).toBe("Medium");
+  it("Medium becomes the channelled role; fails on Power", () => {
+    const s = game(["Medium", "Doctor", "Spy"], 2); s.players[1].alive = false; act(s, 0, 1); run(s); expect(s.players[0].ability).toBe("Doctor"); expect(s.players[0].role).toBe("Doctor"); expect(s.players[0].selfHeal).toBe(1);
     const f = game(["Medium", "Mayor", "Spy"], 2); f.players[1].alive = false; act(f, 0, 1); run(f); expect(f.players[0].ability).toBe("Medium");
   });
   it("Assassin wins by naming both contract targets", () => {
@@ -388,6 +388,29 @@ describe("night Reveal and Hold-immune swappers", () => {
   it("a Held Ferryman still swaps", () => {
     const s = game(["Ferryman", "Locksmith", "Foreman", "Spy", "Detective"], 1, "Cartel"); act(s, 0, 3, 4); act(s, 1, 0); act(s, 2, 3); run(s);
     expect(dead(s, 4)).toBe(true); expect(dead(s, 3)).toBe(false);
+  });
+});
+
+describe("7 Nov rulings, part two", () => {
+  it("the Medium becomes a dead Lanternkeeper's role with a fresh start", () => {
+    const s = game(["Medium", "Rogue", "Mobster", "Spy"], 2); s.players[1].alive = false; s.players[1].bullets = 0; act(s, 0, 1);
+    const m = run(s); expect(s.players[0].role).toBe("Rogue"); expect(s.players[0].faction).toBe("Lanternkeepers"); expect(s.players[0].bullets).toBe(1); expect(said(m, 0)).toContain("You are now the Rogue");
+  });
+  it("the Medium cannot channel a non-Lanternkeeper, and is told", () => {
+    const s = game(["Medium", "Mobster", "Godfather", "Spy"], 2); s.players[1].alive = false; act(s, 0, 1);
+    const m = run(s); expect(s.players[0].role).toBe("Medium"); expect(said(m, 0)).toContain("not a Lanternkeeper");
+  });
+  it("the Kingpin is not offered the Swindler or the Foreman", () => {
+    const s = game(["Kingpin", "Swindler", "Foreman", "Forger", "Spy"], 1, "Cartel"); const names = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);
+    expect(names).toEqual(["p3"]);
+  });
+  it("an Exterminator whose target dies at night becomes the Martyr", () => {
+    const s = game(["Exterminator", "Doctor", "Mobster", "Spy"], 1); s.players[0].extTarget = "p1"; act(s, 2, 1);
+    run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].role).toBe("Martyr");
+  });
+  it("a raised player comes back clean", () => {
+    const s = game(["Priest", "Doctor", "Mobster", "Spy"], 2); const d = s.players[1]; d.alive = false; d.debt = true; d.snuffed = true; d.framed = true; act(s, 0, 1);
+    run(s); expect(d.alive).toBe(true); expect(d.debt || d.snuffed || d.framed).toBe(false);
   });
 });
 
