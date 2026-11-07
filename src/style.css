@@ -106,3 +106,17 @@ input[type=search] { -webkit-appearance:none; }
 html { background:var(--night); } body { background:transparent; } /* body stays clear so the fixed backdrop shows through */
 .home { justify-content:flex-start; padding-top:12vh; } .home .stack { margin-top:auto; padding-bottom:4vh; }
 .log { background:rgba(20,22,28,.82); }
+
+/* Sign-in: narrower than the other screens, with the tagline on the same width */
+main.signin { max-width:360px; padding-left:20px; padding-right:20px; }
+/* Library: grey card like the old app, faction colour on the picture's outline only */
+.tile { border:none !important; background:rgba(255,255,255,.08); padding:6px 6px 10px; }
+.tile img { border:2px solid var(--line); border-radius:8px; }
+/* Game layouts */
+.l-chat .panel { flex:0 0 auto; max-height:40%; }
+.l-chat .chat { flex:1 1 auto; }
+.l-select .panel, .l-role .panel { flex:1 1 auto; }
+.l-select .chat, .l-role .chat { display:none; }
+.l-split .panel { flex:1 1 50%; } .l-split .chat { flex:1 1 50%; }
+.chatpeek { min-height:40px; width:100%; background:rgba(20,22,28,.85); font-size:14px; }
+.who summary { min-height:36px; padding:6px 2px; color:var(--text); }

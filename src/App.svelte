@@ -13,6 +13,7 @@
   let roles: Role[] = [], pendingCode = "";
   // Sign-in
   let mode: "in" | "up" = "in", email = "", password = "", name = "";
+  try { email = localStorage.getItem("lnl-email") ?? ""; } catch { /* storage blocked */ }
   // Create
   let size = 8, evil = "Random", inPerson = true, showCreateRoster = false;
   // In a room, phones are only for roles, votes and night choices, so the longer options give people time to talk and move.
@@ -21,7 +22,7 @@
   const setSetting = (v: boolean) => { inPerson = v; timers = { ...(v ? ROOM_TIMERS : ONLINE_TIMERS) }; };
   const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
   // Rosters screen
-  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Syndicate" | "Cartel" = "Syndicate", typeFilter = "All";
+  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Syndicate" | "Cartel" | "Random" = "Syndicate", typeFilter = "All";
   const TIMER_ROWS: [string, string][] = [["discussion", "Discussion"], ["vote", "Vote"], ["defence", "Defence"], ["verdict", "Verdict"], ["night", "Night"]];
   // Join, party, library
   let code = "", party: any = null, players: any[] = [], qr = "", copied = false, remaining = 0, chan: any = null, clock: any = null;
@@ -44,6 +45,7 @@
     try {
       if (mode === "up") await call("signup", { name, email, password });
       const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (!error) try { localStorage.setItem("lnl-email", email); } catch { /* storage blocked */ }
       if (error) throw new Error(error.message === "Invalid login credentials" ? "That email and password don't match." : error.message);
     } catch (e) { fail(e); }
     busy = false;
@@ -114,7 +116,7 @@
 {#if !ready}
   <main class="center"><p class="dim">Lighting the lanterns...</p></main>
 {:else if !session}
-  <main class="center narrow">
+  <main class="center narrow signin">
     <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
     <p class="dim tc">{pendingCode ? `Sign in to join party ${pendingCode}.` : "A town, a fog, and someone among you who isn't what they seem."}</p>
     <form on:submit|preventDefault={submitAuth} class="stack">
@@ -186,8 +188,7 @@
     <div class="seg">{#each ["Syndicate", "Cartel", "Random"] as m}<button class:on={evil === m} on:click={() => (evil = m)}>{m}</button>{/each}</div>
     <button type="button" class="link" on:click={() => (showCreateRoster = !showCreateRoster)}>{showCreateRoster ? "Hide roster" : `See the roster for ${size} players`}</button>
     {#if showCreateRoster}
-      {#if evil === "Random"}<p class="dim small">Random deals the Syndicate or the Cartel, and nobody is told which. Both possible rosters are shown.</p>{/if}
-      {#each evil === "Random" ? ["Syndicate", "Cartel"] : [evil] as m}<h3 class="lamp">{m} game</h3><Roster size={size} mode={m === "Cartel" ? "Cartel" : "Syndicate"} />{/each}
+      <Roster size={size} mode={evil === "Cartel" ? "Cartel" : evil === "Syndicate" ? "Syndicate" : "Random"} />
     {/if}
     {#each TIMER_ROWS as [k, label]}
       <h3>{label}</h3>
@@ -207,13 +208,13 @@
         <div class="chips" role="group" aria-label="Faction">{#each ["All", "Lanternkeepers", "Syndicate", "Cartel", "Unbound"] as f}<button class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
         <div class="chips" role="group" aria-label="Type">{#each ["All", ...types] as t}<button class:on={typeFilter === t} on:click={() => (typeFilter = t)}>{t === "All" ? "All types" : t}</button>{/each}</div>
         <p class="dim small">{filtered.length} of {roles.length} roles</p>
-        <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile {FACTION_CLASS[r.faction]}-edge" on:click={() => { openRole = r; scrollTo(0, 0); }}><img src={import.meta.env.BASE_URL + r.image} alt="" width="280" height="280" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
+        <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile" on:click={() => { openRole = r; scrollTo(0, 0); }}><img class="{FACTION_CLASS[r.faction]}-edge" src={import.meta.env.BASE_URL + r.image} alt="" width="280" height="280" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
         {#if !filtered.length}<p class="dim tc">No roles match.</p>{/if}
       {:else}
         <h3>Players</h3>
         <NumberStrip bind:value={rSize} valid={SIZES} />
         <h3>Evil side</h3>
-        <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button></div>
+        <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button><button class:on={rMode === "Random"} on:click={() => (rMode = "Random")}>Random</button></div>
         <Roster size={rSize} mode={rMode} />
       {/if}
     {/if}
@@ -232,7 +233,6 @@
     <div class="stack">
       <button class="go wide" on:click={() => go("play")}>Play</button>
       <button class="wide" on:click={() => go("guide")}>Role guide</button>
-      <button class="wide" on:click={() => go("rosters")}>Rosters</button>
       <button class="wide" on:click={() => go("games")}>My games</button>
       <button class="wide" on:click={signOut}>Sign out</button>
     </div>

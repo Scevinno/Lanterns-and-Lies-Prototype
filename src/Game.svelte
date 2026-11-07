@@ -10,16 +10,15 @@
 
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
   let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
-  let showRoster = false, decoy = "", hideTimer: any = null;
+  let showRoster = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
   $: pub = party.public_state;
   $: phase = pub?.phase;
   $: me = view && pub?.players.find((p: any) => p.id === view.player_id);
   $: nameOf = (id: string) => pub?.players.find((p: any) => p.id === id)?.name ?? "";
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
-  $: votersFor = (id: string) => Object.entries(pub?.votes ?? {}).filter(([, t]) => t === id).map(([v]) => nameOf(v));
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
-  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase && pub.inPerson) try { navigator.vibrate?.(180); } catch { /* not supported */ } lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
+  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase && pub.inPerson) try { navigator.vibrate?.(180); } catch { /* not supported */ } lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
   $: if (view?.action && phase === "night" && !picks.length) { picks = [...(view.action.targets ?? [])]; second = view.action.second?.[0] ?? ""; }
   $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
   $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
@@ -30,6 +29,10 @@
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
   $: if (showRole && inPerson && phase !== "reveal") { clearTimeout(hideTimer); hideTimer = setTimeout(() => (showRole = false), 6000); }
+  // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
+  $: layout = showRole ? "role" : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : phase === "over" ? "split" : "chat";
+  $: if (layout !== "select") seen = visible.length;
+  $: unread = Math.max(0, visible.length - seen);
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
 
   const say = (e: unknown) => { err = (e as Error).message; setTimeout(() => (err = ""), 3500); };
@@ -97,7 +100,7 @@
   <main class="center"><p class="dim">Lighting the lanterns...</p></main>
 {:else}
 <div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}.webp)" aria-hidden="true"></div>
-<main class="game">
+<main class="game l-{layout}">
   <header class="bar">
     <span class="dim">{period}</span>
     <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>
@@ -109,7 +112,9 @@
   <h1 class="ptitle">{title(phase)}</h1>
 
   <section class="panel">
-    {#if showRole && myRole}
+    {#if chatOpen}
+      <button class="ghost wide" on:click={() => (chatOpen = false)}>Back to {phase === "night" ? "your choice" : phase === "verdict" ? "the verdict" : "voting"}</button>
+    {:else if showRole && myRole}
       <RoleCard role={myRole} />
       {#if view.ability !== view.role}<p class="dim">You now have the ability of the {view.ability}.</p>{/if}
       {#if view.allies.length}<h3>Your side</h3><ul class="plain">{#each view.allies as a}<li>{a.name}{#if a.role} <span class={FACTION_CLASS[view.faction]}>({a.role})</span>{/if}</li>{/each}</ul>{/if}
@@ -122,7 +127,7 @@
     {:else if phase === "vote"}
       {#if view.canVote}<p class="dim">Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed.</p>{:else}<p class="dim">You cannot vote today.</p>{/if}
       <ul class="plain picker">{#each living as p}
-        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped || p.id === view.player_id} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if p.revealedRole}<span class="dim tag">{p.revealedRole}</span>{/if}{#if p.shipped}<span class="dim tag">sent away</span>{/if}{#if votersFor(p.id).length}<br /><span class="dim small">{votersFor(p.id).join(", ")}</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
+        <li><button class:sel={view.myVote === p.id} disabled={busy || !view.canVote || p.shipped || p.id === view.player_id} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}><span>{p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if p.revealedRole}<span class="dim tag">{p.revealedRole}</span>{/if}{#if p.shipped}<span class="dim tag">sent away</span>{/if}</span><span class="count">{pub.tally[p.id] ?? 0}</span></button></li>
       {/each}</ul>
       {#if view.canCondemn}<details><summary>Condemn a player</summary><ul class="plain picker">{#each living as p}{#if p.id !== view.player_id}<li><button on:click={() => act("condemn", { target: p.id })}>{p.name}</button></li>{/if}{/each}</ul></details>{/if}
     {:else if phase === "defence"}
@@ -154,12 +159,13 @@
     {:else if phase === "dawn"}
       <p class="dim">The sun comes up over the river.</p>
     {:else if phase === "discussion"}
-      <ul class="plain roster small">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}</span><span class="dim">{#if p.revealedRole}{p.revealedRole}{:else if !p.alive}dead{:else if p.shipped}sent away{/if}</span></li>{/each}</ul>
+      <details class="who"><summary>Players ({living.length} alive)</summary><ul class="plain roster small">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}</span><span class="dim">{#if p.revealedRole}{p.revealedRole}{:else if !p.alive}dead{:else if p.shipped}sent away{/if}</span></li>{/each}</ul></details>
     {/if}
     {#if view.canReveal && !showRole}<button class="ghost" disabled={busy} on:click={() => act("reveal")}>Reveal yourself as the {view.role}</button>{/if}
   </section>
 
-  <section class="chat" class:hidden={showRole}>
+  {#if layout === "select"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
+  <section class="chat">
     {#if isEvil || isDead}
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
@@ -191,14 +197,8 @@
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Roster">
       <div class="sheet scroll">
         <h2>Roster</h2>
-        {#if pub.setup === "Random"}
-          <p class="dim small">{pub.size} players. The evil side is Random: the Syndicate or the Cartel, and nobody is told which.</p>
-          <h3 class="lamp">If the Syndicate</h3><Roster size={pub.size} mode="Syndicate" />
-          <h3 class="lamp">If the Cartel</h3><Roster size={pub.size} mode="Cartel" />
-        {:else}
-          <p class="dim small">{pub.size} players, {pub.setup} game.</p>
-          <Roster size={pub.size} mode={pub.setup} />
-        {/if}
+        <p class="dim small">{pub.size} players · evil side: {pub.setup}</p>
+        <Roster size={pub.size} mode={pub.setup} />
         <button class="wide" on:click={() => (showRoster = false)}>Close</button>
       </div>
     </div>

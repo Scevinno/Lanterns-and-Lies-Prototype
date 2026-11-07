@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 // Publishable values: safe in a web app, because the database's access rules decide what each player can read.
 export const SUPABASE_URL = "https://iwqowwucksvbdcarxykr.supabase.co";
 const PUBLISHABLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3cW93d3Vja3N2YmRjYXJ4eWtyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyNDA1ODIsImV4cCI6MjEwNzgxNjU4Mn0.DIJ4HmYqJXQAaAqGltqtKNEv-QP3uyEY0upvuTnPqBU";
-export const sb = createClient(SUPABASE_URL, PUBLISHABLE);
+// Stay signed in on this browser: the session is kept in local storage and refreshed in the background.
+export const sb = createClient(SUPABASE_URL, PUBLISHABLE, { auth: { persistSession: true, autoRefreshToken: true } });
 
 export async function call(action: string, body: Record<string, unknown> = {}) {
   const { data: { session } } = await sb.auth.getSession();
