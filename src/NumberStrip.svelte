@@ -7,15 +7,21 @@
   export let from = 3, to = 20;
   export let label = "Players";
   const nums = Array.from({ length: to - from + 1 }, (_, i) => from + i);
-  let strip: HTMLElement, settleTimer: any;
+  let strip: HTMLElement, settleTimer: any, autoUntil = 0;
 
+  // Scrolling we start ourselves (after a tap) must not be read as a swipe, or it can land on a neighbour.
   function centre(n: number, smooth = true) {
     const el = strip?.querySelector(`[data-n="${n}"]`) as HTMLElement | null;
-    if (el) strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2, behavior: smooth ? "smooth" : "auto" });
+    if (!el) return;
+    const left = el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2;
+    if (Math.abs(strip.scrollLeft - left) < 2) return;
+    autoUntil = Date.now() + 700; clearTimeout(settleTimer);
+    strip.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
   }
   function pick(n: number) { if (!valid.includes(n)) return; value = n; centre(n); }
   // After a swipe stops, take the nearest valid number to the middle.
   function onScroll() {
+    if (Date.now() < autoUntil) return;
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => {
       const mid = strip.scrollLeft + strip.clientWidth / 2; let best = value, dist = Infinity;
