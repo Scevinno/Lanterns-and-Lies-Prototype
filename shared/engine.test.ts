@@ -424,6 +424,25 @@ describe("No parity win (8 Nov)", () => {
   });
 });
 
+describe("Narrator feedback, round 2 (8 Nov)", () => {
+  it("a Rogue who kills a Lanternkeeper is told their regret comes next night", () => {
+    const s = game(["Rogue", "Spy", "Mobster", "Doctor"], 2); act(s, 0, 1); const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 0)).toContain("regret");
+    const e = game(["Rogue", "Spy", "Mobster", "Doctor"], 2); act(e, 0, 2); expect(said(run(e), 0)).not.toContain("regret");
+  });
+  it("a shipped player is told privately", () => {
+    const s = game(["Harbour Master", "Spy", "Doctor"], 1, "Cartel"); act(s, 0, 1); expect(said(run(s), 1)).toContain("sent away on a ship");
+  });
+  it("the Exterminator and Assassin hear at dawn while their targets live", () => {
+    const s = game(["Exterminator", "Assassin", "Spy", "Mobster", "Doctor"], 2); s.players[0].extTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
+    const m = run(s); expect(said(m, 0)).toContain("Your target still lives."); expect(said(m, 1)).toContain("Your targets still live.");
+    const k = game(["Assassin", "Spy", "Mobster", "Doctor"], 2); k.players[0].contract = ["Spy", "Mobster"]; act(k, 2, 1); expect(said(run(k), 0)).toContain("One of your targets still lives.");
+  });
+  it("the Hunter hears the trap is ready on the night it can be set", () => {
+    const s = game(["Hunter", "Spy", "Mobster", "Doctor"], 1); s.phase = "dusk"; s.day = 1; s.endsAt = T0; s.players[0].hasTrap = true;
+    const m = forceAdvance(s, T0, seeded(1)); expect(s.night).toBe(2); expect(said(m, 0)).toContain("trap is ready");
+  });
+});
+
 describe("Narrator feedback (8 Nov)", () => {
   it("the Priest fails on a dead evil player: no second Godfather", () => {
     const s = game(["Priest", "Godfather", "Mobster", "Spy", "Doctor"], 2); s.players[1].alive = false; act(s, 0, 1);

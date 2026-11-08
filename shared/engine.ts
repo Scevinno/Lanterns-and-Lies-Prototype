@@ -437,7 +437,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       if (a.primary) { failedAttackers.add(a.source); if (hitOrderedBy && a.reason === "the Syndicate") failedAttackers.add(hitOrderedBy); }
     }
     if (a.reason === "the Butcher" && dying.has(a.target)) P(a.source).streak = (P(a.source).streak ?? 0) + 1;
-    if (a.reason === "the Rogue" && dying.has(a.target) && P(a.target).faction === "Lanternkeepers") P(a.source).guilt = true;
+    if (a.reason === "the Rogue" && dying.has(a.target) && P(a.target).faction === "Lanternkeepers") { P(a.source).guilt = true; say(a.source, "You killed a Lanternkeeper. Next night, your regret will take your life."); }
   }
   for (const v of veterans) { const n = (vetVisited.get(v.actor) ?? []).filter((u) => dying.has(u)).length; say(v.actor, `Your Alert killed ${n} visitor${n === 1 ? "" : "s"}.`); }
   for (const id of attackedIds) say(id, dying.has(id) ? ATTACKED_DIED : ATTACKED_SURVIVED);
@@ -597,7 +597,13 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   } else { msgs.push({ channel: "town", text: "Every lantern is still burning this morning." }); s.quietDays++; }
   for (const id of raised) msgs.push({ channel: "town", text: `${P(id).name}'s lantern has been relit.` });
   for (const id of revealedTonight) msgs.push({ channel: "town", text: `${P(id).name} has Revealed: they are the ${P(id).role}.` });
-  for (const p of s.players) if (p.shipped && p.alive) msgs.push({ channel: "town", text: `${p.name} has been sent away on a ship. They cannot vote or be voted for today.` });
+  for (const p of s.players) if (p.shipped && p.alive) { msgs.push({ channel: "town", text: `${p.name} has been sent away on a ship. They cannot vote or be voted for today.` }); say(p.id, "You have been sent away on a ship for the Day. You cannot vote or be voted for."); }
+  // Dawn reminders (Nik, 8 Nov): the Exterminator and the Assassin hear while their target(s) still live.
+  for (const p of alive(s)) {
+    if (p.won) continue;
+    if (p.role === "Exterminator" && p.extTarget && P(p.extTarget).alive) say(p.id, "Your target still lives.");
+    if (p.role === "Assassin" && p.contract) { const n = p.contract.filter((c) => alive(s).some((x) => x.role === c && x.id !== p.id)).length; if (n === 2) say(p.id, "Your targets still live."); else if (n === 1) say(p.id, "One of your targets still lives."); }
+  }
   return msgs;
 }
 function setRole(p: Player, role: string) { const d = roleDef(role); p.role = role; p.ability = role; p.faction = d.faction; }
@@ -656,6 +662,7 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   s.night++; s.actions = {}; s.votes = {}; s.verdicts = {}; s.accused = null; s.trial = 0; s.commanded = null; s.condemned = false;
   const msgs: Msg[] = [];
   for (const p of s.players) { p.framed = false; p.disguisedAs = undefined; p.bribed = false; p.bribedBy = undefined; p.shipped = false; }
+  for (const p of alive(s)) if (p.ability === "Hunter" && p.hasTrap && fogNight(s.night)) msgs.push({ channel: "private", to: p.id, text: "Your trap is ready. You can set it tonight." });
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
   setPhase(s, "night", s.timers.night, now);
