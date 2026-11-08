@@ -448,8 +448,19 @@ describe("Narrator feedback (8 Nov)", () => {
     const s = game(["Godfather", "Mobster", "Butcher", "Spy"], 2); act(s, 0, 2); const m = run(s);
     expect(dead(s, 2)).toBe(false); expect(said(m, 0)).toContain("failed"); expect(said(m, 1)).toContain("failed"); expect(said(m, 2)).toContain("survived");
   });
-  it("a Hold on a Hold-immune player fails", () => {
-    const s = game(["Locksmith", "Enforcer", "Spy"], 1); act(s, 0, 1); expect(said(run(s), 0)).toContain("failed");
+  it("a Hold on a Hold-immune player fails, and they hear someone tried", () => {
+    const s = game(["Locksmith", "Enforcer", "Spy"], 1); act(s, 0, 1); const m = run(s); expect(said(m, 0)).toContain("failed"); expect(said(m, 1)).toContain("tried to Hold you");
+  });
+  it("paying the Loan Shark is confirmed", () => {
+    const s = game(["Loan Shark", "Spy", "Doctor"], 2, "Cartel"); s.players[1].debt = true; s.players[1].collection = true; act(s, 1, 0);
+    const m = run(s); expect(said(m, 1)).toContain("You paid your Debt"); expect(dead(s, 1)).toBe(false);
+  });
+  it("the Kingpin's command is told to the member at once, and so is its withdrawal", () => {
+    const s = game(["Kingpin", "Forger", "Paymaster", "Spy"], 1, "Cartel");
+    const a = cmdNight(s, "p0", { targets: ["p1"] }, T0); expect(a.find((x) => x.to === "p1")?.text).toContain("commands you");
+    const b = cmdNight(s, "p0", { targets: ["p2"] }, T0); expect(b.find((x) => x.to === "p1")?.text).toContain("withdrawn"); expect(b.find((x) => x.to === "p2")?.text).toContain("commands you");
+    expect(cmdNight(s, "p0", { targets: ["p2"] }, T0)).toEqual([]);
+    const c = cmdNight(s, "p0", { targets: [] }, T0); expect(c.find((x) => x.to === "p2")?.text).toContain("withdrawn");
   });
   it("evil killers are not offered known allies; the hidden Kingpin stays on the list", () => {
     const s = game(["Foreman", "Kingpin", "Forger", "Spy", "Loan Shark", "Harbour Master"], 2, "Cartel");

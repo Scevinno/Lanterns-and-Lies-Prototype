@@ -307,7 +307,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const t = P(a.targets[0]);
     if (!P(t.id).alive) continue;
     if (t.ability === "Butcher" || (t.ability === "Hollowman" && !fogNight(s.night))) attack(a.actor, t.ability === "Butcher" ? 1 : 2, t.id, "an attack on a Holder");
-    if (IMMUNE_HOLD.has(t.role)) { say(a.actor, FAILED); continue; }
+    if (IMMUNE_HOLD.has(t.role)) { say(a.actor, FAILED); say(t.id, "Someone tried to Hold you tonight, but you are immune."); continue; }
     held.add(t.id);
   }
   const heldNotes = new Set<string>();
@@ -384,7 +384,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of has("Ashkeeper")) if (a.targets[0] !== a.actor) P(a.targets[0]).snuffed = true;
   for (const ash of living.filter((p) => p.ability === "Ashkeeper")) { const vs = allVisitorsOf(ash.id); for (const u of vs) P(u).snuffed = true; if (vs.length) say(ash.id, `Visitors tonight: ${vs.map((u) => P(u).name).join(", ")}.`); }
   const hasLS = (id: string) => has("Pay").some((a) => a.actor === id && P(a.targets[0]).role === "Loan Shark");
-  for (const a of has("Pay")) if (hasLS(a.actor)) paid.add(a.actor);
+  for (const a of has("Pay")) if (hasLS(a.actor)) { paid.add(a.actor); say(a.actor, "You paid your Debt."); }
   for (const a of has("Loan Shark")) { const t = P(a.targets[0]); if (t.faction !== "Cartel") t.debt = true; else say(a.actor, FAILED); }
   for (const ls of living.filter((p) => p.role === "Loan Shark")) for (const u of allVisitorsOf(ls.id)) { const v = P(u); if (!v.debt && !paid.has(u) && v.faction !== "Cartel") v.debt = true; }
   for (const a of has("Paymaster")) { const t = P(a.targets[0]); if (roleDef(t.role).type !== "Power") { t.bribed = true; t.bribedBy = a.actor; } else say(a.actor, FAILED); }
@@ -772,15 +772,25 @@ export function cmdVerdict(s: GameState, id: string, choice: "guilty" | "innocen
   const p = byId(s, id); notPaused(s); if (s.phase !== "verdict" || !p.alive || p.shipped || s.accused === id) throw new Error("You cannot judge now.");
   s.verdicts[id] = choice;
 }
-export function cmdNight(s: GameState, id: string, a: Action, _now: number): void {
+/** Returns any private lines it causes: the Kingpin's command is told to the member at once (Nik, 8 Nov), and so is its withdrawal. */
+export function cmdNight(s: GameState, id: string, a: Action, _now: number): Msg[] {
   const p = byId(s, id); notPaused(s); const pr = nightPrompt(s, p); if (!pr) throw new Error("You have nothing to do tonight.");
-  if (pr.toggle) { s.actions[id] = { targets: [], alert: !!a.alert }; return; }
-  if (a.targets.length === 0) { delete s.actions[id]; if (p.ability === "Kingpin") s.commanded = null; return; }
+  if (pr.toggle) { s.actions[id] = { targets: [], alert: !!a.alert }; return []; }
+  const was = s.commanded;
+  const told = (): Msg[] => {
+    if (p.ability !== "Kingpin" || s.commanded === was) return [];
+    const out: Msg[] = [];
+    if (was) out.push({ channel: "private", to: was, text: "The Kingpin has withdrawn his command." });
+    if (s.commanded) out.push({ channel: "private", to: s.commanded, text: "The Kingpin commands you tonight: choose a second target." });
+    return out;
+  };
+  if (a.targets.length === 0) { delete s.actions[id]; if (p.ability === "Kingpin") s.commanded = null; return told(); }
   if (a.targets.length !== pr.slots.length) throw new Error("Choose every target.");
   a.targets.forEach((t, i) => { if (!pr.slots[i].options.some((o) => o.id === t)) throw new Error("That target is not allowed."); });
   if (pr.slots.length === 2 && a.targets[0] === a.targets[1]) throw new Error("Choose two different players.");
   s.actions[id] = { targets: a.targets, second: a.second };
-  if (p.ability === "Kingpin" && byId(s, a.targets[0]).faction === "Cartel") s.commanded = a.targets[0];
+  if (p.ability === "Kingpin") s.commanded = byId(s, a.targets[0]).faction === "Cartel" ? a.targets[0] : null;
+  return told();
 }
 /** Reveal moved to the Night (Nik, 7 Nov): the Mayor and Judge choose it in their night prompt. Kept so old clients get a clear answer. */
 export function cmdReveal(_s: GameState, _id: string): Msg[] {

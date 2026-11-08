@@ -141,7 +141,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   },
   async vote(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdVote(s, me.id, b.target ?? null, Date.now())); return { ok: true }; },
   async verdict(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { cmdVerdict(s, me.id, b.choice === "guilty" ? "guilty" : "innocent"); return []; }); return { ok: true }; },
-  async night(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { cmdNight(s, me.id, { targets: Array.isArray(b.targets) ? b.targets : [], alert: !!b.alert, second: Array.isArray(b.second) ? b.second : undefined }, Date.now()); return []; }); return { ok: true }; },
+  async night(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { return cmdNight(s, me.id, { targets: Array.isArray(b.targets) ? b.targets : [], alert: !!b.alert, second: Array.isArray(b.second) ? b.second : undefined }, Date.now()); }); return { ok: true }; },
   async reveal(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdReveal(s, me.id)); return { ok: true }; },
   async pause(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdPause(s, me.id, Date.now())); return { ok: true }; },
   async resume(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdResume(s, me.id, Date.now())); return { ok: true }; },

@@ -15,6 +15,8 @@
   let rosterView: "roster" | "roles" = "roster", libF = "All", libT = "All", libSearch = "", libRole: Role | null = null;
   const closeRoster = () => { showRoster = false; rosterView = "roster"; libRole = null; };
   let showRoster = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
+  // Game over (Nik, 8 Nov): the players or the chat fill the screen, one at a time, with Home on both.
+  let overTab: "players" | "chat" = "players";
   $: pub = party.public_state;
   $: phase = pub?.phase;
   $: me = view && pub?.players.find((p: any) => p.id === view.player_id);
@@ -33,7 +35,7 @@
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
   // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
-  $: layout = showRole ? "role" : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : phase === "over" ? (visible.length ? "split" : "select") : "chat";
+  $: layout = showRole ? "role" : phase === "over" ? (overTab === "chat" ? "chat" : "select") : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : "chat";
   $: if (layout !== "select") seen = visible.length;
   $: unread = Math.max(0, visible.length - seen);
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
@@ -125,8 +127,13 @@
       {#if view.allies.length}<div class="side"><h3 class={FACTION_CLASS[view.faction]}>Your side</h3><ul class="plain">{#each view.allies as a}<li><b>{a.name}</b>{#if a.role}<span class={FACTION_CLASS[view.faction]}>{a.role}</span>{/if}</li>{/each}</ul></div>{/if}
       {#if phase !== "reveal"}<button class="ghost backgame" on:click={() => (showRole = false)}>Back to the game</button>{/if}
     {:else if phase === "over"}
-      <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
-      <button class="go wide" on:click={onHome}>Home</button>
+      {#if overTab === "players"}
+        <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
+      {/if}
+      <div class="pair">
+        {#if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
+        <button class="go" on:click={onHome}>Home</button>
+      </div>
     {:else if isDead}
       <p class="dim">Your lantern is out. {inPerson ? "Stay quiet and watch the town." : "You can read the town and talk with the dead."}</p>
     {:else if phase === "vote"}
