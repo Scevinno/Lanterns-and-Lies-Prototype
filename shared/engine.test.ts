@@ -291,11 +291,11 @@ describe("day flow", () => {
     cmdVote(s, "p0", "p2", T0); expect(voteTally(s).p2).toBe(2); expect(privateView(s, "p1").canVote).toBe(true);
   });
   it("no majority when the vote closes ends the Day", () => {
-    const s = day(); const m = forceAdvance(s, T0 + 30_000, seeded(1)); expect(s.phase).toBe("night"); expect(m.some((x) => x.text.includes("No majority. The Day ends."))).toBe(true);
+    const s = day(); const m = forceAdvance(s, T0 + 30_000, seeded(1)); expect(s.phase).toBe("dusk"); expect(m.some((x) => x.text.includes("No majority. The Day ends."))).toBe(true); forceAdvance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("night");
   });
   it("an innocent verdict leads to another trial, up to 3", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p6"; cmdVerdict(s, "p0", "innocent"); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("vote"); expect(s.trial).toBe(2);
-    const t = day(); t.trial = 3; t.phase = "verdict"; t.accused = "p6"; cmdVerdict(t, "p0", "innocent"); forceAdvance(t, T0, seeded(1)); expect(t.phase).toBe("night");
+    const t = day(); t.trial = 3; t.phase = "verdict"; t.accused = "p6"; cmdVerdict(t, "p0", "innocent"); forceAdvance(t, T0, seeded(1)); expect(t.phase).toBe("dusk");
   });
   it("votes are public: a chat line for each vote, change and withdrawal, and who voted for whom in the public view", () => {
     const s = day(); expect(cmdVote(s, "p0", "p2", T0)[0].text).toBe("N0 voted for N2."); expect(publicView(s).votes).toEqual({ p0: "p2" });
@@ -316,11 +316,11 @@ describe("day flow", () => {
   });
   it("guilty verdict executes and goes to Night", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p2"; s.endsAt = T0; for (const v of ["p0", "p1", "p3", "p4", "p5"]) cmdVerdict(s, v, "guilty"); cmdVerdict(s, "p6", "innocent"); forceAdvance(s, T0, seeded(1));
-    expect(dead(s, 2)).toBe(true); expect(s.phase).toBe("night");
+    expect(dead(s, 2)).toBe(true); expect(s.phase).toBe("dusk");
   });
   it("innocent goes back to voting, up to 3 trials, then Night", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p2"; cmdVerdict(s, "p0", "innocent"); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("vote"); expect(s.trial).toBe(2);
-    s.trial = 3; s.phase = "verdict"; s.accused = "p2"; forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("night");
+    s.trial = 3; s.phase = "verdict"; s.accused = "p2"; forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("dusk");
   });
   it("the accused cannot judge themselves", () => { const s = day(); s.phase = "verdict"; s.accused = "p2"; expect(() => cmdVerdict(s, "p2", "innocent")).toThrow(); });
   it("Martyr wins when voted out and is Revealed", () => {
@@ -343,15 +343,15 @@ describe("win conditions and chat", () => {
   });
   const endDay = (roles: string[], d: number, mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, d, mode); s.phase = "vote"; s.day = d; s.trial = 1; s.endsAt = T0; return s; };
   it("day cap: evil and an Unbound killer both alive at the end of Day 7 means evil only", () => {
-    const s = endDay(["Mobster", "Butcher", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]);
+    const s = endDay(["Mobster", "Butcher", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]);
   });
   it("quiet days alone no longer end the game", () => { const s = game(["Mobster", "Spy", "Doctor", "Seer"], 2); s.quietDays = 5; expect(checkWin(s)).toBe(false); });
   it("day cap: a living evil side wins at the end of Day 7, and not before", () => {
-    const six = endDay(["Mobster", "Spy", "Doctor", "Seer"], 6); forceAdvance(six, T0, seeded(1)); expect(six.phase).toBe("night");
+    const six = endDay(["Mobster", "Spy", "Doctor", "Seer"], 6); forceAdvance(six, T0, seeded(1)); expect(six.phase).toBe("dusk"); forceAdvance(six, six.endsAt, seeded(1)); expect(six.phase).toBe("night");
     const n7 = game(["Mobster", "Spy", "Doctor", "Seer"], 7); n7.endsAt = T0; forceAdvance(n7, T0, seeded(1)); expect(n7.phase).toBe("dawn");
-    const s = endDay(["Mobster", "Spy", "Doctor", "Seer"], 7); const m = forceAdvance(s, T0, seeded(1));
+    const s = endDay(["Mobster", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("dusk"); const m = forceAdvance(s, s.endsAt, seeded(1));
     expect(s.phase).toBe("over"); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]); expect(m.some((x) => x.text.includes("Seven days"))).toBe(true);
-    const c = endDay(["Foreman", "Spy", "Doctor", "Seer"], 7, "Cartel"); forceAdvance(c, T0, seeded(1)); expect(c.winner).toBe("The Cartel");
+    const c = endDay(["Foreman", "Spy", "Doctor", "Seer"], 7, "Cartel"); forceAdvance(c, T0, seeded(1)); forceAdvance(c, c.endsAt, seeded(1)); expect(c.winner).toBe("The Cartel");
   });
   it("the game opens with a 30-second reveal, then Night 1, then Day 1", () => {
     const players = Array.from({ length: 8 }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: false }));
@@ -367,7 +367,7 @@ describe("win conditions and chat", () => {
     const s = game(["Mobster", "Rogue", "Doctor"], 7); act(s, 1, 0); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Lanternkeepers");
   });
   it("day cap: with no evil left, an Unbound killer still alive means nobody wins", () => {
-    const s = endDay(["Butcher", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
+    const s = endDay(["Butcher", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
   });
   it("a Surviving Outcast wins alongside", () => { const s = game(["Outcast", "Spy"], 2); checkWin(s); expect(s.winners).toContain("p0"); });
   it("limits who can chat", () => {
@@ -411,6 +411,14 @@ describe("Exterminator and the Swindler", () => {
   it("swapping the target's role keeps the same person as the target", () => {
     const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[0].extTarget = undefined; s.players[1].extTarget = "p2"; act(s, 0, 2, 3);
     run(s); expect(s.players[1].extTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
+  });
+});
+
+describe("Dusk", () => {
+  it("lasts 15 seconds with town chat open, then Night", () => {
+    const s = game(["Mayor", "Judge", "Mobster", "Godfather", "Martyr", "Doctor", "Spy", "Seer"], 2); s.phase = "vote"; s.day = 2; s.trial = 1; s.endsAt = T0 + 30_000;
+    forceAdvance(s, T0 + 30_000, seeded(1)); expect(s.phase).toBe("dusk"); expect(s.endsAt).toBe(T0 + 30_000 + 15_000);
+    expect(canChat(s, "p0", "town")).toBe(true); expect(advance(s, s.endsAt - 1, seeded(1))).toEqual([]); advance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("night");
   });
 });
 

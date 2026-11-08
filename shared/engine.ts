@@ -2,14 +2,15 @@
 // Rules: "Lanterns and Lies roles.xlsx" and "Lanterns and Lies roster.md". Time only ever comes from `now`.
 import { ROLES, type Faction, type RoleDef } from "./roles.ts";
 
-export type Phase = "reveal" | "discussion" | "vote" | "defence" | "verdict" | "night" | "dawn" | "over";
+export type Phase = "reveal" | "discussion" | "vote" | "defence" | "verdict" | "dusk" | "night" | "dawn" | "over";
 export interface Timers { discussion: number; vote: number; defence: number; verdict: number; night: number }
 export const PUBLIC_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, verdict: 15, night: 60 };
 export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
   discussion: [240, 420, 600, 900], vote: [30, 60], defence: [30, 60, 120], verdict: [15, 30], night: [60, 120, 300],
 };
 // Night comes first (Nik, 7 Nov): reveal, Night 1, Day 1, Night 2, Day 2 ... Night 7, Day 7. The game is decided at the end of Day 7.
-export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, MAX_TRIALS = 3, MAX_DAYS = 7;
+// Dusk (Nik, 8 Nov): a 15-second close to every Day before Night, with town chat open online.
+export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, DUSK_SECONDS = 15, MAX_TRIALS = 3, MAX_DAYS = 7;
 
 export interface Player {
   id: string; name: string; seat: number; bot: boolean; alive: boolean;
@@ -651,7 +652,11 @@ function execute(s: GameState, p: Player, verb: string): Msg[] {
   const say = (to: string, text: string) => msgs.push({ channel: "private", to, text }); succession(s, mathRng, say);
   return msgs;
 }
-const afterExecutionOrDay = (s: GameState, now: number, r: Rng, msgs: Msg[]) => (checkWin(s) ? [...msgs, overMsg(s)] : s.day >= MAX_DAYS ? [...msgs, ...dayCap(s)] : [...msgs, ...startNight(s, now, r)]);
+const afterExecutionOrDay = (s: GameState, now: number, _r: Rng, msgs: Msg[]): Msg[] => {
+  if (checkWin(s)) return [...msgs, overMsg(s)];
+  setPhase(s, "dusk", DUSK_SECONDS, now);
+  return [...msgs, { channel: "town", text: "Dusk falls over Emberhollow. Night comes soon." }];
+};
 const overMsg = (s: GameState): Msg => ({ channel: "town", text: s.winner === "Nobody" ? "The town falls silent. Nobody wins." : `${s.winner} ${s.winner?.startsWith("The ") ? "win" : "wins"}.` });
 
 /** Moves the game on when its timer has run out. Safe to call repeatedly: it does nothing before endsAt. */
@@ -704,6 +709,7 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       if (checkWin(s)) return [...msgs, overMsg(s)];
       setPhase(s, "dawn", DAWN_SECONDS, now); return msgs;
     }
+    case "dusk": return s.day >= MAX_DAYS ? dayCap(s) : startNight(s, now, r);
     case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now);
       return [{ channel: "town", text: `Day ${s.day}.` }, ...(s.day === MAX_DAYS ? [{ channel: "town" as const, text: "This is the last day. If the evil side survives it, they win." }] : [])];
     default: return [];
@@ -776,7 +782,7 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
   if (channel === "town") {
     if (!s.townChat) return false;
     if (s.phase === "defence") return s.accused === id;
-    return s.phase === "discussion" || s.phase === "vote" || s.phase === "verdict";
+    return s.phase === "discussion" || s.phase === "vote" || s.phase === "verdict" || s.phase === "dusk";
   }
   // The Kingpin works alone: he never sees or uses his side's night chat (Nik, 7 Nov).
   if (channel === "faction") return s.phase === "night" && isEvil(p) && p.role !== "Kingpin";

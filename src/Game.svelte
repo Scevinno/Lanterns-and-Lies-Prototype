@@ -95,7 +95,7 @@
     if (picks.filter(Boolean).length === need && (need < 2 || picks[0] !== picks[1])) act("night", { targets: picks, second: second ? [second] : undefined });
   }
   function chooseSecond(id: string) { second = id; if (picks[0]) act("night", { targets: picks, second: [id] }); }
-  const title = (ph: string) => ({ reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
+  const title = (ph: string) => ({ reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dusk: "Dusk", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
   $: period = phase === "night" ? `Night ${pub?.night}` : phase === "over" ? "Game over" : phase === "reveal" ? "Night 1 is coming" : phase === "dawn" ? `Dawn ${pub?.night}` : `Day ${pub?.day}`;
 </script>
 
