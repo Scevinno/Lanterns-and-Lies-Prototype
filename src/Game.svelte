@@ -33,7 +33,7 @@
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
   // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
-  $: layout = showRole ? "role" : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : phase === "over" ? "split" : "chat";
+  $: layout = showRole ? "role" : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : phase === "over" ? (visible.length ? "split" : "select") : "chat";
   $: if (layout !== "select") seen = visible.length;
   $: unread = Math.max(0, visible.length - seen);
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
@@ -169,7 +169,7 @@
     {#if view.canReveal && !showRole}<button class="ghost" disabled={busy} on:click={() => act("reveal")}>Reveal yourself as the {view.role}</button>{/if}
   </section>
 
-  {#if layout === "select"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
+  {#if layout === "select" && phase !== "over"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
   <section class="chat">
     {#if (isEvil && phase === "night" && view.role !== "Kingpin") || (isDead && !inPerson)}
       <div class="tabs">
