@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, cmdCondemn, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -379,7 +379,7 @@ describe("win conditions and chat", () => {
   it("views do not leak hidden roles", () => {
     const players = Array.from({ length: 8 }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: false }));
     const { state: s } = createGame({ players, mode: "Syndicate", timers: PUBLIC_TIMERS, townChat: true }, seeded(5), T0);
-    const v = JSON.stringify(publicView(s)); for (const p of s.players) expect(v).not.toContain(`"${p.role}"`);
+    if (!SHOW_ALL_ROLES) { const v = JSON.stringify(publicView(s)); for (const p of s.players) expect(v).not.toContain(`"${p.role}"`); }
     const kp = game(["Kingpin", "Forger", "Spy"], 1, "Cartel"); expect(privateView(kp, "p1").allies.length).toBe(0); expect(privateView(kp, "p0").allies[0].role).toBe("Forger");
   });
 });
@@ -411,6 +411,15 @@ describe("Exterminator and the Swindler", () => {
   it("swapping the target's role keeps the same person as the target", () => {
     const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[0].extTarget = undefined; s.players[1].extTarget = "p2"; act(s, 0, 2, 3);
     run(s); expect(s.players[1].extTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
+  });
+});
+
+describe("Chaos roles hold off the evil parity win", () => {
+  it("evil matching everyone else wins only when no Unbound role is alive", () => {
+    const g = (roles: string[]) => { const s = game(roles, 2); checkWin(s); return s.winner; };
+    expect(g(["Mobster", "Godfather", "Spy", "Doctor"])).toBe("The Syndicate");
+    expect(g(["Mobster", "Godfather", "Spy", "Outcast"])).toBeNull();
+    expect(g(["Mobster", "Godfather", "Assassin", "Spy"])).toBeNull();
   });
 });
 

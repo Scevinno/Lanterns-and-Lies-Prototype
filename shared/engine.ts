@@ -9,6 +9,8 @@ export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
   discussion: [240, 420, 600, 900], vote: [30, 60], defence: [30, 60, 120], verdict: [15, 30], night: [60, 120, 300],
 };
 // Night comes first (Nik, 7 Nov): reveal, Night 1, Day 1, Night 2, Day 2 ... Night 7, Day 7. The game is decided at the end of Day 7.
+/** Testing only (Nik, 8 Nov): everyone sees every role during the game. Set to false before real play. */
+export const SHOW_ALL_ROLES = true;
 // Dusk (Nik, 8 Nov): a 15-second close to every Day before Night, with town chat open online.
 export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, DUSK_SECONDS = 15, MAX_TRIALS = 3, MAX_DAYS = 7;
 
@@ -612,7 +614,8 @@ export function checkWin(s: GameState): boolean {
   let w: string | null = null;
   if (!lv.length) w = "Nobody";
   else if (!ev.length && !uk.length) w = "The Lanternkeepers";
-  else if (ev.length && !uk.length && ev.length >= lv.length - ev.length) w = s.mode === "Syndicate" ? "The Syndicate" : "The Cartel";
+  // The evil side wins by matching everyone else alive, but not while any Unbound role (killer or Chaos) is alive (Nik, 8 Nov).
+  else if (ev.length && !lv.some((p) => p.faction === "Unbound") && ev.length >= lv.length - ev.length) w = s.mode === "Syndicate" ? "The Syndicate" : "The Cartel";
   else if (uk.length === 1 && lv.length === 1) w = uk[0].role; // An Unbound killer wins only by eliminating everyone (Nik, 6 Nov).
   if (!w) return false;
   finish(s, w); return true;
@@ -795,7 +798,7 @@ export function publicView(s: GameState) {
     phase: s.phase, phaseNo: s.phaseNo, day: s.day, night: s.night, endsAt: s.endsAt, accused: s.accused, trial: s.trial, maxTrials: MAX_TRIALS,
     needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
     townChat: s.townChat, setup: s.setup ?? s.mode, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
-    players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
+    players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: SHOW_ALL_ROLES || s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };
 }
 export function privateView(s: GameState, id: string) {
