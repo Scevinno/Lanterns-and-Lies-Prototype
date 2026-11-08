@@ -254,7 +254,8 @@ describe("Cartel", () => {
   });
   it("Coroner learns the dead role and uses its ability; the Priest raising them stops it", () => {
     const s = game(["Coroner", "Doctor", "Foreman", "Spy", "Priest"], 2, "Cartel"); s.players[2].alive = false; s.actions.p0 = { targets: ["p2", "p3"] }; const m = run(s); expect(said(m, 0)).toContain("Foreman"); expect(dead(s, 3)).toBe(true);
-    const q = game(["Coroner", "Doctor", "Foreman", "Spy", "Priest"], 2, "Cartel"); q.players[2].alive = false; q.actions.p0 = { targets: ["p2", "p3"] }; act(q, 4, 2); run(q); expect(dead(q, 3)).toBe(false); expect(dead(q, 2)).toBe(false);
+    const q = game(["Coroner", "Doctor", "Foreman", "Spy", "Priest"], 2, "Cartel"); q.players[2].alive = false; q.actions.p0 = { targets: ["p2", "p3"] }; act(q, 4, 2); const mq = run(q); expect(dead(q, 3)).toBe(true); expect(dead(q, 2)).toBe(true); expect(said(mq, 4)).toContain("failed");
+    const z = game(["Coroner", "Doctor", "Rogue", "Spy", "Priest"], 2, "Cartel"); z.players[2].alive = false; z.actions.p0 = { targets: ["p2", "p3"] }; act(z, 4, 2); const mz = run(z); expect(dead(z, 3)).toBe(false); expect(dead(z, 2)).toBe(false); expect(said(mz, 0)).toContain("failed");
   });
   it("Foreman succession: a random Cartel member, never the Kingpin", () => {
     const s = game(["Foreman", "Kingpin", "Forger", "Rogue"], 2, "Cartel"); act(s, 3, 0); run(s); expect(s.players[2].role).toBe("Foreman"); expect(s.players[1].role).toBe("Kingpin");
@@ -338,7 +339,7 @@ describe("day flow", () => {
 describe("win conditions and chat", () => {
   const w = (roles: string[], mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, 2, mode); return checkWin(s) ? s.winner : null; };
   it("declares the right winner", () => {
-    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBe("The Syndicate"); expect(w(["Foreman", "Spy"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher"])).toBe("Butcher");
+    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBeNull(); expect(w(["Mobster", "Godfather"])).toBe("The Syndicate"); expect(w(["Foreman", "Forger"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher"])).toBe("Butcher");
     expect(w(["Butcher", "Spy"])).toBeNull(); expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Butcher", "Spy", "Doctor"])).toBeNull();
   });
   const endDay = (roles: string[], d: number, mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, d, mode); s.phase = "vote"; s.day = d; s.trial = 1; s.endsAt = T0; return s; };
@@ -414,12 +415,47 @@ describe("Exterminator and the Swindler", () => {
   });
 });
 
-describe("Chaos roles hold off the evil parity win", () => {
-  it("evil matching everyone else wins only when no Unbound role is alive", () => {
+describe("No parity win (8 Nov)", () => {
+  it("evil wins only once every Lanternkeeper and Unbound killer is gone", () => {
     const g = (roles: string[]) => { const s = game(roles, 2); checkWin(s); return s.winner; };
-    expect(g(["Mobster", "Godfather", "Spy", "Doctor"])).toBe("The Syndicate");
-    expect(g(["Mobster", "Godfather", "Spy", "Outcast"])).toBeNull();
-    expect(g(["Mobster", "Godfather", "Assassin", "Spy"])).toBeNull();
+    expect(g(["Mobster", "Godfather", "Spy"])).toBeNull();
+    expect(g(["Mobster", "Godfather", "Butcher"])).toBeNull();
+    expect(g(["Mobster", "Godfather", "Outcast"])).toBe("The Syndicate");
+  });
+});
+
+describe("Narrator feedback (8 Nov)", () => {
+  it("the Priest fails on a dead evil player: no second Godfather", () => {
+    const s = game(["Priest", "Godfather", "Mobster", "Spy", "Doctor"], 2); s.players[1].alive = false; act(s, 0, 1);
+    const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 0)).toContain("failed"); expect(s.players[0].priestUsed).toBe(true);
+  });
+  it("Doctor and Bodyguard get the same protection line; the target hears only that they were attacked", () => {
+    const d = game(["Doctor", "Spy", "Mobster", "Seer"]); act(d, 0, 1); act(d, 2, 1); const md = run(d);
+    expect(dead(d, 1)).toBe(false); expect(said(md, 0)).toContain("You protected your target"); expect(said(md, 1)).toContain("attacked tonight, but you survived"); expect(said(md, 2)).toContain("failed");
+    const b = game(["Bodyguard", "Spy", "Mobster", "Seer"]); act(b, 0, 1); act(b, 2, 1); const mb = run(b);
+    expect(dead(b, 1)).toBe(false); expect(said(mb, 0)).toContain("You protected your target"); expect(said(mb, 1)).toContain("attacked tonight, but you survived"); expect(said(mb, 1)).not.toContain("protected");
+  });
+  it("a Warden copies the protection line", () => {
+    const s = game(["Doctor", "Spy", "Mobster", "Warden"]); act(s, 0, 1); act(s, 2, 1); act(s, 3, 0); expect(said(run(s), 3)).toContain("You protected your target");
+  });
+  it("no protection line when nobody attacked the target", () => {
+    const s = game(["Doctor", "Spy", "Mobster", "Seer"]); act(s, 0, 1); act(s, 2, 3); const m = run(s); expect(said(m, 0)).not.toContain("protected"); expect(said(m, 3)).toContain("Your lantern has gone out");
+  });
+  it("a Held killer attacks nobody, so nobody hears of an attack", () => {
+    const s = game(["Locksmith", "Spy", "Mobster", "Seer"]); act(s, 0, 2); act(s, 2, 1); const m = run(s); expect(said(m, 1)).not.toContain("attacked"); expect(dead(s, 1)).toBe(false);
+  });
+  it("an attack on stronger defence fails, and the Godfather who ordered it hears too", () => {
+    const s = game(["Godfather", "Mobster", "Butcher", "Spy"], 2); act(s, 0, 2); const m = run(s);
+    expect(dead(s, 2)).toBe(false); expect(said(m, 0)).toContain("failed"); expect(said(m, 1)).toContain("failed"); expect(said(m, 2)).toContain("survived");
+  });
+  it("a Hold on a Hold-immune player fails", () => {
+    const s = game(["Locksmith", "Enforcer", "Spy"], 1); act(s, 0, 1); expect(said(run(s), 0)).toContain("failed");
+  });
+  it("evil killers are not offered known allies; the hidden Kingpin stays on the list", () => {
+    const s = game(["Foreman", "Kingpin", "Forger", "Spy", "Loan Shark", "Harbour Master"], 2, "Cartel");
+    expect(nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id)).toEqual(["p1", "p3"]);
+    expect(nightPrompt(s, s.players[4])!.slots[0].options.map((o) => o.id)).toEqual(["p1", "p3"]);
+    expect(nightPrompt(s, s.players[5])!.slots[0].options.map((o) => o.id)).not.toContain("p1");
   });
 });
 
@@ -461,7 +497,7 @@ describe("7 Nov rulings, part two", () => {
   });
   it("the Medium cannot channel a non-Lanternkeeper, and is told", () => {
     const s = game(["Medium", "Mobster", "Godfather", "Spy"], 2); s.players[1].alive = false; act(s, 0, 1);
-    const m = run(s); expect(s.players[0].role).toBe("Medium"); expect(said(m, 0)).toContain("not a Lanternkeeper");
+    const m = run(s); expect(s.players[0].role).toBe("Medium"); expect(said(m, 0)).toContain("failed");
   });
   it("the Kingpin is not offered the Swindler or the Foreman", () => {
     const s = game(["Kingpin", "Swindler", "Foreman", "Forger", "Spy"], 1, "Cartel"); const names = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);

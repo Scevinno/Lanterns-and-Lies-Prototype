@@ -132,6 +132,12 @@ const NO_VISIT = new Set(["Innkeeper", "Archivist", "Spy", "Outcast", "Judge", "
 const NO_ASTRAY = new Set(["Seer", "Ferryman", "Assassin"]);
 const HOLDERS = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
 const NO_BORROW = new Set(["Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Exterminator", "Martyr", "Outcast"]);
+// Narrator feedback (Nik, 8 Nov). One failure line for every reason, so it never says why.
+// Doctor and Bodyguard get the same protection line, so a Warden copying it cannot tell them apart.
+export const FAILED = "Your ability failed tonight.";
+export const PROTECTED = "You protected your target from an attack tonight.";
+export const ATTACKED_SURVIVED = "You were attacked tonight, but you survived.";
+export const ATTACKED_DIED = "You were attacked tonight. Your lantern has gone out.";
 const baseDefence = (s: GameState, p: Player): number => {
   switch (p.role) {
     case "Godfather": case "Ashkeeper": case "Butcher": case "Exterminator": case "Assassin": case "Outcast": case "Harbour Master": return 1;
@@ -156,19 +162,20 @@ export function nightPrompt(s: GameState, p: Player): Prompt | null {
 }
 function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], all: Player[], dead: Player[], one: (l: string, c?: Player[]) => Prompt): Prompt | null {
   switch (ab) {
-    case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Cartel"));
+    // Evil roles are never offered their known allies (Nik, 8 Nov). The Kingpin is unknown to them, so he stays on the list.
+    case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
     // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
     case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter");
     case "Smuggler": case "Ferryman": return { label: "Swap two players", slots: [{ label: "First", options: opts(all) }, { label: "Second", options: opts(all) }] };
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
-    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
+    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
     case "Quartermaster": return one("Hold a player below deck");
     case "Forger": return one("Forge a player's results");
     case "Coroner": return dead.length ? { label: "Use a dead player's ability on a target", slots: [{ label: "Dead player", options: opts(dead) }, { label: "Target", options: opts(all) }] } : null;
     case "Paymaster": return one("Bribe a player");
     case "Notary": return one("Learn a player's exact role");
-    case "Foreman": return one("Attack a player");
+    case "Foreman": return one("Attack a player", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
     case "Bodyguard": return one("Guard a player", others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")));
     case "Rogue": return s.night > 1 && (p.bullets ?? 0) > 0 ? one("Shoot a player") : null;
     case "Veteran": return (p.alerts ?? 0) > 0 ? { label: `Go on Alert (${p.alerts} left)`, slots: [], toggle: "Go on Alert", toggleOn: "On Alert tonight" } : null;
@@ -241,11 +248,11 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (t.some((x, i) => !legal.slots[i].options.some((o) => o.id === x))) continue;
     if (legal.slots.length === 2 && t[0] === t[1]) continue;
     if (p.ability === "Coroner") {
-      const d = P(t[0]); const priestSame = living.some((q) => q.ability === "Priest" && s.actions[q.id]?.targets[0] === d.id);
+      const d = P(t[0]); const priestSame = d.faction === "Lanternkeepers" && living.some((q) => q.ability === "Priest" && s.actions[q.id]?.targets[0] === d.id);
       say(p.id, `${d.name} was the ${d.role}.`);
-      if (priestSame) { say(p.id, "The Priest raised that player, so you could not use them."); continue; }
+      if (priestSame) { say(p.id, FAILED); continue; }
       // The Coroner gives one living target, so only abilities that take exactly that can be borrowed.
-      if (NO_BORROW.has(d.ability)) { say(p.id, "That ability cannot be used this way."); continue; }
+      if (NO_BORROW.has(d.ability)) { say(p.id, FAILED); continue; }
       acts.push({ actor: p.id, ab: d.ability, targets: [t[1]], borrowed: true }); continue;
     }
     acts.push({ actor: p.id, ab: p.ability, targets: t });
@@ -260,7 +267,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const swaps: [string, string, string][] = []; const swapped = new Set<string>();
   for (const a of [...has("Ferryman"), ...has("Smuggler")]) {
     if (prelimHeld.has(a.actor) && !IMMUNE_HOLD.has(P(a.actor).role)) continue;
-    const [x, y] = a.targets; if (swapped.has(x) || swapped.has(y)) continue;
+    const [x, y] = a.targets; if (swapped.has(x) || swapped.has(y)) { say(a.actor, FAILED); continue; }
     swaps.push([x, y, a.actor]); swapped.add(x); swapped.add(y);
     say(x, "You were swapped tonight."); say(y, "You were swapped tonight.");
   }
@@ -276,8 +283,9 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   }
 
   // Attack queue, filled from here on.
-  type Atk = { target: string; level: number; source: string; reason: string; visitor: boolean };
-  const atks: Atk[] = []; const attack = (target: string, level: number, source: string, reason: string, visitor = true) => atks.push({ target, level, source, reason, visitor });
+  // primary: the target the attacker chose. Only a failed primary attack tells the attacker their ability failed.
+  type Atk = { target: string; level: number; source: string; reason: string; visitor: boolean; primary?: boolean };
+  const atks: Atk[] = []; const attack = (target: string, level: number, source: string, reason: string, visitor = true, primary = false) => atks.push({ target, level, source, reason, visitor, primary });
   for (const [a, sw] of selfRedirectSwapper) attack(sw, 1, a, "a redirected killer");
 
   // The Fence and Pawnbroker work on a Holder's visit before the Hold lands (Nik, 7 Nov), unless a different Holder holds them.
@@ -299,7 +307,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const t = P(a.targets[0]);
     if (!P(t.id).alive) continue;
     if (t.ability === "Butcher" || (t.ability === "Hollowman" && !fogNight(s.night))) attack(a.actor, t.ability === "Butcher" ? 1 : 2, t.id, "an attack on a Holder");
-    if (IMMUNE_HOLD.has(t.role)) continue;
+    if (IMMUNE_HOLD.has(t.role)) { say(a.actor, FAILED); continue; }
     held.add(t.id);
   }
   const heldNotes = new Set<string>();
@@ -318,6 +326,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   } else if (mob) { hits.push(mob); }
   for (const a of acts) if (a.borrowed && (a.ab === "Godfather" || a.ab === "Mobster")) hits.push(a);
   void gfP;
+  const hitOrderedBy = gf && gf.dead && !gf.borrowed ? gf.actor : null; // the Mobster carried out the Godfather's order
 
   // Redirects: Fence, then Pawnbroker. Holders' visits were already resolved above.
   for (const a of has("Fence")) {
@@ -360,10 +369,10 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const v of veterans) { const vs = allVisitorsOf(v.actor); vetVisited.set(v.actor, vs); for (const u of vs) { attack(u, 2, v.actor, "the Veteran", false); vetVictims.add(u); } }
   for (const a of has("Doctor")) {
     if (vetVictims.has(a.actor)) continue;
-    const t = a.targets[0]; healers.set(t, [...(healers.get(t) ?? []), a.actor]); addDef(t, 2);
+    const t = a.targets[0]; healers.set(t, [...(healers.get(t) ?? []), a.actor]);
     if (t === a.actor) P(a.actor).selfHeal = 0;
   }
-  const lethalVet = (id: string) => vetVictims.has(id) && Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0) < 2;
+  const lethalVet = (id: string) => vetVictims.has(id) && Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0, healers.has(id) ? 2 : 0) < 2;
   for (const a of acts) if (!a.dead && lethalVet(a.actor) && !["Ferryman", "Smuggler", "Hollowman"].includes(a.ab)) a.dead = true;
   for (const inn of living.filter((p) => p.ability === "Innkeeper" && !held.has(p.id))) for (const u of allVisitorsOf(inn.id)) addDef(u, 1);
   const guards = new Map<string, string[]>(); for (const a of has("Bodyguard")) guards.set(a.targets[0], [...(guards.get(a.targets[0]) ?? []), a.actor]);
@@ -376,27 +385,27 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const ash of living.filter((p) => p.ability === "Ashkeeper")) { const vs = allVisitorsOf(ash.id); for (const u of vs) P(u).snuffed = true; if (vs.length) say(ash.id, `Visitors tonight: ${vs.map((u) => P(u).name).join(", ")}.`); }
   const hasLS = (id: string) => has("Pay").some((a) => a.actor === id && P(a.targets[0]).role === "Loan Shark");
   for (const a of has("Pay")) if (hasLS(a.actor)) paid.add(a.actor);
-  for (const a of has("Loan Shark")) { const t = P(a.targets[0]); if (t.faction !== "Cartel") t.debt = true; }
+  for (const a of has("Loan Shark")) { const t = P(a.targets[0]); if (t.faction !== "Cartel") t.debt = true; else say(a.actor, FAILED); }
   for (const ls of living.filter((p) => p.role === "Loan Shark")) for (const u of allVisitorsOf(ls.id)) { const v = P(u); if (!v.debt && !paid.has(u) && v.faction !== "Cartel") v.debt = true; }
-  for (const a of has("Paymaster")) { const t = P(a.targets[0]); if (roleDef(t.role).type !== "Power") { t.bribed = true; t.bribedBy = a.actor; } }
+  for (const a of has("Paymaster")) { const t = P(a.targets[0]); if (roleDef(t.role).type !== "Power") { t.bribed = true; t.bribedBy = a.actor; } else say(a.actor, FAILED); }
   for (const a of has("Harbour Master")) {
     if (!fogNight(s.night)) { P(a.targets[0]).shipped = true; }
     else {
       const t = P(a.targets[0]);
       if (t.faction === "Cartel" && t.id !== a.actor) { for (const o of acts.filter((x) => x.actor === t.id && isVisit(x))) for (const v of visitTargets(o)) if (v !== t.id) attack(v, 1, t.id, "Guns"); }
-      else attack(t.id, 1, a.actor, "Guns");
+      else attack(t.id, 1, a.actor, "Guns", true, true);
     }
   }
 
   // Attacks.
-  for (const a of hits) if (!a.dead) attack(a.targets[0], 1, a.actor, a.ab === "Godfather" ? "the Godfather" : "the Syndicate");
-  for (const a of has("Foreman")) attack(a.targets[0], 1, a.actor, "the Foreman");
-  for (const a of has("Rogue")) { attack(a.targets[0], 1, a.actor, "the Rogue"); if (!a.borrowed) P(a.actor).bullets = 0; }
+  for (const a of hits) if (!a.dead) attack(a.targets[0], 1, a.actor, a.ab === "Godfather" ? "the Godfather" : "the Syndicate", true, true);
+  for (const a of has("Foreman")) attack(a.targets[0], 1, a.actor, "the Foreman", true, true);
+  for (const a of has("Rogue")) { attack(a.targets[0], 1, a.actor, "the Rogue", true, true); if (!a.borrowed) P(a.actor).bullets = 0; }
   for (const p of living) if (p.guilt) { attack(p.id, 3, p.id, "guilt", false); p.guilt = false; }
   const butchers = has("Butcher");
   for (const p of living.filter((q) => q.ability === "Butcher")) { if (!butchers.some((b) => b.actor === p.id)) p.streak = 0; }
-  for (const a of butchers) { const b = P(a.actor), t = a.targets[0]; attack(t, 1, a.actor, "the Butcher"); if ((b.streak ?? 0) >= 2) for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 1, a.actor, "the Butcher's Rampage"); }
-  for (const a of has("Hollowman")) { const t = a.targets[0]; attack(t, 2, a.actor, "the Hollowman"); for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 2, a.actor, "the Hollowman"); }
+  for (const a of butchers) { const b = P(a.actor), t = a.targets[0]; attack(t, 1, a.actor, "the Butcher", true, true); if ((b.streak ?? 0) >= 2) for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 1, a.actor, "the Butcher's Rampage"); }
+  for (const a of has("Hollowman")) { const t = a.targets[0]; attack(t, 2, a.actor, "the Hollowman", true, true); for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 2, a.actor, "the Hollowman"); }
   for (const a of has("Assassin")) {
     const me = P(a.actor), roles = a.targets.map((t) => P(t).role).sort(), want = [...(me.contract ?? [])].sort();
     if (me.contract && roles[0] === want[0] && roles[1] === want[1]) { for (const t of a.targets) if (P(t).alive) attack(t, 3, a.actor, "the Assassin", false); me.won = true; say(a.actor, "You found both targets. Your contract is complete."); }
@@ -408,28 +417,39 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   // Apply attacks, in order, with Bodyguards and the Doctor-Hollowman rule.
   const queue = [...atks]; const killers = new Map<string, string[]>(); const dying = new Set<string>(); const usedGuard = new Set<string>();
   const NOGUARD = new Set(["the Veteran", "an unpaid Debt", "Lights out", "the Assassin", "guilt", "a trap", "a Bodyguard"]);
-  const defenceOf = (id: string) => Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0);
+  const otherDefence = (id: string) => Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0);
+  const defenceOf = (id: string) => Math.max(otherDefence(id), healers.has(id) ? 2 : 0);
+  // Feedback (Nik, 8 Nov): who was attacked (not self-inflicted guilt or Debt), which protectors saved someone, which attacks failed.
+  const attackedIds = new Set<string>(), protectors = new Set<string>(), failedAttackers = new Set<string>();
   while (queue.length) {
     const a = queue.shift()!; if (!P(a.target).alive) continue;
-    if (a.reason === "the Hollowman" && (healers.get(a.target) ?? []).length) { for (const d of healers.get(a.target)!) { dying.add(d); killers.set(d, [...(killers.get(d) ?? []), a.source]); } continue; }
+    if (a.source !== a.target) attackedIds.add(a.target);
+    if (a.reason === "the Hollowman" && (healers.get(a.target) ?? []).length) { for (const d of healers.get(a.target)!) { dying.add(d); killers.set(d, [...(killers.get(d) ?? []), a.source]); protectors.add(d); } continue; }
     const gs = (guards.get(a.target) ?? []).filter((g) => !usedGuard.has(g));
     if (gs.length && !NOGUARD.has(a.reason) && a.visitor) {
-      const g = gs[0]; usedGuard.add(g);
+      const g = gs[0]; usedGuard.add(g); protectors.add(g);
       queue.push({ target: a.source, level: 2, source: g, reason: "a Bodyguard", visitor: false }, { target: g, level: 2, source: a.source, reason: "a Bodyguard", visitor: false });
-      say(a.target, "Someone protected you from an attack tonight."); continue;
+      continue;
     }
     if (a.level > defenceOf(a.target)) { dying.add(a.target); killers.set(a.target, [...(killers.get(a.target) ?? []), a.source]); }
-    else if (a.level > 0) say(a.target, "You were attacked tonight, but survived.");
+    else if (a.level > 0) {
+      if (a.level > otherDefence(a.target)) for (const d of healers.get(a.target) ?? []) protectors.add(d); // the heal made the difference
+      if (a.primary) { failedAttackers.add(a.source); if (hitOrderedBy && a.reason === "the Syndicate") failedAttackers.add(hitOrderedBy); }
+    }
     if (a.reason === "the Butcher" && dying.has(a.target)) P(a.source).streak = (P(a.source).streak ?? 0) + 1;
     if (a.reason === "the Rogue" && dying.has(a.target) && P(a.target).faction === "Lanternkeepers") P(a.source).guilt = true;
   }
   for (const v of veterans) { const n = (vetVisited.get(v.actor) ?? []).filter((u) => dying.has(u)).length; say(v.actor, `Your Alert killed ${n} visitor${n === 1 ? "" : "s"}.`); }
+  for (const id of attackedIds) say(id, dying.has(id) ? ATTACKED_DIED : ATTACKED_SURVIVED);
+  for (const id of failedAttackers) if (!dying.has(id)) say(id, FAILED);
 
   // Investigations. A false result is produced on a Fog Night while the Hollowman lives, and for a Forged investigator.
   const fog = fogNight(s.night) && living.some((p) => p.ability === "Hollowman" && !dying.has(p.id));
   const results: Result[] = [];
   const res = (to: string, kind: Result["kind"], value: Result["value"], pre: string, info = true) => results.push({ to, kind, value, pre, info });
   const names = (ids: string[]) => ids.map((x) => P(x).name);
+  // Protection lines go in as results, so a Warden watching a Doctor or a Bodyguard gets the same copy either way.
+  for (const id of protectors) res(id, "text", PROTECTED, "", false);
   for (const a of acts) {
     if (a.dead || !a.targets.length) continue; const t = P(a.targets[0]);
     switch (a.ab) {
@@ -530,8 +550,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     // The Medium becomes the dead Lanternkeeper's role for the rest of the game, with fresh uses (Nik, 7 Nov).
     // It fails on anyone who was not a Lanternkeeper, so the Medium can never turn evil, and on any Power role.
     const dd = roleDef(d.role), m = P(a.actor);
-    if (d.faction !== "Lanternkeepers") say(a.actor, "Channelling failed: they were not a Lanternkeeper.");
-    else if (dd.type === "Power") say(a.actor, "Channelling failed: a Power role cannot be channelled.");
+    if (d.faction !== "Lanternkeepers" || dd.type === "Power") say(a.actor, FAILED);
     else {
       setRole(m, d.role);
       m.bullets = d.role === "Rogue" ? 1 : undefined; m.alerts = d.role === "Veteran" ? 2 : undefined; m.selfHeal = d.role === "Doctor" ? 1 : undefined;
@@ -542,7 +561,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const raised: string[] = [];
   for (const a of has("Priest")) {
     if (!P(a.actor).alive) continue; P(a.actor).priestUsed = true; const d = P(a.targets[0]);
-    if (deadTonight.includes(d.id)) continue;
+    // The Priest fails on anyone who was not a Lanternkeeper (Nik, 8 Nov): a raised Godfather had made two Godfathers.
+    if (deadTonight.includes(d.id) || d.faction !== "Lanternkeepers") { say(a.actor, FAILED); continue; }
     d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
     // Raised players come back clean (Nik, 7 Nov): no effect from before their death carries over.
     d.debt = false; d.collection = false; d.debtNotified = false; d.snuffed = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
@@ -553,7 +573,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const me = P(a.actor); if (!me.alive) continue;
     if (!living.some((x) => x.faction === "Cartel" && x.id !== me.id && !deadTonight.includes(x.id)) && !me.recruited && !alive(s).some((x) => x.faction === "Cartel" && x.id !== me.id)) {
       me.recruited = true; const t = P(a.targets[0]); const d = roleDef(t.role);
-      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), recruitedTonight.add(t.id), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, "Your recruit failed.");
+      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), recruitedTonight.add(t.id), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, FAILED);
     }
   }
   // Swindler (Nik, 7 Nov): fails on a Revealed player, on a player the Kingpin recruited tonight, and on a player who died tonight.
@@ -561,7 +581,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const swindledTonight = new Set<string>();
   for (const a of has("Swindler")) {
     P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
-    if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Cartel" || y.faction === "Cartel") { say(a.actor, "Your swap failed."); continue; }
+    if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Cartel" || y.faction === "Cartel") { say(a.actor, FAILED); continue; }
     swindledTonight.add(x.id); swindledTonight.add(y.id);
     { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.extTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.extTarget = q.extTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.extTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`);
       // Handed the Exterminator role while being its target: become the Martyr at once (Nik, 7 Nov).
@@ -614,8 +634,8 @@ export function checkWin(s: GameState): boolean {
   let w: string | null = null;
   if (!lv.length) w = "Nobody";
   else if (!ev.length && !uk.length) w = "The Lanternkeepers";
-  // The evil side wins by matching everyone else alive, but not while any Unbound role (killer or Chaos) is alive (Nik, 8 Nov).
-  else if (ev.length && !lv.some((p) => p.faction === "Unbound") && ev.length >= lv.length - ev.length) w = s.mode === "Syndicate" ? "The Syndicate" : "The Cartel";
+  // No parity win (Nik, 8 Nov): the evil side wins only once every Lanternkeeper and every Unbound killer is gone.
+  else if (ev.length && !lk.length && !uk.length) w = s.mode === "Syndicate" ? "The Syndicate" : "The Cartel";
   else if (uk.length === 1 && lv.length === 1) w = uk[0].role; // An Unbound killer wins only by eliminating everyone (Nik, 6 Nov).
   if (!w) return false;
   finish(s, w); return true;
