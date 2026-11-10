@@ -131,7 +131,8 @@ const IMMUNE_DETECT = new Set(["Godfather", "Kingpin", "Loan Shark", "Harbour Ma
 const NO_VISIT = new Set(["Innkeeper", "Archivist", "Spy", "Outcast", "Judge", "Mayor", "Martyr", "Exterminator"]);
 const NO_ASTRAY = new Set(["Seer", "Ferryman", "Assassin"]);
 const HOLDERS = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
-const NO_BORROW = new Set(["Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Exterminator", "Martyr", "Outcast"]);
+// Loan Shark (Nik, 10 Nov): a Coroner borrowing a dead Loan Shark made a Debt nobody could pay.
+const NO_BORROW = new Set(["Loan Shark", "Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Exterminator", "Martyr", "Outcast"]);
 // Narrator feedback (Nik, 8 Nov). One failure line for every reason, so it never says why.
 // Doctor and Bodyguard get the same protection line, so a Warden copying it cannot tell them apart.
 export const FAILED = "Your ability failed tonight.";
@@ -668,6 +669,8 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   const msgs: Msg[] = [];
   for (const p of s.players) { p.framed = false; p.disguisedAs = undefined; p.bribed = false; p.bribedBy = undefined; p.shipped = false; }
   for (const p of alive(s)) if (p.ability === "Hunter" && p.hasTrap && fogNight(s.night)) msgs.push({ channel: "private", to: p.id, text: "Your trap is ready. You can set it tonight." });
+  // A Debt is owed only to a living Loan Shark: with none alive, every Debt is void (Nik, 10 Nov).
+  if (!alive(s).some((p) => p.role === "Loan Shark")) for (const p of s.players) { p.debt = false; p.collection = false; }
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
   setPhase(s, "night", s.timers.night, now);
