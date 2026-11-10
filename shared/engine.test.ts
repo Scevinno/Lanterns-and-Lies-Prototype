@@ -647,9 +647,10 @@ describe("Spy (Nik, 10 Nov)", () => {
 });
 
 describe("Debt without a living Loan Shark (Nik, 10 Nov)", () => {
-  it("a Coroner cannot borrow a dead Loan Shark", () => {
+  it("a Coroner can borrow a dead Loan Shark; the Debt is void at nightfall", () => {
     const s = game(["Coroner", "Loan Shark", "Oracle", "Doctor"], 2, "Cartel"); s.players[1].alive = false; act(s, 0, 1, 2);
-    const m = run(s); expect(said(m, 0)).toContain("Your ability failed tonight."); expect(s.players[2].debt).toBeFalsy();
+    const m = run(s); expect(said(m, 0)).toContain("N2: Oracle."); expect(said(m, 0)).not.toContain("failed"); expect(s.players[2].debt).toBe(true);
+    s.phase = "dusk"; s.endsAt = T0; const n = forceAdvance(s, T0, seeded(1)); expect(said(n, 2)).not.toContain("You owe"); expect(s.players[2].debt).toBe(false);
   });
   it("voids any Debt when Night falls and no Loan Shark lives", () => {
     const s = game(["Foreman", "Loan Shark", "Oracle", "Doctor"], 2, "Cartel"); s.players[1].alive = false; s.players[2].debt = true;

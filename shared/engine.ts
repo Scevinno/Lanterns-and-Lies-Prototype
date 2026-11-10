@@ -131,8 +131,8 @@ const IMMUNE_DETECT = new Set(["Godfather", "Kingpin", "Loan Shark", "Harbour Ma
 const NO_VISIT = new Set(["Innkeeper", "Archivist", "Spy", "Outcast", "Judge", "Mayor", "Martyr", "Exterminator"]);
 const NO_ASTRAY = new Set(["Seer", "Ferryman", "Assassin"]);
 const HOLDERS = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
-// Loan Shark (Nik, 10 Nov): a Coroner borrowing a dead Loan Shark made a Debt nobody could pay.
-const NO_BORROW = new Set(["Loan Shark", "Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Exterminator", "Martyr", "Outcast"]);
+// A Coroner may borrow a dead Loan Shark (Nik, 10 Nov); the Debt is void at nightfall, since no Loan Shark lives to collect it.
+const NO_BORROW = new Set(["Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Exterminator", "Martyr", "Outcast"]);
 // Narrator feedback (Nik, 8 Nov). One failure line for every reason, so it never says why.
 // Doctor and Bodyguard get the same protection line, so a Warden copying it cannot tell them apart.
 export const FAILED = "Your ability failed tonight.";
