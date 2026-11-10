@@ -133,6 +133,7 @@ main.signin { max-width:360px; padding-left:20px; padding-right:20px; }
 .side h3 { font-family:"Almendra",Georgia,serif; font-size:20px; margin:0 0 8px; }
 .side li { display:flex; justify-content:space-between; gap:10px; font-size:18px; padding:6px 0; border-bottom:1px solid var(--line); } .side li:last-child { border-bottom:none; }
 .side li span { font-family:"Alegreya SC",Georgia,serif; font-weight:700; }
+.overbar { flex:0 0 auto; margin-top:16px; padding:12px 0 calc(4px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); }
 .backgame { display:block; margin:24px auto 8px; min-width:200px; }
 
 /* Home: a bigger title; Sign out quieter than the rest */

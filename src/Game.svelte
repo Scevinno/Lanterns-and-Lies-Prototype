@@ -130,10 +130,6 @@
       {#if overTab === "players"}
         <ul class="plain roster">{#each pub.players as p}<li class:gone={!p.alive}><span>{p.name}{#if p.won}<b class="lamp won">won</b>{/if}</span><span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span></li>{/each}</ul>
       {/if}
-      <div class="pair">
-        {#if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
-        <button class="go" on:click={onHome}>Home</button>
-      </div>
     {:else if isDead}
       <p class="dim">Your lantern is out. {inPerson ? "Stay quiet and watch the town." : "You can read the town and talk with the dead."}</p>
     {:else if phase === "vote"}
@@ -194,6 +190,13 @@
       <form class="send" on:submit|preventDefault={send}><input bind:value={draft} maxlength="300" placeholder={tab === "town" ? "Type to the town" : tab === "dead" ? "Type to the dead" : "Type to your side"} aria-label="Message" /><button class="go" type="submit">Send</button></form>
     {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
   </section>
+  <!-- Game over (Nik, 10 Nov): Chat/Players and Home sit in their own bar at the bottom, spaced away from the list. -->
+  {#if phase === "over" && !showRole}
+    <div class="pair overbar">
+      {#if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
+      <button class="go" on:click={onHome}>Home</button>
+    </div>
+  {/if}
 
   {#if paused}
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Game paused">
