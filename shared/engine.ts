@@ -476,7 +476,12 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   }
   for (const ls of living.filter((p) => p.role === "Loan Shark")) for (const u of allVisitorsOf(ls.id)) res(ls.id, "role", P(u).role, `${P(u).name} visited you:`);
   for (const p of living) {
-    if (p.ability === "Spy" && !held.has(p.id)) res(p.id, "count", acts.filter((a) => isVisit(a) && isEvil(P(a.actor)) && !(P(a.actor).disguisedAs && P(P(a.actor).disguisedAs!).faction === "Lanternkeepers")).length, "Evil visits tonight:");
+    // Spy (Nik, 10 Nov): learns which players the evil side visited, not who visited them or how many visits.
+    // Each name once, in seat order, so the order gives nothing away. A Syndicate member Disguised as a Lanternkeeper is not seen.
+    if (p.ability === "Spy" && !held.has(p.id)) {
+      const ids = new Set(acts.filter((a) => isVisit(a) && isEvil(P(a.actor)) && !(P(a.actor).disguisedAs && P(P(a.actor).disguisedAs!).faction === "Lanternkeepers")).flatMap((a) => visitTargets(a).filter((t) => t !== a.actor)));
+      res(p.id, "names", names(s.players.filter((x) => ids.has(x.id)).map((x) => x.id)), "The evil side visited");
+    }
     if (p.ability === "Archivist" && !held.has(p.id)) {
       const roles = [...new Set(living.map((x) => x.role))].filter((x) => !(p.learned ?? []).includes(x) && x !== "Archivist");
       if (roles.length) { const c = pick(roles, r); p.learned = [...(p.learned ?? []), c]; const n = living.filter((x) => x.role === c).length; res(p.id, "role", c + (n > 1 ? ` (${n} alive)` : ""), "A living role:"); }

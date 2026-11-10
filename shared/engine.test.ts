@@ -200,8 +200,8 @@ describe("investigations", () => {
     const f = (a: string, b: string) => { const s = game(["Seer", a, b]); act(s, 0, 1, 2); return said(run(s), 0); };
     expect(f("Spy", "Outcast")).toContain("friends"); expect(f("Spy", "Butcher")).toContain("enemies"); expect(f("Spy", "Godfather")).toContain("friends"); expect(f("Mobster", "Fence")).toContain("friends");
   });
-  it("Spy counts evil visits; Archivist learns a new role each Night", () => {
-    const s = game(["Spy", "Foreman", "Doctor", "Archivist"], 1, "Cartel"); act(s, 1, 2); const m = run(s); expect(said(m, 0)).toContain("1"); expect(said(m, 3)).toContain("living role");
+  it("Spy sees who evil visited; Archivist learns a new role each Night", () => {
+    const s = game(["Spy", "Foreman", "Doctor", "Archivist"], 1, "Cartel"); act(s, 1, 2); const m = run(s); expect(said(m, 0)).toContain("The evil side visited: N2."); expect(said(m, 3)).toContain("living role");
   });
   it("Watchman sees visitors; Tracker sees the visit", () => {
     const s = game(["Watchman", "Tracker", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 3); act(s, 1, 2); act(s, 2, 3); const m = run(s); expect(said(m, 0)).toContain("N2"); expect(said(m, 1)).toContain("N3");
@@ -628,4 +628,20 @@ describe("full games", () => {
     console.log(winners);
     expect(unfinished).toBe(0);
   }, 180000);
+});
+
+describe("Spy (Nik, 10 Nov)", () => {
+  it("learns which players the evil side visited, not who or how many", () => {
+    const s = game(["Godfather", "Mobster", "Doctor", "Spy", "Detective"]); act(s, 0, 2); act(s, 4, 1);
+    const m = run(s); expect(said(m, 3)).toContain("The evil side visited: N2.");
+    expect(said(m, 3)).not.toContain("N1");
+  });
+  it("hears nobody on a night without evil visits", () => {
+    const s = game(["Godfather", "Doctor", "Spy", "Detective"]); act(s, 3, 1);
+    expect(said(run(s), 2)).toContain("The evil side visited: nobody.");
+  });
+  it("lists each visited player once, in seat order", () => {
+    const s = game(["Foreman", "Loan Shark", "Doctor", "Spy", "Detective", "Watchman"], 1, "Cartel"); act(s, 0, 5); act(s, 1, 2);
+    expect(said(run(s), 3)).toContain("The evil side visited: N2, N5.");
+  });
 });
