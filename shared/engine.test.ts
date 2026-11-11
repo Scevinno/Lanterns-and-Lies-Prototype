@@ -446,7 +446,7 @@ describe("Narrator feedback, round 2 (8 Nov)", () => {
 describe("Narrator feedback (8 Nov)", () => {
   it("the Priest fails on a dead evil player: no second Godfather", () => {
     const s = game(["Priest", "Godfather", "Mobster", "Spy", "Doctor"], 2); s.players[1].alive = false; act(s, 0, 1);
-    const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 0)).toContain("failed"); expect(s.players[0].priestUsed).toBe(true);
+    const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 0)).toContain("failed"); expect(s.players[0].priestUsed).toBeFalsy();
   });
   it("Doctor and Guardsman get the same protection line; the target hears only that they were attacked", () => {
     const d = game(["Doctor", "Spy", "Mobster", "Seer"]); act(d, 0, 1); act(d, 2, 1); const md = run(d);
@@ -668,5 +668,17 @@ describe("evil roles and their own side (Nik, 11 Nov)", () => {
   });
   it("the Tailor, Kingpin and Harbour Master Guns still choose their own side", () => {
     const s = game(["Tailor", "Mobster", "Doctor"], 2); s.phase = "night"; expect(nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id)).toContain("p1");
+  });
+});
+
+describe("failed once-per-game uses are kept (Nik, 11 Nov)", () => {
+  it("Kingpin, Swindler and Medium keep a use that failed; the Rogue's bullet is spent", () => {
+    const k = game(["Kingpin", "Mayor", "Spy"], 2, "Cartel"); act(k, 0, 1); run(k); expect(k.players[0].recruited).toBeFalsy(); expect(k.players[1].role).toBe("Mayor");
+    const w = game(["Swindler", "Spy", "Mayor", "Doctor"], 1, "Cartel"); w.players[2].revealed = true; act(w, 0, 1, 2); run(w); expect(w.players[0].swindled).toBeFalsy();
+    const m = game(["Medium", "Godfather", "Spy"], 2); m.players[1].alive = false; act(m, 0, 1); run(m); expect(m.players[0].mediumUsed).toBeFalsy(); expect(m.players[0].role).toBe("Medium");
+    const r = game(["Rogue", "Godfather", "Spy"], 2); act(r, 0, 1); run(r); expect(r.players[1].alive).toBe(true); expect(r.players[0].bullets).toBe(0);
+  });
+  it("the Hollowman has Basic Defence on Fog Nights", () => {
+    const s = game(["Hollowman", "Mobster", "Spy"], 2); act(s, 1, 0); run(s); expect(s.players[0].alive).toBe(true);
   });
 });

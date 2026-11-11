@@ -143,7 +143,7 @@ const baseDefence = (s: GameState, p: Player): number => {
   switch (p.role) {
     case "Godfather": case "Tinkerer": case "Butcher": case "Town Crier": case "Assassin": case "Outcast": case "Harbour Master": return 1;
     case "Kingpin": return alive(s).some((x) => x.faction === "Cartel" && x.id !== p.id) ? 2 : 0;
-    case "Hollowman": return fogNight(s.night) ? 0 : 2;
+    case "Hollowman": return fogNight(s.night) ? 1 : 2;   // Basic Defence on Fog Nights (Nik, 11 Nov)
     default: return 0;
   }
 };
@@ -557,7 +557,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   // A Town Crier whose target dies in the Night becomes the Martyr (Nik, 7 Nov): they win if they are voted out themselves.
   for (const p of alive(s)) if (p.role === "Town Crier" && p.crierTarget && deadTonight.includes(p.crierTarget) && !p.won) { setRole(p, "Martyr"); say(p.id, "Your target died in the night. You are now the Martyr: you win if you are voted out."); }
   for (const a of has("Medium")) {
-    if (P(a.actor).alive === false) continue; const d = P(a.targets[0]); P(a.actor).mediumUsed = true;
+    // A once-per-game use that fails is kept for another Night (Nik, 11 Nov); only the Rogue's bullet is spent either way.
+    if (P(a.actor).alive === false) continue; const d = P(a.targets[0]);
     // The Medium becomes the dead Lanternkeeper's role for the rest of the game, with fresh uses (Nik, 7 Nov).
     // It fails on anyone who was not a Lanternkeeper, so the Medium can never turn evil, and on any Power role.
     const dd = roleDef(d.role), m = P(a.actor);
@@ -571,10 +572,10 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   }
   const raised: string[] = [];
   for (const a of has("Priest")) {
-    if (!P(a.actor).alive) continue; P(a.actor).priestUsed = true; const d = P(a.targets[0]);
+    if (!P(a.actor).alive) continue; const d = P(a.targets[0]);
     // The Priest fails on anyone who was not a Lanternkeeper (Nik, 8 Nov): a raised Godfather had made two Godfathers.
     if (deadTonight.includes(d.id) || d.faction !== "Lanternkeepers") { say(a.actor, FAILED); continue; }
-    d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
+    P(a.actor).priestUsed = true; d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
     // Raised players come back clean (Nik, 7 Nov): no effect from before their death carries over.
     d.debt = false; d.collection = false; d.debtNotified = false; d.planted = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
     say(d.id, "The Priest has raised you from the dead.");
@@ -583,17 +584,17 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of has("Kingpin")) {
     const me = P(a.actor); if (!me.alive) continue;
     if (!living.some((x) => x.faction === "Cartel" && x.id !== me.id && !deadTonight.includes(x.id)) && !me.recruited && !alive(s).some((x) => x.faction === "Cartel" && x.id !== me.id)) {
-      me.recruited = true; const t = P(a.targets[0]); const d = roleDef(t.role);
-      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) setRole(t, "Foreman"), recruitedTonight.add(t.id), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, FAILED);
+      const t = P(a.targets[0]); const d = roleDef(t.role);
+      if (t.alive && d.type !== "Power" && !(d.faction === "Unbound" && d.type === "Killing")) me.recruited = true, setRole(t, "Foreman"), recruitedTonight.add(t.id), say(t.id, "You have been recruited. You are now the Foreman."); else say(a.actor, FAILED);
     }
   }
   // Swindler (Nik, 7 Nov): fails on a Revealed player, on a player the Kingpin recruited tonight, and on a player who died tonight.
   // It resolves before Reveals, so a Mayor or Judge whose role is swapped tonight does not Reveal.
   const swindledTonight = new Set<string>();
   for (const a of has("Swindler")) {
-    P(a.actor).swindled = true; const [x, y] = a.targets.map(P);
+    const [x, y] = a.targets.map(P);
     if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Cartel" || y.faction === "Cartel") { say(a.actor, FAILED); continue; }
-    swindledTonight.add(x.id); swindledTonight.add(y.id);
+    P(a.actor).swindled = true; swindledTonight.add(x.id); swindledTonight.add(y.id);
     { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.crierTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.crierTarget = q.crierTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.crierTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`);
       // Handed the Town Crier role while being its target: become the Martyr at once (Nik, 7 Nov).
       for (const z of [x, y]) if (z.role === "Town Crier" && z.crierTarget === z.id) { setRole(z, "Martyr"); say(z.id, "You are your own target. You are now the Martyr: you win if you are voted out."); } }
