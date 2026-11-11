@@ -40,7 +40,7 @@ describe("dealing", () => {
   });
   it("matches the Cartel table", () => {
     const r = seeded(2); const cnt = (s: number) => dealDeck(s, "Cartel", r).filter((n) => roleDef(n).faction === "Cartel").length;
-    expect([8, 9, 10, 11, 12, 13, 14, 15].map(cnt)).toEqual([2, 2, 3, 3, 3, 3, 3, 4]);
+    expect([8, 9, 10, 11, 12, 13, 14, 15].map(cnt)).toEqual([2, 2, 3, 3, 3, 4, 4, 4]);
   });
 });
 
@@ -694,5 +694,14 @@ describe("11 Nov card batch (Nik)", () => {
   it("the Kingpin cannot write in the Cartel chat", () => {
     const s = game(["Kingpin", "Notary", "Doctor"], 1, "Cartel"); s.phase = "night";
     expect(canChat(s, "p0", "faction")).toBe(false); expect(canChat(s, "p1", "faction")).toBe(true);
+  });
+});
+
+describe("roster: the town grows the same way in both modes (Nik, 11 Nov)", () => {
+  it("Lanternkeeper counts match between Syndicate and Cartel and never drop", () => {
+    const lk = (n: number, m: "Syndicate" | "Cartel") => rosterFor(n, m).filter((x) => x.faction === "Lanternkeepers").reduce((a, x) => a + x.count, 0);
+    const syn = [8, 9, 10, 11, 12, 13, 14, 15].map((n) => lk(n, "Syndicate")), car = [8, 9, 10, 11, 12, 13, 14, 15].map((n) => lk(n, "Cartel"));
+    expect(car).toEqual(syn); for (let i = 1; i < syn.length; i++) expect(syn[i]).toBeGreaterThanOrEqual(syn[i - 1]);
+    for (let n = 8; n <= 15; n++) expect(rosterFor(n, "Cartel").reduce((a, x) => a + x.count, 0)).toBe(n);
   });
 });

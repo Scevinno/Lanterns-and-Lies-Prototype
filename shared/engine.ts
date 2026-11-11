@@ -49,16 +49,17 @@ export const roleDef = (n: string): RoleDef => { const d = ROLES.find((x) => x.n
 const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
 const LK = { Power: [1,1,1,1,1,1,1,1], Investigative: [1,2,2,2,2,2,2,2], Protective: [1,1,1,1,1,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,1,2,3,3,4,4] };
 const SYN = { Power: [1,1,1,1,1,1,1,1], Killing: [0,0,1,1,1,1,1,1], Random: [1,1,1,1,1,2,2,2] };
-const CAR = { Power: [0,0,0,0,0,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,2,2,2,1,1,2] };
+// The Cartel has as many players as the Syndicate at every size, so the town grows the same way in both modes (Nik, 11 Nov).
+// Its Power role comes only at 15: from 13 it pushed the Cartel past the balance band.
+const CAR = { Power: [0,0,0,0,0,0,0,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,2,2,2,3,3,2] };
 /** The categories dealt for a player count and evil side, for the roster screen. Same tables as dealDeck. */
 export interface RosterSlot { faction: Faction; category: string; count: number; roles: string[] }
 export function rosterFor(size: number, mode: "Syndicate" | "Cartel"): RosterSlot[] {
   const i = SIZES.indexOf(size); if (i < 0) return [];
   const out: RosterSlot[] = [];
   const add = (faction: Faction, category: string, count: number, types: string[]) => { if (count > 0) out.push({ faction, category, count, roles: pool(faction, types) }); };
-  const extra = mode === "Cartel" ? SYN.Power[i] + SYN.Killing[i] + SYN.Random[i] - (CAR.Power[i] + CAR.Killing[i] + CAR.Random[i]) : 0;
   for (const cat of ["Power", "Investigative", "Protective", "Killing"] as const) add("Lanternkeepers", cat, LK[cat][i], [cat]);
-  if (LK.Random[i] + extra > 0) out.push({ faction: "Lanternkeepers", category: "Random", count: LK.Random[i] + extra, roles: ROLES.filter((x) => x.faction === "Lanternkeepers" && x.type !== "Power").map((x) => x.name) });
+  if (LK.Random[i] > 0) out.push({ faction: "Lanternkeepers", category: "Random", count: LK.Random[i], roles: ROLES.filter((x) => x.faction === "Lanternkeepers" && x.type !== "Power").map((x) => x.name) });
   const t = mode === "Syndicate" ? SYN : CAR;
   add(mode, "Power", t.Power[i], ["Power"]); add(mode, "Killing", t.Killing[i], ["Killing"]); add(mode, "Random", t.Random[i], ["Support", "Deceptive"]);
   add("Unbound", "Chaos", 1, ["Chaos"]); add("Unbound", "Killing", size === 15 ? 1 : 0, ["Killing"]);
@@ -82,8 +83,7 @@ export function dealDeck(size: number, mode: "Syndicate" | "Cartel", r: Rng): st
   const lkRandom = ROLES.filter((x) => x.faction === "Lanternkeepers" && x.type !== "Power").map((x) => x.name);
   const lkSlots: [string, string[]][] = [];
   for (const cat of ["Power", "Investigative", "Protective", "Killing"] as const) for (let k = 0; k < LK[cat][i]; k++) lkSlots.push([cat, pool("Lanternkeepers", [cat])]);
-  const extra = mode === "Cartel" ? SYN.Power[i] + SYN.Killing[i] + SYN.Random[i] - (CAR.Power[i] + CAR.Killing[i] + CAR.Random[i]) : 0;
-  for (let k = 0; k < LK.Random[i] + extra; k++) lkSlots.push(["Random", lkRandom]);
+  for (let k = 0; k < LK.Random[i]; k++) lkSlots.push(["Random", lkRandom]);
   for (let e = 0; e < 200; e++) {
     const evil = fill(evilSlots, r); if (!evil) continue; const es = score(evil);
     for (let l = 0; l < 3000; l++) {
