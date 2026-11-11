@@ -17,7 +17,7 @@ export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, DUSK_SECONDS = 15, MAX_TRIA
 export interface Player {
   id: string; name: string; seat: number; bot: boolean; alive: boolean;
   role: string; faction: Faction; ability: string; // ability differs from role once a Medium channels
-  framed?: boolean; snuffed?: boolean; disguisedAs?: string; debt?: boolean; collection?: boolean; debtNotified?: boolean;
+  framed?: boolean; planted?: boolean; disguisedAs?: string; debt?: boolean; collection?: boolean; debtNotified?: boolean;
   bribed?: boolean; bribedBy?: string; shipped?: boolean; revealed?: boolean; bullets?: number; selfHeal?: number; alerts?: number;
   priestUsed?: boolean; mediumUsed?: boolean; swindled?: boolean; recruited?: boolean; hasTrap?: boolean;
   guilt?: boolean; streak?: number; contract?: string[]; extTarget?: string; patrol?: string[]; learned?: string[];
@@ -141,7 +141,7 @@ export const ATTACKED_SURVIVED = "You were attacked tonight, but you survived.";
 export const ATTACKED_DIED = "You were attacked tonight. Your lantern has gone out.";
 const baseDefence = (s: GameState, p: Player): number => {
   switch (p.role) {
-    case "Godfather": case "Ashkeeper": case "Butcher": case "Exterminator": case "Assassin": case "Outcast": case "Harbour Master": return 1;
+    case "Godfather": case "Tinkerer": case "Butcher": case "Exterminator": case "Assassin": case "Outcast": case "Harbour Master": return 1;
     case "Kingpin": return alive(s).some((x) => x.faction === "Cartel" && x.id !== p.id) ? 2 : 0;
     case "Hollowman": return fogNight(s.night) ? 0 : 2;
     default: return 0;
@@ -202,7 +202,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Informant": return one("Check a player's exact role");
     case "Godfather": return one("Order a hit", others.filter((x) => x.faction !== "Syndicate"));
     case "Hollowman": return fogNight(s.night) ? null : one("Hollow a house");
-    case "Ashkeeper": return { label: "Snuff out a lantern, or choose yourself for Lights out", slots: [{ label: "Target", options: opts(all) }] };
+    case "Tinkerer": return { label: "Plant an explosive, or choose yourself to Trigger", slots: [{ label: "Target", options: opts(all) }] };
     case "Butcher": return s.night > 1 ? one("Murder a player") : null;
     case "Assassin": { const c = s.players.filter((x) => x.id !== p.id); return { label: "Name the two contract targets", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     default: return null; // Innkeeper, Archivist, Spy, Exterminator, Martyr, Outcast
@@ -212,17 +212,17 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
 // ---- Appearances ----
 const appearsRole = (s: GameState, p: Player): Player => (p.disguisedAs ? byId(s, p.disguisedAs) : p);
 function constableEvil(s: GameState, p: Player): boolean {
-  if (p.framed || p.snuffed) return true;
+  if (p.framed || p.planted) return true;
   const a = appearsRole(s, p);
   if (a.faction === "Lanternkeepers") return false;
   if (IMMUNE_DETECT.has(a.role)) return false;
   if (a.role === "Martyr" || a.role === "Outcast") return false;
   return true;
 }
-const detectiveType = (s: GameState, p: Player) => (p.snuffed ? "Killing" : p.framed ? "Deceptive" : roleDef(appearsRole(s, p).role).type);
-const exactRole = (p: Player, s: GameState, seesDisguise: boolean) => (p.snuffed ? "Ashkeeper" : seesDisguise ? appearsRole(s, p).role : p.role);
+const detectiveType = (s: GameState, p: Player) => (p.planted ? "Killing" : p.framed ? "Deceptive" : roleDef(appearsRole(s, p).role).type);
+const exactRole = (p: Player, s: GameState, seesDisguise: boolean) => (p.planted ? "Tinkerer" : seesDisguise ? appearsRole(s, p).role : p.role);
 function seerGroup(s: GameState, p: Player): string {
-  if (p.framed || p.snuffed) return "evil-look:" + p.id;
+  if (p.framed || p.planted) return "evil-look:" + p.id;
   const a = appearsRole(s, p);
   if (a.faction === "Lanternkeepers" || a.role === "Martyr" || a.role === "Outcast" || IMMUNE_DETECT.has(a.role)) return "good";
   if (a.faction === "Syndicate" || a.faction === "Cartel") return a.faction;
@@ -382,8 +382,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of has("Framer")) P(a.targets[0]).framed = true;
   for (const a of has("Tailor")) { P(a.targets[0]).disguisedAs = a.targets[1]; }
   const forged = new Set(has("Forger").map((a) => a.targets[0]));
-  for (const a of has("Ashkeeper")) if (a.targets[0] !== a.actor) P(a.targets[0]).snuffed = true;
-  for (const ash of living.filter((p) => p.ability === "Ashkeeper")) { const vs = allVisitorsOf(ash.id); for (const u of vs) P(u).snuffed = true; if (vs.length) say(ash.id, `Visitors tonight: ${vs.map((u) => P(u).name).join(", ")}.`); }
+  for (const a of has("Tinkerer")) if (a.targets[0] !== a.actor) P(a.targets[0]).planted = true;
+  for (const tk of living.filter((p) => p.ability === "Tinkerer")) { const vs = allVisitorsOf(tk.id); for (const u of vs) P(u).planted = true; if (vs.length) say(tk.id, `Visitors tonight: ${vs.map((u) => P(u).name).join(", ")}.`); }
   const hasLS = (id: string) => has("Pay").some((a) => a.actor === id && P(a.targets[0]).role === "Loan Shark");
   for (const a of has("Pay")) if (hasLS(a.actor)) { paid.add(a.actor); say(a.actor, "You paid your Debt."); }
   for (const a of has("Loan Shark")) { const t = P(a.targets[0]); if (t.faction !== "Cartel") t.debt = true; else say(a.actor, FAILED); }
@@ -411,13 +411,13 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const me = P(a.actor), roles = a.targets.map((t) => P(t).role).sort(), want = [...(me.contract ?? [])].sort();
     if (me.contract && roles[0] === want[0] && roles[1] === want[1]) { for (const t of a.targets) if (P(t).alive) attack(t, 3, a.actor, "the Assassin", false); me.won = true; say(a.actor, "You found both targets. Your contract is complete."); }
   }
-  for (const a of has("Ashkeeper")) if (a.targets[0] === a.actor) for (const p of living) if (p.snuffed) attack(p.id, 3, a.actor, "Lights out", false);
+  for (const a of has("Tinkerer")) if (a.targets[0] === a.actor) for (const p of living) if (p.planted) attack(p.id, 3, a.actor, "the Trigger", false);
   for (const id of debtDue) if (!paid.has(id)) attack(id, 3, id, "an unpaid Debt", false);
   for (const id of debtDue) { const p = P(id); p.collection = false; if (paid.has(id)) p.debt = false; p.debtNotified = false; }
 
   // Apply attacks, in order, with Bodyguards and the Doctor-Hollowman rule.
   const queue = [...atks]; const killers = new Map<string, string[]>(); const dying = new Set<string>(); const usedGuard = new Set<string>();
-  const NOGUARD = new Set(["the Veteran", "an unpaid Debt", "Lights out", "the Assassin", "guilt", "a trap", "a Bodyguard"]);
+  const NOGUARD = new Set(["the Veteran", "an unpaid Debt", "the Trigger", "the Assassin", "guilt", "a trap", "a Bodyguard"]);
   const otherDefence = (id: string) => Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0);
   const defenceOf = (id: string) => Math.max(otherDefence(id), healers.has(id) ? 2 : 0);
   // Feedback (Nik, 8 Nov): who was attacked (not self-inflicted guilt or Debt), which protectors saved someone, which attacks failed.
@@ -571,7 +571,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (deadTonight.includes(d.id) || d.faction !== "Lanternkeepers") { say(a.actor, FAILED); continue; }
     d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
     // Raised players come back clean (Nik, 7 Nov): no effect from before their death carries over.
-    d.debt = false; d.collection = false; d.debtNotified = false; d.snuffed = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
+    d.debt = false; d.collection = false; d.debtNotified = false; d.planted = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
     say(d.id, "The Priest has raised you from the dead.");
   }
   const recruitedTonight = new Set<string>();

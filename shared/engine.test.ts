@@ -74,7 +74,7 @@ describe("attacks and defence", () => {
   });
   it("Doctor heals a Basic Attack but not an Unstoppable one", () => {
     const a = game(["Foreman", "Doctor", "Spy"], 1, "Cartel"); act(a, 0, 2); act(a, 1, 2); run(a); expect(dead(a, 2)).toBe(false);
-    const b = game(["Ashkeeper", "Doctor", "Spy"]); b.players[2].snuffed = true; act(b, 0, 0); act(b, 1, 2); run(b); expect(dead(b, 2)).toBe(true);
+    const b = game(["Tinkerer", "Doctor", "Spy"]); b.players[2].planted = true; act(b, 0, 0); act(b, 1, 2); run(b); expect(dead(b, 2)).toBe(true);
   });
   it("Doctor self-heal works once", () => {
     const s = game(["Foreman", "Doctor"], 1, "Cartel"); s.actions.p1 = { targets: ["p1"] }; run(s); expect(s.players[1].selfHeal).toBe(0);
@@ -84,8 +84,8 @@ describe("attacks and defence", () => {
     const s = game(["Foreman", "Bodyguard", "Spy"], 1, "Cartel"); act(s, 0, 2); act(s, 1, 2); run(s);
     expect(dead(s, 2)).toBe(false); expect(dead(s, 0)).toBe(true); expect(dead(s, 1)).toBe(true);
   });
-  it("Bodyguard cannot stop Lights out", () => {
-    const s = game(["Ashkeeper", "Bodyguard", "Spy"]); s.players[2].snuffed = true; act(s, 0, 0); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 1)).toBe(false);
+  it("Bodyguard cannot stop Trigger", () => {
+    const s = game(["Tinkerer", "Bodyguard", "Spy"]); s.players[2].planted = true; act(s, 0, 0); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 1)).toBe(false);
   });
   it("Veteran on Alert kills visitors, and counts them", () => {
     const s = game(["Veteran", "Foreman", "Detective"], 1, "Cartel"); s.actions.p0 = { targets: [], alert: true }; act(s, 1, 0); act(s, 2, 0); const m = run(s);
@@ -156,8 +156,8 @@ describe("Holds and redirects", () => {
   it("Swapping a Butcher to their own house makes them attack the swapper", () => {
     const s = game(["Ferryman", "Butcher", "Spy"], 2); act(s, 0, 1, 2); act(s, 1, 2); run(s); expect(dead(s, 0)).toBe(true);
   });
-  it("Swaps do not save anyone from Lights out", () => {
-    const s = game(["Ferryman", "Ashkeeper", "Spy", "Detective"]); s.players[2].snuffed = true; act(s, 0, 2, 3); act(s, 1, 1); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 3)).toBe(false);
+  it("Swaps do not save anyone from Trigger", () => {
+    const s = game(["Ferryman", "Tinkerer", "Spy", "Detective"]); s.players[2].planted = true; act(s, 0, 2, 3); act(s, 1, 1); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 3)).toBe(false);
   });
   it("Fence sends a visitor to a neighbour; not the Seer", () => {
     const s = game(["Fence", "Detective", "Spy", "Doctor", "Godfather"]); act(s, 0, 1); act(s, 1, 2); const m = run(s); expect(said(m, 1)).toContain("N3");
@@ -175,16 +175,16 @@ describe("investigations", () => {
     expect(c("Mobster")).toContain("Evil"); expect(c("Spy", true)).toContain("Evil"); expect(c("Martyr")).toContain("Innocent"); expect(c("Outcast")).toContain("Innocent");
     expect(c("Assassin")).toContain("Evil"); expect(c("Exterminator")).toContain("Evil");
   });
-  it("Detective reads the role type; Framed appears Deceptive, Snuffed appears Killing; Godfather is not immune", () => {
+  it("Detective reads the role type; Framed appears Deceptive, Planted appears Killing; Godfather is not immune", () => {
     const d = (role: string, set?: (s: GameState) => void) => { const s = game(["Detective", role, "Framer"]); act(s, 0, 1); set?.(s); return said(run(s), 0); };
-    expect(d("Godfather")).toContain("Power"); expect(d("Doctor", (s) => act(s, 2, 1))).toContain("Deceptive"); expect(d("Doctor", (s) => { s.players[1].snuffed = true; })).toContain("Killing");
+    expect(d("Godfather")).toContain("Power"); expect(d("Doctor", (s) => act(s, 2, 1))).toContain("Deceptive"); expect(d("Doctor", (s) => { s.players[1].planted = true; })).toContain("Killing");
   });
   it("Tailor's disguise fools the Constable and Watchman but not the Informant", () => {
     const s = game(["Tailor", "Mobster", "Constable", "Spy", "Informant", "Watchman", "Doctor"]); act(s, 0, 1, 3); act(s, 1, 6); act(s, 2, 1); act(s, 4, 1); act(s, 5, 6); const m = run(s);
     expect(said(m, 2)).toContain("Innocent"); expect(said(m, 4)).toContain("Mobster"); expect(said(m, 5)).toContain("N3");
   });
-  it("Notary and Informant see a Snuffed player as the Ashkeeper", () => {
-    const s = game(["Notary", "Spy"], 1, "Cartel"); s.players[1].snuffed = true; act(s, 0, 1); expect(said(run(s), 0)).toContain("Ashkeeper");
+  it("Notary and Informant see a Planted player as the Tinkerer", () => {
+    const s = game(["Notary", "Spy"], 1, "Cartel"); s.players[1].planted = true; act(s, 0, 1); expect(said(run(s), 0)).toContain("Tinkerer");
   });
   it("Forger makes an investigator's result false, including Watchman names", () => {
     const s = game(["Forger", "Constable", "Mobster"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); expect(said(run(s), 1)).toContain("Innocent");
@@ -277,8 +277,8 @@ describe("Syndicate succession and others", () => {
     const s = game(["Assassin", "Spy", "Mobster", "Doctor"]); s.players[0].contract = ["Spy", "Mobster"]; act(s, 0, 1, 2); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 2)).toBe(true); expect(s.players[0].won).toBe(true);
     const w = game(["Assassin", "Spy", "Mobster", "Doctor"]); w.players[0].contract = ["Spy", "Mobster"]; act(w, 0, 3, 2); run(w); expect(dead(w, 3)).toBe(false);
   });
-  it("Ashkeeper: Snuffed visitors, learns visitors, Lights out", () => {
-    const s = game(["Ashkeeper", "Detective", "Spy"]); act(s, 1, 0); act(s, 0, 2); const m = run(s); expect(s.players[1].snuffed).toBe(true); expect(s.players[2].snuffed).toBe(true); expect(said(m, 0)).toContain("N1");
+  it("Tinkerer: Planted visitors, learns visitors, Trigger", () => {
+    const s = game(["Tinkerer", "Detective", "Spy"]); act(s, 1, 0); act(s, 0, 2); const m = run(s); expect(s.players[1].planted).toBe(true); expect(s.players[2].planted).toBe(true); expect(said(m, 0)).toContain("N1");
     s.actions = {}; act(s, 0, 0); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 2)).toBe(true);
   });
 });
@@ -538,8 +538,8 @@ describe("7 Nov rulings, part two", () => {
     run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].role).toBe("Martyr");
   });
   it("a raised player comes back clean", () => {
-    const s = game(["Priest", "Doctor", "Mobster", "Spy"], 2); const d = s.players[1]; d.alive = false; d.debt = true; d.snuffed = true; d.framed = true; act(s, 0, 1);
-    run(s); expect(d.alive).toBe(true); expect(d.debt || d.snuffed || d.framed).toBe(false);
+    const s = game(["Priest", "Doctor", "Mobster", "Spy"], 2); const d = s.players[1]; d.alive = false; d.debt = true; d.planted = true; d.framed = true; act(s, 0, 1);
+    run(s); expect(d.alive).toBe(true); expect(d.debt || d.planted || d.framed).toBe(false);
   });
 });
 
