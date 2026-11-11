@@ -80,12 +80,12 @@ describe("attacks and defence", () => {
     const s = game(["Foreman", "Doctor"], 1, "Cartel"); s.actions.p1 = { targets: ["p1"] }; run(s); expect(s.players[1].selfHeal).toBe(0);
     s.phase = "night"; expect(nightPrompt(s, s.players[1])!.slots[0].options.some((o) => o.id === "p1")).toBe(false);
   });
-  it("Bodyguard stops the attack: attacker and Bodyguard both die", () => {
-    const s = game(["Foreman", "Bodyguard", "Spy"], 1, "Cartel"); act(s, 0, 2); act(s, 1, 2); run(s);
+  it("Guardsman stops the attack: attacker and Guardsman both die", () => {
+    const s = game(["Foreman", "Guardsman", "Spy"], 1, "Cartel"); act(s, 0, 2); act(s, 1, 2); run(s);
     expect(dead(s, 2)).toBe(false); expect(dead(s, 0)).toBe(true); expect(dead(s, 1)).toBe(true);
   });
-  it("Bodyguard cannot stop Trigger", () => {
-    const s = game(["Tinkerer", "Bodyguard", "Spy"]); s.players[2].planted = true; act(s, 0, 0); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 1)).toBe(false);
+  it("Guardsman cannot stop Trigger", () => {
+    const s = game(["Tinkerer", "Guardsman", "Spy"]); s.players[2].planted = true; act(s, 0, 0); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 1)).toBe(false);
   });
   it("Veteran on Alert kills visitors, and counts them", () => {
     const s = game(["Veteran", "Foreman", "Detective"], 1, "Cartel"); s.actions.p0 = { targets: [], alert: true }; act(s, 1, 0); act(s, 2, 0); const m = run(s);
@@ -448,10 +448,10 @@ describe("Narrator feedback (8 Nov)", () => {
     const s = game(["Priest", "Godfather", "Mobster", "Spy", "Doctor"], 2); s.players[1].alive = false; act(s, 0, 1);
     const m = run(s); expect(dead(s, 1)).toBe(true); expect(said(m, 0)).toContain("failed"); expect(s.players[0].priestUsed).toBe(true);
   });
-  it("Doctor and Bodyguard get the same protection line; the target hears only that they were attacked", () => {
+  it("Doctor and Guardsman get the same protection line; the target hears only that they were attacked", () => {
     const d = game(["Doctor", "Spy", "Mobster", "Seer"]); act(d, 0, 1); act(d, 2, 1); const md = run(d);
     expect(dead(d, 1)).toBe(false); expect(said(md, 0)).toContain("You protected your target"); expect(said(md, 1)).toContain("attacked tonight, but you survived"); expect(said(md, 2)).toContain("failed");
-    const b = game(["Bodyguard", "Spy", "Mobster", "Seer"]); act(b, 0, 1); act(b, 2, 1); const mb = run(b);
+    const b = game(["Guardsman", "Spy", "Mobster", "Seer"]); act(b, 0, 1); act(b, 2, 1); const mb = run(b);
     expect(dead(b, 1)).toBe(false); expect(said(mb, 0)).toContain("You protected your target"); expect(said(mb, 1)).toContain("attacked tonight, but you survived"); expect(said(mb, 1)).not.toContain("protected");
   });
   it("a Warden copies the protection line", () => {

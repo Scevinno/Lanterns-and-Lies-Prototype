@@ -134,7 +134,7 @@ const HOLDERS = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
 // A Coroner may borrow a dead Loan Shark (Nik, 10 Nov); the Debt is void at nightfall, since no Loan Shark lives to collect it.
 const NO_BORROW = new Set(["Swindler", "Smuggler", "Ferryman", "Seer", "Tailor", "Assassin", "Coroner", "Veteran", "Priest", "Medium", "Kingpin", "Hunter", "Spy", "Archivist", "Innkeeper", "Judge", "Mayor", "Town Crier", "Martyr", "Outcast"]);
 // Narrator feedback (Nik, 8 Nov). One failure line for every reason, so it never says why.
-// Doctor and Bodyguard get the same protection line, so a Warden copying it cannot tell them apart.
+// Doctor and Guardsman get the same protection line, so a Warden copying it cannot tell them apart.
 export const FAILED = "Your ability failed tonight.";
 export const PROTECTED = "You protected your target from an attack tonight.";
 export const ATTACKED_SURVIVED = "You were attacked tonight, but you survived.";
@@ -182,7 +182,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Paymaster": return one("Bribe a player", outsiders(p, others));
     case "Notary": return one("Learn a player's exact role", outsiders(p, others));
     case "Foreman": return one("Attack a player", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
-    case "Bodyguard": return one("Guard a player", others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")));
+    case "Guardsman": return one("Guard a player", others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")));
     case "Rogue": return s.night > 1 && (p.bullets ?? 0) > 0 ? one("Shoot a player") : null;
     case "Veteran": return (p.alerts ?? 0) > 0 ? { label: `Go on Alert (${p.alerts} left)`, slots: [], toggle: "Go on Alert", toggleOn: "On Alert tonight" } : null;
     // Reveal is a Night action (Nik, 7 Nov), from Night 2, announced at dawn.
@@ -381,7 +381,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const lethalVet = (id: string) => vetVictims.has(id) && Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0, healers.has(id) ? 2 : 0) < 2;
   for (const a of acts) if (!a.dead && lethalVet(a.actor) && !["Ferryman", "Smuggler", "Hollowman"].includes(a.ab)) a.dead = true;
   for (const inn of living.filter((p) => p.ability === "Innkeeper" && !held.has(p.id))) for (const u of allVisitorsOf(inn.id)) addDef(u, 1);
-  const guards = new Map<string, string[]>(); for (const a of has("Bodyguard")) guards.set(a.targets[0], [...(guards.get(a.targets[0]) ?? []), a.actor]);
+  const guards = new Map<string, string[]>(); for (const a of has("Guardsman")) guards.set(a.targets[0], [...(guards.get(a.targets[0]) ?? []), a.actor]);
 
   // Marks made tonight, before anyone investigates.
   for (const a of has("Framer")) P(a.targets[0]).framed = true;
@@ -420,9 +420,9 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const id of debtDue) if (!paid.has(id)) attack(id, 3, id, "an unpaid Debt", false);
   for (const id of debtDue) { const p = P(id); p.collection = false; if (paid.has(id)) p.debt = false; p.debtNotified = false; }
 
-  // Apply attacks, in order, with Bodyguards and the Doctor-Hollowman rule.
+  // Apply attacks, in order, with Guardsmen and the Doctor-Hollowman rule.
   const queue = [...atks]; const killers = new Map<string, string[]>(); const dying = new Set<string>(); const usedGuard = new Set<string>();
-  const NOGUARD = new Set(["the Veteran", "an unpaid Debt", "the Trigger", "the Assassin", "guilt", "a trap", "a Bodyguard"]);
+  const NOGUARD = new Set(["the Veteran", "an unpaid Debt", "the Trigger", "the Assassin", "guilt", "a trap", "a Guardsman"]);
   const otherDefence = (id: string) => Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0);
   const defenceOf = (id: string) => Math.max(otherDefence(id), healers.has(id) ? 2 : 0);
   // Feedback (Nik, 8 Nov): who was attacked (not self-inflicted guilt or Debt), which protectors saved someone, which attacks failed.
@@ -434,7 +434,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const gs = (guards.get(a.target) ?? []).filter((g) => !usedGuard.has(g));
     if (gs.length && !NOGUARD.has(a.reason) && a.visitor) {
       const g = gs[0]; usedGuard.add(g); protectors.add(g);
-      queue.push({ target: a.source, level: 2, source: g, reason: "a Bodyguard", visitor: false }, { target: g, level: 2, source: a.source, reason: "a Bodyguard", visitor: false });
+      queue.push({ target: a.source, level: 2, source: g, reason: "a Guardsman", visitor: false }, { target: g, level: 2, source: a.source, reason: "a Guardsman", visitor: false });
       continue;
     }
     if (a.level > defenceOf(a.target)) { dying.add(a.target); killers.set(a.target, [...(killers.get(a.target) ?? []), a.source]); }
@@ -454,7 +454,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const results: Result[] = [];
   const res = (to: string, kind: Result["kind"], value: Result["value"], pre: string, info = true) => results.push({ to, kind, value, pre, info });
   const names = (ids: string[]) => ids.map((x) => P(x).name);
-  // Protection lines go in as results, so a Warden watching a Doctor or a Bodyguard gets the same copy either way.
+  // Protection lines go in as results, so a Warden watching a Doctor or a Guardsman gets the same copy either way.
   for (const id of protectors) res(id, "text", PROTECTED, "", false);
   for (const a of acts) {
     if (a.dead || !a.targets.length) continue; const t = P(a.targets[0]);
