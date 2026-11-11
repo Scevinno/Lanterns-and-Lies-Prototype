@@ -50,8 +50,8 @@ const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
 const LK = { Power: [1,1,1,1,1,1,1,1], Investigative: [1,2,2,2,2,2,2,2], Protective: [1,1,1,1,1,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,1,2,3,3,4,4] };
 const SYN = { Power: [1,1,1,1,1,1,1,1], Killing: [0,0,1,1,1,1,1,1], Random: [1,1,1,1,1,2,2,2] };
 // The Cartel has as many players as the Syndicate at every size, so the town grows the same way in both modes (Nik, 11 Nov).
-// Its Power role comes only at 15: from 13 it pushed the Cartel past the balance band.
-const CAR = { Power: [0,0,0,0,0,0,0,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,2,2,2,3,3,2] };
+// Its Power role comes in at 13 (Nik, 11 Nov), so the Cartel runs nearer the top of the balance band at 13 and 14.
+const CAR = { Power: [0,0,0,0,0,1,1,1], Killing: [1,1,1,1,1,1,1,1], Random: [1,1,2,2,2,2,2,2] };
 /** The categories dealt for a player count and evil side, for the roster screen. Same tables as dealDeck. */
 export interface RosterSlot { faction: Faction; category: string; count: number; roles: string[] }
 export function rosterFor(size: number, mode: "Syndicate" | "Cartel"): RosterSlot[] {
