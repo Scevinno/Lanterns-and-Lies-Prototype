@@ -8,7 +8,7 @@ import {
 const T0 = 1_000_000;
 /** A game with chosen roles, at night 1 unless told otherwise. Names are the role's first letters plus seat. */
 function game(roles: string[], night = 1, mode: "Syndicate" | "Cartel" = "Syndicate"): GameState {
-  const players: Player[] = roles.map((role, seat) => { const d = roleDef(role); const p: Player = { id: "p" + seat, name: "N" + seat, seat, bot: false, alive: true, role, ability: role, faction: d.faction, patrol: [], learned: [] }; if (role === "Rogue") p.bullets = 1; if (role === "Doctor") p.selfHeal = 1; if (role === "Veteran") p.alerts = 2; if (role === "Butcher") p.streak = 0; return p; });
+  const players: Player[] = roles.map((role, seat) => { const d = roleDef(role); const p: Player = { id: "p" + seat, name: "N" + seat, seat, bot: false, alive: true, role, ability: role, faction: d.faction, patrol: [], learned: [] }; if (role === "Rogue") p.bullets = 1; if (role === "Doctor") p.selfHeal = 1; if (role === "Veteran") p.alerts = 2; if (role === "Ripper") p.streak = 0; return p; });
   return { mode, timers: PUBLIC_TIMERS, townChat: true, phase: "night", phaseNo: 2, endsAt: T0, day: night, night, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: roles.includes("Godfather"), winner: null, winners: [], condemned: false };
 }
 const act = (s: GameState, i: number, ...t: number[]) => { s.actions["p" + i] = { targets: t.map((x) => "p" + x) }; };
@@ -99,12 +99,12 @@ describe("attacks and defence", () => {
     const s = game(["Rogue", "Spy", "Doctor"], 2); act(s, 0, 1); run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].guilt).toBe(true);
     s.night = 3; s.actions = {}; run(s); expect(dead(s, 0)).toBe(true);
   });
-  it("Butcher: no visit first Night; attacks a Holder even if Held", () => {
-    const a = game(["Butcher", "Spy"], 1); expect(nightPrompt(a, a.players[0])).toBeNull();
-    const s = game(["Butcher", "Locksmith", "Spy"], 2); act(s, 0, 2); act(s, 1, 0); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 2)).toBe(false);
+  it("Ripper: no visit first Night; attacks a Holder even if Held", () => {
+    const a = game(["Ripper", "Spy"], 1); expect(nightPrompt(a, a.players[0])).toBeNull();
+    const s = game(["Ripper", "Locksmith", "Spy"], 2); act(s, 0, 2); act(s, 1, 0); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 2)).toBe(false);
   });
-  it("Butcher rampages after two Murders in a row", () => {
-    const s = game(["Butcher", "Spy", "Doctor", "Detective"], 3); s.players[0].streak = 2; act(s, 0, 1); act(s, 3, 1); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 3)).toBe(true);
+  it("the Ripper has no Rampage: visitors to his target are not attacked", () => {
+    const s = game(["Ripper", "Spy", "Doctor", "Detective"], 3); s.players[0].streak = 2; act(s, 0, 1); act(s, 3, 1); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 3)).toBe(false);
   });
   it("Hollowman attacks target and visitors on clear Nights; Doctor who heals their target dies instead", () => {
     const a = game(["Hollowman", "Spy", "Detective"], 1); act(a, 0, 1); act(a, 2, 1); run(a); expect(dead(a, 1)).toBe(true); expect(dead(a, 2)).toBe(true);
@@ -153,8 +153,8 @@ describe("Holds and redirects", () => {
     const s = game(["Ferryman", "Smuggler", "Foreman", "Spy", "Detective", "Doctor"], 1, "Cartel"); act(s, 0, 3, 4); act(s, 1, 3, 5); act(s, 2, 3); run(s);
     expect(dead(s, 4)).toBe(true); expect(dead(s, 5)).toBe(false);
   });
-  it("Swapping a Butcher to their own house makes them attack the swapper", () => {
-    const s = game(["Ferryman", "Butcher", "Spy"], 2); act(s, 0, 1, 2); act(s, 1, 2); run(s); expect(dead(s, 0)).toBe(true);
+  it("Swapping a Ripper to their own house makes them attack the swapper", () => {
+    const s = game(["Ferryman", "Ripper", "Spy"], 2); act(s, 0, 1, 2); act(s, 1, 2); run(s); expect(dead(s, 0)).toBe(true);
   });
   it("Swaps do not save anyone from Trigger", () => {
     const s = game(["Ferryman", "Tinkerer", "Spy", "Detective"]); s.players[2].planted = true; act(s, 0, 2, 3); act(s, 1, 1); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 3)).toBe(false);
@@ -198,7 +198,7 @@ describe("investigations", () => {
   });
   it("Seer: Lanternkeepers and Outcast are friends; an Unbound killer is an enemy; Godfather reads as a friend", () => {
     const f = (a: string, b: string) => { const s = game(["Seer", a, b]); act(s, 0, 1, 2); return said(run(s), 0); };
-    expect(f("Spy", "Outcast")).toContain("friends"); expect(f("Spy", "Butcher")).toContain("enemies"); expect(f("Spy", "Godfather")).toContain("friends"); expect(f("Mobster", "Fence")).toContain("friends");
+    expect(f("Spy", "Outcast")).toContain("friends"); expect(f("Spy", "Ripper")).toContain("enemies"); expect(f("Spy", "Godfather")).toContain("friends"); expect(f("Mobster", "Fence")).toContain("friends");
   });
   it("Spy sees who evil visited; Archivist learns a new role each Night", () => {
     const s = game(["Spy", "Foreman", "Doctor", "Archivist"], 1, "Cartel"); act(s, 1, 2); const m = run(s); expect(said(m, 0)).toContain("The evil side visited: N2."); expect(said(m, 3)).toContain("living role");
@@ -227,7 +227,7 @@ describe("Cartel", () => {
     const s = game(["Loan Shark", "Spy", "Detective"], 1, "Cartel"); act(s, 0, 1); act(s, 2, 0); const m = run(s); expect(said(m, 0)).toContain("Spy"); expect(said(m, 0)).toContain("Detective"); expect(s.players[2].debt).toBe(true);
   });
   it("A dead Loan Shark clears every Debt", () => {
-    const s = game(["Loan Shark", "Spy", "Rogue"], 2, "Cartel"); s.players[1].debt = true; act(s, 2, 0); run(s); expect(dead(s, 0)).toBe(true); expect(s.players[1].debt).toBe(false);
+    const s = game(["Loan Shark", "Spy", "Hollowman"], 3, "Cartel"); s.players[1].debt = true; act(s, 2, 0); run(s); expect(dead(s, 0)).toBe(true); expect(s.players[1].debt).toBe(false);
   });
   it("Kingpin commands a member to act twice, cannot command the Foreman, and has Powerful Defence while others live", () => {
     const s = game(["Kingpin", "Framer", "Spy", "Doctor", "Foreman"], 1, "Cartel"); s.players[1].faction = "Cartel";
@@ -339,12 +339,12 @@ describe("day flow", () => {
 describe("win conditions and chat", () => {
   const w = (roles: string[], mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, 2, mode); return checkWin(s) ? s.winner : null; };
   it("declares the right winner", () => {
-    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBeNull(); expect(w(["Mobster", "Godfather"])).toBe("The Syndicate"); expect(w(["Foreman", "Forger"], "Cartel")).toBe("The Cartel"); expect(w(["Butcher"])).toBe("Butcher");
-    expect(w(["Butcher", "Spy"])).toBeNull(); expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Butcher", "Spy", "Doctor"])).toBeNull();
+    expect(w(["Spy", "Doctor"])).toBe("The Lanternkeepers"); expect(w(["Mobster", "Spy"])).toBeNull(); expect(w(["Mobster", "Godfather"])).toBe("The Syndicate"); expect(w(["Foreman", "Forger"], "Cartel")).toBe("The Cartel"); expect(w(["Ripper"])).toBe("Ripper");
+    expect(w(["Ripper", "Spy"])).toBeNull(); expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Ripper", "Spy", "Doctor"])).toBeNull();
   });
   const endDay = (roles: string[], d: number, mode: "Syndicate" | "Cartel" = "Syndicate") => { const s = game(roles, d, mode); s.phase = "vote"; s.day = d; s.trial = 1; s.endsAt = T0; return s; };
   it("day cap: evil and an Unbound killer both alive at the end of Day 7 means evil only", () => {
-    const s = endDay(["Mobster", "Butcher", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]);
+    const s = endDay(["Mobster", "Ripper", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.winner).toBe("The Syndicate"); expect(s.winners).toEqual(["p0"]);
   });
   it("quiet days alone no longer end the game", () => { const s = game(["Mobster", "Spy", "Doctor", "Seer"], 2); s.quietDays = 5; expect(checkWin(s)).toBe(false); });
   it("day cap: a living evil side wins at the end of Day 7, and not before", () => {
@@ -368,7 +368,7 @@ describe("win conditions and chat", () => {
     const s = game(["Mobster", "Rogue", "Doctor"], 7); act(s, 1, 0); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Lanternkeepers");
   });
   it("day cap: with no evil left, an Unbound killer still alive means nobody wins", () => {
-    const s = endDay(["Butcher", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
+    const s = endDay(["Ripper", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
   });
   it("a Surviving Outcast wins alongside", () => { const s = game(["Outcast", "Spy"], 2); checkWin(s); expect(s.winners).toContain("p0"); });
   it("limits who can chat", () => {
@@ -419,7 +419,7 @@ describe("No parity win (8 Nov)", () => {
   it("evil wins only once every Lanternkeeper and Unbound killer is gone", () => {
     const g = (roles: string[]) => { const s = game(roles, 2); checkWin(s); return s.winner; };
     expect(g(["Mobster", "Godfather", "Spy"])).toBeNull();
-    expect(g(["Mobster", "Godfather", "Butcher"])).toBeNull();
+    expect(g(["Mobster", "Godfather", "Ripper"])).toBeNull();
     expect(g(["Mobster", "Godfather", "Outcast"])).toBe("The Syndicate");
   });
 });
@@ -464,7 +464,7 @@ describe("Narrator feedback (8 Nov)", () => {
     const s = game(["Locksmith", "Spy", "Mobster", "Seer"]); act(s, 0, 2); act(s, 2, 1); const m = run(s); expect(said(m, 1)).not.toContain("attacked"); expect(dead(s, 1)).toBe(false);
   });
   it("an attack on stronger defence fails, and the Godfather who ordered it hears too", () => {
-    const s = game(["Godfather", "Mobster", "Butcher", "Spy"], 2); act(s, 0, 2); const m = run(s);
+    const s = game(["Godfather", "Mobster", "Ripper", "Spy"], 2); act(s, 0, 2); const m = run(s);
     expect(dead(s, 2)).toBe(false); expect(said(m, 0)).toContain("failed"); expect(said(m, 1)).toContain("failed"); expect(said(m, 2)).toContain("survived");
   });
   it("a Hold on a Hold-immune player fails, and they hear someone tried", () => {
@@ -663,7 +663,7 @@ describe("evil roles and their own side (Nik, 11 Nov)", () => {
   it("Syndicate and Cartel roles are not offered themselves or known allies", () => {
     const s = game(["Framer", "Mobster", "Doctor", "Spy"], 2); s.phase = "night";
     const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id); expect(ids).toEqual(["p2", "p3"]);
-    const c = game(["Smuggler", "Notary", "Kingpin", "Doctor"], 3, "Cartel"); c.phase = "night";
+    const c = game(["Notary", "Forger", "Kingpin", "Doctor"], 3, "Cartel"); c.phase = "night";
     const sm = nightPrompt(c, c.players[0])!.slots[0].options.map((o) => o.id); expect(sm).toEqual(["p2", "p3"]);
   });
   it("the Tailor, Kingpin and Harbour Master Guns still choose their own side", () => {
@@ -680,5 +680,19 @@ describe("failed once-per-game uses are kept (Nik, 11 Nov)", () => {
   });
   it("the Hollowman has Basic Defence on Fog Nights", () => {
     const s = game(["Hollowman", "Mobster", "Spy"], 2); act(s, 1, 0); run(s); expect(s.players[0].alive).toBe(true);
+  });
+});
+
+describe("11 Nov card batch (Nik)", () => {
+  it("the Loan Shark has Basic Defence", () => {
+    const s = game(["Loan Shark", "Ripper", "Spy"], 2, "Cartel"); act(s, 1, 0); run(s); expect(s.players[0].alive).toBe(true);
+  });
+  it("the Smuggler may swap himself and his own side", () => {
+    const s = game(["Smuggler", "Notary", "Doctor"], 1, "Cartel"); s.phase = "night";
+    expect(nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id)).toEqual(["p0", "p1", "p2"]);
+  });
+  it("the Kingpin cannot write in the Cartel chat", () => {
+    const s = game(["Kingpin", "Notary", "Doctor"], 1, "Cartel"); s.phase = "night";
+    expect(canChat(s, "p0", "faction")).toBe(false); expect(canChat(s, "p1", "faction")).toBe(true);
   });
 });

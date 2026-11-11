@@ -35,7 +35,7 @@
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
   // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
-  $: layout = showRole ? "role" : phase === "over" ? (overTab === "chat" ? "chat" : "select") : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction ? "split" : "select") : "chat";
+  $: layout = showRole ? "role" : phase === "over" ? (overTab === "chat" ? "chat" : "select") : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction || (isEvil && view?.role === "Kingpin") ? "split" : "select") : "chat";
   $: if (layout !== "select") seen = visible.length;
   $: unread = Math.max(0, visible.length - seen);
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
@@ -174,10 +174,10 @@
 
   {#if layout === "select" && phase !== "over"}<button class="chatpeek" on:click={() => (chatOpen = true)}>Show chat{unread ? ` · ${unread} new` : ""}</button>{/if}
   <section class="chat">
-    {#if (isEvil && phase === "night" && view.role !== "Kingpin") || (isDead && !inPerson)}
+    {#if (isEvil && phase === "night") || (isDead && !inPerson)}
       <div class="tabs">
         <button class:on={tab === "town"} on:click={() => (tab = "town")}>Town</button>
-        {#if isEvil && phase === "night" && view.role !== "Kingpin"}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
+        {#if isEvil && phase === "night"}<button class:on={tab === "faction"} on:click={() => (tab = "faction")}>{view.faction}</button>{/if}
         {#if isDead && !inPerson}<button class:on={tab === "dead"} on:click={() => (tab = "dead")}>The dead</button>{/if}
       </div>
     {/if}
@@ -188,6 +188,7 @@
     </div>
     {#if canType}
       <form class="send" on:submit|preventDefault={send}><input bind:value={draft} maxlength="300" placeholder={tab === "town" ? "Type to the town" : tab === "dead" ? "Type to the dead" : "Type to your side"} aria-label="Message" /><button class="go" type="submit">Send</button></form>
+    {:else if tab === "faction" && view.role === "Kingpin"}<p class="dim small pad">You can read your side's chat, but you cannot write in it.</p>
     {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
   </section>
   <!-- Game over (Nik, 10 Nov): Chat/Players and Home sit in their own bar at the bottom, spaced away from the list. -->

@@ -102,7 +102,7 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
   const players: Player[] = input.players.map((p, i) => {
     const d = roleDef(deck[i]);
     const pl: Player = { ...p, seat: i, alive: true, role: d.name, faction: d.faction, ability: d.name, wasStartFaction: d.faction };
-    if (d.name === "Rogue") pl.bullets = 1; if (d.name === "Doctor") pl.selfHeal = 1; if (d.name === "Veteran") pl.alerts = 2; if (d.name === "Butcher") pl.streak = 0;
+    if (d.name === "Rogue") pl.bullets = 1; if (d.name === "Doctor") pl.selfHeal = 1; if (d.name === "Veteran") pl.alerts = 2;
     pl.patrol = []; pl.learned = []; return pl;
   });
   const state: GameState = { mode: input.mode, timers: input.timers, townChat: input.townChat, phase: "reveal", phaseNo: 1, endsAt: now + REVEAL_SECONDS * 1000, day: 0, night: 0, players, votes: {}, verdicts: {}, accused: null, trial: 0, actions: {}, trap: null, commanded: null, quietDays: 0, hadGodfather: deck.includes("Godfather"), winner: null, winners: [], condemned: false, inPerson: !!input.inPerson, pausedLeft: null, pausedBy: null, setup: input.setup ?? input.mode };
@@ -141,7 +141,7 @@ export const ATTACKED_SURVIVED = "You were attacked tonight, but you survived.";
 export const ATTACKED_DIED = "You were attacked tonight. Your lantern has gone out.";
 const baseDefence = (s: GameState, p: Player): number => {
   switch (p.role) {
-    case "Godfather": case "Tinkerer": case "Butcher": case "Town Crier": case "Assassin": case "Outcast": case "Harbour Master": return 1;
+    case "Godfather": case "Loan Shark": case "Tinkerer": case "Ripper": case "Town Crier": case "Assassin": case "Outcast": case "Harbour Master": return 1;
     case "Kingpin": return alive(s).some((x) => x.faction === "Cartel" && x.id !== p.id) ? 2 : 0;
     case "Hollowman": return fogNight(s.night) ? 1 : 2;   // Basic Defence on Fog Nights (Nik, 11 Nov)
     default: return 0;
@@ -152,7 +152,7 @@ export interface Slot { label: string; options: { id: string; name: string }[] }
 export interface Prompt { label: string; slots: Slot[]; toggle?: string; toggleOn?: string; second?: boolean }
 const opts = (ps: Player[]) => ps.map((p) => ({ id: p.id, name: p.name }));
 // Evil roles never choose themselves or a known ally (Nik, 11 Nov), unless the power only works on their own side:
-// the Tailor, the Kingpin, the Harbour Master and the Coroner keep their own rules.
+// the Tailor, the Kingpin, the Harbour Master, the Smuggler and the Coroner keep their own rules.
 // Cartel members other than the Power roles do not know the Kingpin, so he stays on their lists.
 const KNOWS_KINGPIN = new Set(["Kingpin", "Harbour Master", "Loan Shark"]);
 const outsiders = (p: Player, c: Player[]) => (!isEvil(p) ? c : c.filter((x) => x.id !== p.id && (x.faction !== p.faction || (x.role === "Kingpin" && !KNOWS_KINGPIN.has(p.role)))));
@@ -173,7 +173,8 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
     case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
-    case "Smuggler": case "Ferryman": { const c = outsiders(p, all); return { label: "Swap two players", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
+    case "Smuggler": case "Ferryman": { const c = all; // the Smuggler may choose his own side (Nik, 11 Nov)
+      return { label: "Swap two players", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
     case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
     case "Quartermaster": return one("Hold a player below deck", outsiders(p, others));
@@ -208,7 +209,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Godfather": return one("Order a hit", others.filter((x) => x.faction !== "Syndicate"));
     case "Hollowman": return fogNight(s.night) ? null : one("Hollow a house");
     case "Tinkerer": return { label: "Plant an explosive, or choose yourself to Trigger", slots: [{ label: "Target", options: opts(all) }] };
-    case "Butcher": return s.night > 1 ? one("Murder a player") : null;
+    case "Ripper": return s.night > 1 ? one("Murder a player") : null;
     case "Assassin": { const c = s.players.filter((x) => x.id !== p.id); return { label: "Name the two contract targets", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     default: return null; // Innkeeper, Archivist, Spy, Town Crier, Martyr, Outcast
   }
@@ -283,7 +284,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (a.ab === "Ferryman" || a.ab === "Smuggler" || a.ab === "Pay" && false) continue;
     a.targets = a.targets.map((t) => {
       const nt = P(t).alive ? mapSwap(t) : t;
-      if (nt === a.actor && nt !== t && (a.ab === "Butcher" || a.ab === "Hollowman")) { const sw = swaps.find(([x, y]) => (x === t && y === nt) || (y === t && x === nt)); if (sw) selfRedirectSwapper.set(a.actor, sw[2]); }
+      if (nt === a.actor && nt !== t && (a.ab === "Ripper" || a.ab === "Hollowman")) { const sw = swaps.find(([x, y]) => (x === t && y === nt) || (y === t && x === nt)); if (sw) selfRedirectSwapper.set(a.actor, sw[2]); }
       return nt;
     });
   }
@@ -312,7 +313,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of acts.filter((x) => HOLDERS.has(x.ab))) {
     const t = P(a.targets[0]);
     if (!P(t.id).alive) continue;
-    if (t.ability === "Butcher" || (t.ability === "Hollowman" && !fogNight(s.night))) attack(a.actor, t.ability === "Butcher" ? 1 : 2, t.id, "an attack on a Holder");
+    if (t.ability === "Ripper" || (t.ability === "Hollowman" && !fogNight(s.night))) attack(a.actor, t.ability === "Ripper" ? 1 : 2, t.id, "an attack on a Holder");
     if (IMMUNE_HOLD.has(t.role)) { say(a.actor, FAILED); say(t.id, "Someone tried to Hold you tonight, but you are immune."); continue; }
     held.add(t.id);
   }
@@ -408,9 +409,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of has("Foreman")) attack(a.targets[0], 1, a.actor, "the Foreman", true, true);
   for (const a of has("Rogue")) { attack(a.targets[0], 1, a.actor, "the Rogue", true, true); if (!a.borrowed) P(a.actor).bullets = 0; }
   for (const p of living) if (p.guilt) { attack(p.id, 3, p.id, "guilt", false); p.guilt = false; }
-  const butchers = has("Butcher");
-  for (const p of living.filter((q) => q.ability === "Butcher")) { if (!butchers.some((b) => b.actor === p.id)) p.streak = 0; }
-  for (const a of butchers) { const b = P(a.actor), t = a.targets[0]; attack(t, 1, a.actor, "the Butcher", true, true); if ((b.streak ?? 0) >= 2) for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 1, a.actor, "the Butcher's Rampage"); }
+  // The Ripper has no Rampage (Nik, 11 Nov): one Basic Attack a Night.
+  for (const a of has("Ripper")) attack(a.targets[0], 1, a.actor, "the Ripper", true, true);
   for (const a of has("Hollowman")) { const t = a.targets[0]; attack(t, 2, a.actor, "the Hollowman", true, true); for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 2, a.actor, "the Hollowman"); }
   for (const a of has("Assassin")) {
     const me = P(a.actor), roles = a.targets.map((t) => P(t).role).sort(), want = [...(me.contract ?? [])].sort();
@@ -442,7 +442,6 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       if (a.level > otherDefence(a.target)) for (const d of healers.get(a.target) ?? []) protectors.add(d); // the heal made the difference
       if (a.primary) { failedAttackers.add(a.source); if (hitOrderedBy && a.reason === "the Syndicate") failedAttackers.add(hitOrderedBy); }
     }
-    if (a.reason === "the Butcher" && dying.has(a.target)) P(a.source).streak = (P(a.source).streak ?? 0) + 1;
     if (a.reason === "the Rogue" && dying.has(a.target) && P(a.target).faction === "Lanternkeepers") { P(a.source).guilt = true; say(a.source, "You killed a Lanternkeeper. Next night, your regret will take your life."); }
   }
   for (const v of veterans) { const n = (vetVisited.get(v.actor) ?? []).filter((u) => dying.has(u)).length; say(v.actor, `Your Alert killed ${n} visitor${n === 1 ? "" : "s"}.`); }
@@ -577,7 +576,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (deadTonight.includes(d.id) || d.faction !== "Lanternkeepers") { say(a.actor, FAILED); continue; }
     P(a.actor).priestUsed = true; d.alive = true; raised.push(d.id); if (d.role === "Rogue") d.bullets = 1;
     // Raised players come back clean (Nik, 7 Nov): no effect from before their death carries over.
-    d.debt = false; d.collection = false; d.debtNotified = false; d.planted = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false; if (d.role === "Butcher") d.streak = 0;
+    d.debt = false; d.collection = false; d.debtNotified = false; d.planted = false; d.framed = false; d.bribed = false; d.bribedBy = undefined; d.shipped = false; d.disguisedAs = undefined; d.guilt = false;
     say(d.id, "The Priest has raised you from the dead.");
   }
   const recruitedTonight = new Set<string>();
@@ -838,7 +837,7 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
     if (s.phase === "defence") return s.accused === id;
     return s.phase === "discussion" || s.phase === "vote" || s.phase === "verdict" || s.phase === "dusk";
   }
-  // The Kingpin works alone: he never sees or uses his side's night chat (Nik, 7 Nov).
+  // The Kingpin reads his side's night chat but never writes in it (Nik, 11 Nov; he could not see it from 7 Nov).
   if (channel === "faction") return s.phase === "night" && isEvil(p) && p.role !== "Kingpin";
   return false;
 }
