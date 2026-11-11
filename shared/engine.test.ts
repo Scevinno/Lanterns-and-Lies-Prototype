@@ -173,7 +173,7 @@ describe("investigations", () => {
     const c = (role: string, framed = false) => { const s = game(["Constable", role, "Framer", "Spy"]); act(s, 0, 1); if (framed) act(s, 2, 1); return said(run(s), 0); };
     expect(c("Godfather")).toContain("Innocent"); expect(c("Kingpin")).toContain("Innocent"); expect(c("Harbour Master")).toContain("Innocent"); expect(c("Loan Shark")).toContain("Innocent");
     expect(c("Mobster")).toContain("Evil"); expect(c("Spy", true)).toContain("Evil"); expect(c("Martyr")).toContain("Innocent"); expect(c("Outcast")).toContain("Innocent");
-    expect(c("Assassin")).toContain("Evil"); expect(c("Exterminator")).toContain("Evil");
+    expect(c("Assassin")).toContain("Evil"); expect(c("Town Crier")).toContain("Evil");
   });
   it("Detective reads the role type; Framed appears Deceptive, Planted appears Killing; Godfather is not immune", () => {
     const d = (role: string, set?: (s: GameState) => void) => { const s = game(["Detective", role, "Framer"]); act(s, 0, 1); set?.(s); return said(run(s), 0); };
@@ -327,8 +327,8 @@ describe("day flow", () => {
   it("Martyr wins when voted out and is Revealed", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p4"; cmdVerdict(s, "p0", "guilty"); forceAdvance(s, T0, seeded(1)); expect(s.players[4].won).toBe(true); expect(s.players[4].revealed).toBe(true);
   });
-  it("Exterminator wins when their target is voted out", () => {
-    const s = game(["Exterminator", "Spy", "Doctor", "Mobster", "Godfather", "Seer"], 2); s.players[0].extTarget = "p1"; s.phase = "verdict"; s.accused = "p1"; cmdVerdict(s, "p2", "guilty"); forceAdvance(s, T0, seeded(1)); expect(s.players[0].won).toBe(true);
+  it("Town Crier wins when their target is voted out", () => {
+    const s = game(["Town Crier", "Spy", "Doctor", "Mobster", "Godfather", "Seer"], 2); s.players[0].crierTarget = "p1"; s.phase = "verdict"; s.accused = "p1"; cmdVerdict(s, "p2", "guilty"); forceAdvance(s, T0, seeded(1)); expect(s.players[0].won).toBe(true);
   });
   it("Judge: Condemn executes; Condemning a Lanternkeeper kills the Judge", () => {
     const s = day(); s.players[1].revealed = true; cmdCondemn(s, "p1", "p2", T0, seeded(1)); expect(dead(s, 2)).toBe(true);
@@ -360,9 +360,9 @@ describe("win conditions and chat", () => {
     expect(s.endsAt).toBe(T0 + 30_000); forceAdvance(s, s.endsAt, seeded(2)); expect(s.phase).toBe("night"); expect(s.night).toBe(1);
     forceAdvance(s, s.endsAt, seeded(2)); forceAdvance(s, s.endsAt, seeded(2)); expect(s.phase).toBe("discussion"); expect(s.day).toBe(1);
   });
-  it("the Swindler moves the Exterminator's target and the Assassin's contract with the role", () => {
-    const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[1].extTarget = "p3"; act(s, 0, 1, 2);
-    run(s); expect(s.players[2].role).toBe("Exterminator"); expect(s.players[2].extTarget).toBe("p3");
+  it("the Swindler moves the Town Crier's target and the Assassin's contract with the role", () => {
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Cartel"); s.players[1].crierTarget = "p3"; act(s, 0, 1, 2);
+    run(s); expect(s.players[2].role).toBe("Town Crier"); expect(s.players[2].crierTarget).toBe("p3");
   });
   it("killing the last evil player on Night 7 still wins it for the Lanternkeepers", () => {
     const s = game(["Mobster", "Rogue", "Doctor"], 7); act(s, 1, 0); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Lanternkeepers");
@@ -404,14 +404,14 @@ describe("night Reveal and Hold-immune swappers", () => {
   });
 });
 
-describe("Exterminator and the Swindler", () => {
-  it("the target handed the Exterminator role becomes the Martyr at once", () => {
-    const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[1].extTarget = "p2"; act(s, 0, 1, 2);
+describe("Town Crier and the Swindler", () => {
+  it("the target handed the Town Crier role becomes the Martyr at once", () => {
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Cartel"); s.players[1].crierTarget = "p2"; act(s, 0, 1, 2);
     run(s); expect(s.players[2].role).toBe("Martyr"); expect(s.players[1].role).toBe("Spy");
   });
   it("swapping the target's role keeps the same person as the target", () => {
-    const s = game(["Swindler", "Exterminator", "Spy", "Doctor"], 1, "Cartel"); s.players[0].extTarget = undefined; s.players[1].extTarget = "p2"; act(s, 0, 2, 3);
-    run(s); expect(s.players[1].extTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Cartel"); s.players[0].crierTarget = undefined; s.players[1].crierTarget = "p2"; act(s, 0, 2, 3);
+    run(s); expect(s.players[1].crierTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
   });
 });
 
@@ -432,8 +432,8 @@ describe("Narrator feedback, round 2 (8 Nov)", () => {
   it("a shipped player is told privately", () => {
     const s = game(["Harbour Master", "Spy", "Doctor"], 1, "Cartel"); act(s, 0, 1); expect(said(run(s), 1)).toContain("sent away on a ship");
   });
-  it("the Exterminator and Assassin hear at dawn while their targets live", () => {
-    const s = game(["Exterminator", "Assassin", "Spy", "Mobster", "Doctor"], 2); s.players[0].extTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
+  it("the Town Crier and Assassin hear at dawn while their targets live", () => {
+    const s = game(["Town Crier", "Assassin", "Spy", "Mobster", "Doctor"], 2); s.players[0].crierTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
     const m = run(s); expect(said(m, 0)).toContain("Your target still lives."); expect(said(m, 1)).toContain("Your targets still live.");
     const k = game(["Assassin", "Spy", "Mobster", "Doctor"], 2); k.players[0].contract = ["Spy", "Mobster"]; act(k, 2, 1); expect(said(run(k), 0)).toContain("One of your targets still lives.");
   });
@@ -513,8 +513,8 @@ describe("Swindler reach", () => {
 });
 
 describe("role view extras", () => {
-  it("shows the Exterminator's target and the Assassin's contract to them only", () => {
-    const s = game(["Exterminator", "Assassin", "Spy", "Mobster"], 1); s.players[0].extTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
+  it("shows the Town Crier's target and the Assassin's contract to them only", () => {
+    const s = game(["Town Crier", "Assassin", "Spy", "Mobster"], 1); s.players[0].crierTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
     expect(privateView(s, "p0").target).toEqual({ name: "N2", alive: true }); expect(privateView(s, "p1").contract).toEqual(["Spy", "Mobster"]);
     expect(privateView(s, "p2").target).toBeNull(); expect(privateView(s, "p2").contract).toBeNull();
   });
@@ -533,8 +533,8 @@ describe("7 Nov rulings, part two", () => {
     const s = game(["Kingpin", "Swindler", "Foreman", "Forger", "Spy"], 1, "Cartel"); const names = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);
     expect(names).toEqual(["p3"]);
   });
-  it("an Exterminator whose target dies at night becomes the Martyr", () => {
-    const s = game(["Exterminator", "Doctor", "Mobster", "Spy"], 1); s.players[0].extTarget = "p1"; act(s, 2, 1);
+  it("a Town Crier whose target dies at night becomes the Martyr", () => {
+    const s = game(["Town Crier", "Doctor", "Mobster", "Spy"], 1); s.players[0].crierTarget = "p1"; act(s, 2, 1);
     run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].role).toBe("Martyr");
   });
   it("a raised player comes back clean", () => {
