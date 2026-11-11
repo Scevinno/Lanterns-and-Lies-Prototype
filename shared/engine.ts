@@ -152,7 +152,7 @@ export interface Slot { label: string; options: { id: string; name: string }[] }
 export interface Prompt { label: string; slots: Slot[]; toggle?: string; toggleOn?: string; second?: boolean }
 const opts = (ps: Player[]) => ps.map((p) => ({ id: p.id, name: p.name }));
 // Evil roles never choose themselves or a known ally (Nik, 11 Nov), unless the power only works on their own side:
-// the Tailor, the Kingpin's Command, the Harbour Master's Guns and the Coroner keep their own rules.
+// the Tailor, the Kingpin, the Harbour Master and the Coroner keep their own rules.
 // Cartel members other than the Power roles do not know the Kingpin, so he stays on their lists.
 const KNOWS_KINGPIN = new Set(["Kingpin", "Harbour Master", "Loan Shark"]);
 const outsiders = (p: Player, c: Player[]) => (!isEvil(p) ? c : c.filter((x) => x.id !== p.id && (x.faction !== p.faction || (x.role === "Kingpin" && !KNOWS_KINGPIN.has(p.role)))));
@@ -175,7 +175,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
     case "Smuggler": case "Ferryman": { const c = outsiders(p, all); return { label: "Swap two players", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
-    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", outsiders(p, all)); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
+    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
     case "Quartermaster": return one("Hold a player below deck", outsiders(p, others));
     case "Forger": return one("Forge a player's results", outsiders(p, others));
     case "Coroner": return dead.length ? { label: "Use a dead player's ability on a target", slots: [{ label: "Dead player", options: opts(dead) }, { label: "Target", options: opts(all) }] } : null;
