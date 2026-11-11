@@ -164,7 +164,7 @@ describe("Holds and redirects", () => {
     const u = game(["Fence", "Seer", "Spy", "Doctor"]); act(u, 0, 1); act(u, 1, 2, 3); expect(said(run(u), 1)).toContain("N2 and N3");
   });
   it("Pawnbroker draws a visit, and not a two-target visitor", () => {
-    const s = game(["Pawnbroker", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(false);
+    const s = game(["Pawnbroker", "Hollowman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(false);
   });
 });
 
@@ -179,9 +179,9 @@ describe("investigations", () => {
     const d = (role: string, set?: (s: GameState) => void) => { const s = game(["Detective", role, "Framer"]); act(s, 0, 1); set?.(s); return said(run(s), 0); };
     expect(d("Godfather")).toContain("Power"); expect(d("Doctor", (s) => act(s, 2, 1))).toContain("Deceptive"); expect(d("Doctor", (s) => { s.players[1].planted = true; })).toContain("Killing");
   });
-  it("Tailor's disguise fools the Constable and Watchman but not the Informant", () => {
-    const s = game(["Tailor", "Mobster", "Constable", "Spy", "Informant", "Watchman", "Doctor"]); act(s, 0, 1, 3); act(s, 1, 6); act(s, 2, 1); act(s, 4, 1); act(s, 5, 6); const m = run(s);
-    expect(said(m, 2)).toContain("Innocent"); expect(said(m, 4)).toContain("Mobster"); expect(said(m, 5)).toContain("N3");
+  it("Tailor's disguise fools the Constable and Watchman", () => {
+    const s = game(["Tailor", "Mobster", "Constable", "Spy", "Doctor", "Watchman"]); act(s, 0, 1, 3); act(s, 1, 4); act(s, 2, 1); act(s, 5, 4); const m = run(s);
+    expect(said(m, 2)).toContain("Innocent"); expect(said(m, 5)).toContain("N3");
   });
   it("Notary and Informant see a Planted player as the Tinkerer", () => {
     const s = game(["Notary", "Spy"], 1, "Cartel"); s.players[1].planted = true; act(s, 0, 1); expect(said(run(s), 0)).toContain("Tinkerer");
@@ -550,7 +550,7 @@ describe("7 Nov rulings", () => {
     const m = run(s); expect(said(m, 0)).not.toContain("Held"); expect(said(m, 2)).toContain("Held"); expect(dead(s, 3)).toBe(true);
   });
   it("a Fence held by a different Holder cannot lead astray", () => {
-    const s = game(["Fence", "Locksmith", "Doctor", "Spy", "Enforcer"], 1); act(s, 0, 1); act(s, 1, 3); act(s, 4, 0);
+    const s = game(["Fence", "Locksmith", "Doctor", "Spy", "Locksmith"], 1); act(s, 0, 1); act(s, 1, 3); act(s, 4, 0);
     const m = run(s); expect(said(m, 0)).toContain("Held");
   });
   it("the Pawnbroker draws a Hold onto himself", () => {
@@ -656,5 +656,17 @@ describe("Debt without a living Loan Shark (Nik, 10 Nov)", () => {
     const s = game(["Foreman", "Loan Shark", "Oracle", "Doctor"], 2, "Cartel"); s.players[1].alive = false; s.players[2].debt = true;
     s.phase = "dusk"; s.endsAt = T0; const m = forceAdvance(s, T0, seeded(1));
     expect(said(m, 2)).not.toContain("You owe"); expect(s.players[2].collection).toBeFalsy(); expect(s.players[2].debt).toBe(false);
+  });
+});
+
+describe("evil roles and their own side (Nik, 11 Nov)", () => {
+  it("Syndicate and Cartel roles are not offered themselves or known allies", () => {
+    const s = game(["Framer", "Mobster", "Doctor", "Spy"], 2); s.phase = "night";
+    const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id); expect(ids).toEqual(["p2", "p3"]);
+    const c = game(["Smuggler", "Notary", "Kingpin", "Doctor"], 3, "Cartel"); c.phase = "night";
+    const sm = nightPrompt(c, c.players[0])!.slots[0].options.map((o) => o.id); expect(sm).toEqual(["p2", "p3"]);
+  });
+  it("the Tailor, Kingpin and Harbour Master Guns still choose their own side", () => {
+    const s = game(["Tailor", "Mobster", "Doctor"], 2); s.phase = "night"; expect(nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id)).toContain("p1");
   });
 });

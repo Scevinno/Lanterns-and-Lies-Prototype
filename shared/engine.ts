@@ -151,6 +151,11 @@ const baseDefence = (s: GameState, p: Player): number => {
 export interface Slot { label: string; options: { id: string; name: string }[] }
 export interface Prompt { label: string; slots: Slot[]; toggle?: string; toggleOn?: string; second?: boolean }
 const opts = (ps: Player[]) => ps.map((p) => ({ id: p.id, name: p.name }));
+// Evil roles never choose themselves or a known ally (Nik, 11 Nov), unless the power only works on their own side:
+// the Tailor, the Kingpin's Command, the Harbour Master's Guns and the Coroner keep their own rules.
+// Cartel members other than the Power roles do not know the Kingpin, so he stays on their lists.
+const KNOWS_KINGPIN = new Set(["Kingpin", "Harbour Master", "Loan Shark"]);
+const outsiders = (p: Player, c: Player[]) => (!isEvil(p) ? c : c.filter((x) => x.id !== p.id && (x.faction !== p.faction || (x.role === "Kingpin" && !KNOWS_KINGPIN.has(p.role)))));
 
 /** What this player can choose tonight, or null. Candidate lists never reveal hidden roles. */
 export function nightPrompt(s: GameState, p: Player): Prompt | null {
@@ -167,15 +172,15 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
     // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
     case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
-    case "Pawnbroker": return one("Draw a visitor to your counter");
-    case "Smuggler": case "Ferryman": return { label: "Swap two players", slots: [{ label: "First", options: opts(all) }, { label: "Second", options: opts(all) }] };
+    case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
+    case "Smuggler": case "Ferryman": { const c = outsiders(p, all); return { label: "Swap two players", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
-    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", all); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
-    case "Quartermaster": return one("Hold a player below deck");
-    case "Forger": return one("Forge a player's results");
+    case "Harbour Master": { if (!fogNight(s.night)) return one("Passage: ship a player out for the Day", outsiders(p, all)); const crew = others.filter((x) => x.faction === "Cartel" && x.role !== "Kingpin"); return crew.length ? one("Guns: arm a Cartel member", crew) : one("Guns: attack a player"); }
+    case "Quartermaster": return one("Hold a player below deck", outsiders(p, others));
+    case "Forger": return one("Forge a player's results", outsiders(p, others));
     case "Coroner": return dead.length ? { label: "Use a dead player's ability on a target", slots: [{ label: "Dead player", options: opts(dead) }, { label: "Target", options: opts(all) }] } : null;
-    case "Paymaster": return one("Bribe a player");
-    case "Notary": return one("Learn a player's exact role");
+    case "Paymaster": return one("Bribe a player", outsiders(p, others));
+    case "Notary": return one("Learn a player's exact role", outsiders(p, others));
     case "Foreman": return one("Attack a player", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
     case "Bodyguard": return one("Guard a player", others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")));
     case "Rogue": return s.night > 1 && (p.bullets ?? 0) > 0 ? one("Shoot a player") : null;
@@ -194,12 +199,12 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Seer": { const c = others.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")); return { label: "Learn whether two players are friends or enemies", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Tracker": return one("Follow a player");
     case "Constable": return one("Search a player's house");
-    case "Fence": return one("Lead a player astray");
-    case "Enforcer": return one("Hold a player");
+    case "Fence": return one("Lead a player astray", outsiders(p, others));
+    case "Enforcer": return one("Hold a player", outsiders(p, others));
     case "Mobster": return one("Choose who to attack", others.filter((x) => x.faction !== "Syndicate"));
     case "Tailor": return { label: "Disguise a Syndicate member", slots: [{ label: "Syndicate member", options: opts(all.filter((x) => x.faction === "Syndicate")) }, { label: "Disguised as", options: opts(s.players.filter((x) => x.faction !== "Syndicate")) }] };
-    case "Framer": return one("Frame a player");
-    case "Informant": return one("Check a player's exact role");
+    case "Framer": return one("Frame a player", outsiders(p, others));
+    case "Informant": return one("Check a player's exact role", outsiders(p, others));
     case "Godfather": return one("Order a hit", others.filter((x) => x.faction !== "Syndicate"));
     case "Hollowman": return fogNight(s.night) ? null : one("Hollow a house");
     case "Tinkerer": return { label: "Plant an explosive, or choose yourself to Trigger", slots: [{ label: "Target", options: opts(all) }] };
