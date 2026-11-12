@@ -14,6 +14,7 @@
   import Library from "./Library.svelte";
   import Settings from "./Settings.svelte";
   import Friends from "./Friends.svelte";
+  import Guide from "./Guide.svelte";
 
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
@@ -45,8 +46,8 @@
     const h = location.hash.replace(/^#\/?/, "") || "home";
     if (h.startsWith("join/")) { pendingCode = h.slice(5).toUpperCase(); if (session) { await join(pendingCode); pendingCode = ""; } else route = "home"; return; }
     if (h.startsWith("party/")) { await openParty(h.slice(6)); return; }
-    if (h === "rosters") { guideTab = "rosters"; openRole = null; route = "guide"; leaveChannel(); return; }
-    if (h === "guide") guideTab = "roles";
+    if (h === "rosters") { guideTab = "rosters"; openRole = null; route = "roles"; leaveChannel(); return; }
+    if (h === "roles") guideTab = "roles";
     route = h; leaveChannel();
     if (h === "games") loadGames();
     if (h === "home" && session) loadFriends();
@@ -223,9 +224,11 @@
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
-{:else if route === "guide"}
+{:else if route === "guide" || route === "rules" || route === "combat" || route === "glossary"}
+  <Guide page={route} {roles} />
+{:else if route === "roles"}
   <main class="narrow">
-    <button class="link back" on:click={() => (openRole ? closeRole() : go("home"))}>Back</button>
+    <button class="link back" on:click={() => (openRole ? closeRole() : go("guide"))}>Back</button>
     {#if openRole}<RoleCard role={openRole} />
     {:else}
       <div class="tabs top"><button class:on={guideTab === "roles"} on:click={() => (guideTab = "roles")}>Roles</button><button class:on={guideTab === "rosters"} on:click={() => (guideTab = "rosters")}>Rosters</button></div>
@@ -257,7 +260,7 @@
     <p class="dim tc">Signed in as {session.user.user_metadata?.display_name ?? session.user.email}</p>
     <div class="stack">
       <button class="go wide" on:click={() => go("play")}>Play</button>
-      <button class="wide" on:click={() => go("guide")}>Role guide</button>
+      <button class="wide" on:click={() => go("guide")}>Guide</button>
       <button class="wide" on:click={() => go("friends")}>Friends{#if invites + requests}<span class="badge" aria-label="{invites + requests} new">{invites + requests}</span>{/if}</button>
       <button class="wide" on:click={() => go("games")}>My games</button>
       <button class="wide weak" on:click={() => go("settings")}>Settings</button>

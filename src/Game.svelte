@@ -124,7 +124,7 @@
     {#if chatOpen}
       <button class="ghost wide" on:click={() => (chatOpen = false)}>Back to {phase === "night" ? "your choice" : phase === "verdict" ? "the verdict" : "voting"}</button>
     {:else if showRole && myRole}
-      <RoleCard role={myRole} />
+      <RoleCard role={myRole} guideLinks={false} />
       {#if view.ability !== view.role}<p class="dim">You now have the ability of the {view.ability}.</p>{/if}
       {#if view.target}<div class="side"><h3 class="f-ub">Your target</h3><ul class="plain"><li><b>{view.target.name}</b><span class="dim">{view.target.alive ? "Get them voted out" : "Dead"}</span></li></ul></div>{/if}
       {#if view.contract}<div class="side"><h3 class="f-ub">Your contract</h3><ul class="plain">{#each view.contract as c}<li><b class={FACTION_CLASS[roleByName(c)?.faction ?? ""]}>{c}</b><span class="dim">{roleByName(c)?.faction ?? ""}</span></li>{/each}</ul><p class="dim small">Visit both on the same Night to win.</p></div>{/if}
@@ -218,7 +218,7 @@
       <div class="sheet scroll" bind:this={sheetEl}>
         {#if !libRole}<h2>{rosterView === "roles" ? "Roles" : "Roster"}</h2>{/if}
         {#if libRole}
-          <button class="link back" on:click={closeLibRole}>Back</button><RoleCard role={libRole} />
+          <button class="link back" on:click={closeLibRole}>Back</button><RoleCard role={libRole} guideLinks={false} />
         {:else if rosterView === "roles"}
           <button class="link back" on:click={() => (rosterView = "roster")}>Back to the roster</button>
           <Library roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => { sheetScroll = sheetEl?.scrollTop ?? 0; libRole = r; if (sheetEl) sheetEl.scrollTop = 0; }} />

@@ -184,3 +184,17 @@ button.danger { border-color:var(--syn); color:#ffb4b4; }
 .invite { display:flex; justify-content:space-between; align-items:center; gap:8px; } .invite .btns { display:flex; gap:6px; }
 .badge { display:inline-block; min-width:20px; margin-left:8px; padding:0 6px; border-radius:10px; background:var(--lamp); color:#1b1608; font-size:13px; font-weight:700; line-height:20px; }
 .create-go { margin-top:32px; }
+/* Guide and the glossary sheet (Nik, 12 Nov). */
+.guide-row { padding:12px; } .guide h3 { color:var(--lamp); margin-top:22px; }
+.combat { width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; } .combat th,.combat td { border:1px solid var(--line); padding:6px; text-align:center; }
+.combat th { background:var(--panel); font-weight:600; } .combat td { color:var(--lk); } .combat td.dies { color:var(--syn); }
+.who li { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); }
+.glossary dt { font-weight:700; color:var(--lamp); margin-top:14px; } .glossary dd { margin:2px 0 0; }
+button.term { all:unset; cursor:pointer; color:inherit; text-decoration:underline dotted var(--lamp); text-underline-offset:3px; text-decoration-thickness:1.5px; }
+button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; border-radius:2px; }
+.term-scrim { position:fixed; inset:0; background:rgba(8,9,12,.6); z-index:20; }
+.term-sheet { position:fixed; left:0; right:0; bottom:0; max-height:50dvh; min-height:30dvh; overflow-y:auto; background:var(--night); border-top:1px solid var(--line); border-radius:16px 16px 0 0; padding:10px 20px calc(16px + env(safe-area-inset-bottom)); z-index:21; box-shadow:0 -10px 30px rgba(0,0,0,.5); max-width:480px; margin:0 auto; }
+.term-sheet .handle { width:40px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 10px; }
+.term-sheet h2 { font-family:"Alegreya SC",Georgia,serif; color:var(--lamp); margin:4px 0 8px; }
+.term-actions { display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
+.stats-link { display:block; text-align:center; font-size:13px; margin-top:6px; }
