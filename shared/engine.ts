@@ -144,7 +144,7 @@ const baseDefence = (s: GameState, p: Player): number => {
   switch (p.role) {
     case "Godfather": case "Loan Shark": case "Tinkerer": case "Ripper": case "Town Crier": case "Assassin": case "Outcast": case "Harbour Master": return 1;
     case "Kingpin": return alive(s).some((x) => x.faction === "Cartel" && x.id !== p.id) ? 2 : 0;
-    case "Hollowman": return fogNight(s.night) ? 1 : 2;   // Basic Defence on Fog Nights (Nik, 11 Nov)
+    case "Hollowman": return fogNight(s.night) ? 3 : 1;   // Absolute Defence on Fog Nights, Light on clear Nights (Nik, 12 Nov)
     default: return 0;
   }
 };
@@ -374,7 +374,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const healers = new Map<string, string[]>();
   const veterans = has("Veteran").filter((a) => a.alert);
   for (const v of veterans) { P(v.actor).alerts = (P(v.actor).alerts ?? 1) - 1; addDef(v.actor, 1); }
-  // The Veteran's Powerful Attack can cancel a visitor's ability; only the Ferryman, Smuggler and Hollowman still act.
+  // The Veteran's Heavy Attack can cancel a visitor's ability; only the Ferryman, Smuggler and Hollowman still act.
   const vetVictims = new Set<string>(); const vetVisited = new Map<string, string[]>();
   for (const v of veterans) { const vs = allVisitorsOf(v.actor); vetVisited.set(v.actor, vs); for (const u of vs) { attack(u, 2, v.actor, "the Veteran", false); vetVictims.add(u); } }
   for (const a of has("Doctor")) {
@@ -412,7 +412,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of has("Foreman")) attack(a.targets[0], 1, a.actor, "the Foreman", true, true);
   for (const a of has("Rogue")) { attack(a.targets[0], 1, a.actor, "the Rogue", true, true); if (!a.borrowed) P(a.actor).bullets = 0; }
   for (const p of living) if (p.guilt) { attack(p.id, 3, p.id, "guilt", false); p.guilt = false; }
-  // The Ripper has no Rampage (Nik, 11 Nov): one Basic Attack a Night.
+  // The Ripper has no Rampage (Nik, 11 Nov): one Light Attack a Night.
   for (const a of has("Ripper")) attack(a.targets[0], 1, a.actor, "the Ripper", true, true);
   for (const a of has("Hollowman")) { const t = a.targets[0]; attack(t, 2, a.actor, "the Hollowman", true, true); for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 2, a.actor, "the Hollowman"); }
   for (const a of has("Assassin")) {

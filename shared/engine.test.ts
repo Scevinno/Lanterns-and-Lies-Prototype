@@ -69,10 +69,10 @@ describe("attacks and defence", () => {
     const s = game(["Godfather", "Mobster", "Locksmith", "Doctor", "Spy"]); act(s, 0, 3); act(s, 1, 4); act(s, 2, 0); run(s);
     expect(dead(s, 4)).toBe(true); expect(dead(s, 3)).toBe(false);
   });
-  it("Godfather acts alone with no Mobster and has Basic Defence against the Rogue", () => {
+  it("Godfather acts alone with no Mobster and has Light Defence against the Rogue", () => {
     const s = game(["Godfather", "Rogue", "Doctor"], 2); act(s, 0, 2); act(s, 1, 0); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 0)).toBe(false);
   });
-  it("Doctor heals a Basic Attack but not an Unstoppable one", () => {
+  it("Doctor heals a Light Attack but not an Absolute one", () => {
     const a = game(["Foreman", "Doctor", "Spy"], 1, "Cartel"); act(a, 0, 2); act(a, 1, 2); run(a); expect(dead(a, 2)).toBe(false);
     const b = game(["Tinkerer", "Doctor", "Spy"]); b.players[2].planted = true; act(b, 0, 0); act(b, 1, 2); run(b); expect(dead(b, 2)).toBe(true);
   });
@@ -126,7 +126,7 @@ describe("attacks and defence", () => {
     const s = game(["Hollowman", "Constable"], 1); act(s, 1, 0); expect(said(run(s), 1)).toContain("Evil");
     const f = game(["Hollowman", "Constable"], 3); act(f, 1, 0); expect(said(run(f), 1)).toContain("Evil");
   });
-  it("Innkeeper gives visitors Basic Defence, unless Held", () => {
+  it("Innkeeper gives visitors Light Defence, unless Held", () => {
     const s = game(["Foreman", "Innkeeper", "Detective"], 1, "Cartel"); act(s, 0, 2); act(s, 2, 1); run(s); expect(dead(s, 2)).toBe(false);
     const h = game(["Foreman", "Innkeeper", "Detective", "Locksmith"], 1, "Cartel"); act(h, 0, 2); act(h, 2, 1); act(h, 3, 1); run(h); expect(dead(h, 2)).toBe(true);
   });
@@ -142,7 +142,7 @@ describe("Holds and redirects", () => {
     const s = game(["Locksmith", "Detective", "Enforcer", "Spy"]); act(s, 0, 1); act(s, 1, 3); act(s, 2, 0); const m = run(s);
     expect(said(m, 1)).not.toContain("role"); expect(said(m, 1)).toContain("Held");
   });
-  it("Quartermaster's Hold gives Powerful Defence", () => {
+  it("Quartermaster's Hold gives Heavy Defence", () => {
     const s = game(["Quartermaster", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 2); act(s, 1, 2); run(s); expect(dead(s, 2)).toBe(false);
   });
   it("Ferryman swaps visits; swapped players are told", () => {
@@ -229,7 +229,7 @@ describe("Cartel", () => {
   it("A dead Loan Shark clears every Debt", () => {
     const s = game(["Loan Shark", "Spy", "Hollowman"], 3, "Cartel"); s.players[1].debt = true; act(s, 2, 0); run(s); expect(dead(s, 0)).toBe(true); expect(s.players[1].debt).toBe(false);
   });
-  it("Kingpin commands a member to act twice, cannot command the Foreman, and has Powerful Defence while others live", () => {
+  it("Kingpin commands a member to act twice, cannot command the Foreman, and has Heavy Defence while others live", () => {
     const s = game(["Kingpin", "Framer", "Spy", "Doctor", "Foreman"], 1, "Cartel"); s.players[1].faction = "Cartel";
     expect(nightPrompt(s, s.players[0])!.slots[0].options.some((o) => o.id === "p4")).toBe(false);
     cmdNight(s, "p0", { targets: ["p1"] }, T0); expect(privateView(s, "p1").commanded).toBe(true);
@@ -678,13 +678,15 @@ describe("failed once-per-game uses are kept (Nik, 11 Nov)", () => {
     const m = game(["Medium", "Godfather", "Spy"], 2); m.players[1].alive = false; act(m, 0, 1); run(m); expect(m.players[0].mediumUsed).toBeFalsy(); expect(m.players[0].role).toBe("Medium");
     const r = game(["Rogue", "Godfather", "Spy"], 2); act(r, 0, 1); run(r); expect(r.players[1].alive).toBe(true); expect(r.players[0].bullets).toBe(0);
   });
-  it("the Hollowman has Basic Defence on Fog Nights", () => {
-    const s = game(["Hollowman", "Mobster", "Spy"], 2); act(s, 1, 0); run(s); expect(s.players[0].alive).toBe(true);
+  it("the Hollowman has Absolute Defence on Fog Nights and Light Defence on clear Nights (Nik, 12 Nov)", () => {
+    const f = game(["Hollowman", "Assassin", "Spy"], 2); f.players[1].contract = ["Hollowman", "Spy"]; act(f, 1, 0, 2); run(f); expect(f.players[0].alive).toBe(true);
+    const c = game(["Hollowman", "Assassin", "Spy"], 1); c.players[1].contract = ["Hollowman", "Spy"]; act(c, 1, 0, 2); run(c); expect(c.players[0].alive).toBe(false);
+    const l = game(["Hollowman", "Mobster", "Spy"], 1); act(l, 1, 0); run(l); expect(l.players[0].alive).toBe(true); // Light stops a Light Attack
   });
 });
 
 describe("11 Nov card batch (Nik)", () => {
-  it("the Loan Shark has Basic Defence", () => {
+  it("the Loan Shark has Light Defence", () => {
     const s = game(["Loan Shark", "Ripper", "Spy"], 2, "Cartel"); act(s, 1, 0); run(s); expect(s.players[0].alive).toBe(true);
   });
   it("the Smuggler may swap himself and his own side", () => {
