@@ -219,7 +219,7 @@
       <h3>{label}</h3>
       <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
     {/each}
-    <button class="go wide" disabled={busy} on:click={create}>Create party</button>
+    <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
 {:else if route === "guide"}

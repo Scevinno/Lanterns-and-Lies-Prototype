@@ -183,3 +183,4 @@ button.danger { border-color:var(--syn); color:#ffb4b4; }
 .toast.ok { background:#1f3a26; border-color:var(--lk); }
 .invite { display:flex; justify-content:space-between; align-items:center; gap:8px; } .invite .btns { display:flex; gap:6px; }
 .badge { display:inline-block; min-width:20px; margin-left:8px; padding:0 6px; border-radius:10px; background:var(--lamp); color:#1b1608; font-size:13px; font-weight:700; line-height:20px; }
+.create-go { margin-top:32px; }
