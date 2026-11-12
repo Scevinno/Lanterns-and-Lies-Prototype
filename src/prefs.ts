@@ -13,8 +13,7 @@ export const prefs = {
 export const canBuzz = () => typeof navigator !== "undefined" && "vibrate" in navigator;
 export function buzz(ms: number | number[] = 180) { if (!prefs.buzz) return; try { navigator.vibrate?.(ms); } catch { /* not supported */ } }
 
-// Push notifications. The public key is meant to be public; the private one lives only on the game server.
-const VAPID_PUBLIC = "BKCioN_e7KDJqpE4BeUIAQ1Zw3zprbEWS-DbsaP2IE2yq1_abembJLbdqzzexU8durDiSP5bGoKypnukDcan-rY";
+// Push notifications. The game server hands out its public key; the private one never leaves the database.
 export const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 // iPhones only allow push once the site is added to the Home Screen.
 export const needsHomeScreen = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator as any).standalone;
@@ -30,7 +29,7 @@ export async function pushState(): Promise<"on" | "off" | "blocked" | "unsupport
 export async function pushOn() {
   const perm = await Notification.requestPermission(); if (perm !== "granted") throw new Error("Notifications are blocked for this site. Allow them in your browser settings.");
   const reg = await navigator.serviceWorker.ready;
-  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key(VAPID_PUBLIC) }));
+  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key((await call("pushKey")).key) }));
   await call("pushSubscribe", { sub: sub.toJSON() });
 }
 export async function pushOff() {

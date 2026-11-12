@@ -24,11 +24,19 @@ const newCode = () => Array.from({ length: 6 }, () => codeChars[Math.floor(Math.
 const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : null);
 const SITE = "https://scevinno.github.io/Lanterns-and-Lies-Prototype/";
 
-// Push notifications (Nik, 12 Nov). Keys live in the function's secrets; without them nothing is sent.
-const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY"), VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY");
-if (VAPID_PUBLIC && VAPID_PRIVATE) webpush.setVapidDetails(SITE, VAPID_PUBLIC, VAPID_PRIVATE);
+// Push notifications (Nik, 12 Nov). The server makes its own key pair on first use and keeps it in app_secrets,
+// a table only the server can read, so the private key never leaves the database.
+let vapidPublic: string | null = null;
+async function vapid() {
+  if (vapidPublic) return vapidPublic;
+  let { data } = await db.from("app_secrets").select("value").eq("name", "vapid").maybeSingle();
+  if (!data) { await db.from("app_secrets").upsert({ name: "vapid", value: webpush.generateVAPIDKeys() }, { onConflict: "name", ignoreDuplicates: true }); ({ data } = await db.from("app_secrets").select("value").eq("name", "vapid").maybeSingle()); }
+  const k = data!.value as { publicKey: string; privateKey: string };
+  webpush.setVapidDetails(SITE, k.publicKey, k.privateKey); vapidPublic = k.publicKey; return vapidPublic;
+}
 async function notify(userIds: (string | null)[], msg: { title: string; body: string; url?: string; tag?: string }) {
-  const ids = [...new Set(userIds.filter(Boolean))] as string[]; if (!ids.length || !VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  const ids = [...new Set(userIds.filter(Boolean))] as string[]; if (!ids.length) return;
+  try { await vapid(); } catch (e) { console.error("push keys", (e as Error).message); return; }
   const { data } = await db.from("push_subscriptions").select("*").in("user_id", ids);
   await Promise.allSettled((data ?? []).map(async (r) => {
     try { await webpush.sendNotification({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }, JSON.stringify(msg), { TTL: 300, urgency: "high" }); }
@@ -208,6 +216,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     const { error } = await db.auth.admin.deleteUser(u.id); if (error) throw new Oops("Could not delete the account. Try again.");
     return { ok: true };
   },
+  async pushKey() { return { key: await vapid() }; },
   async pushSubscribe(b, req) {
     const u = await userOf(req); const sub = b.sub ?? {}; if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) throw new Oops("Notifications could not be set up.");
     await db.from("push_subscriptions").upsert({ endpoint: String(sub.endpoint), user_id: u.id, p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) }); return { ok: true };
