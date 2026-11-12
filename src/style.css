@@ -162,3 +162,4 @@ button.weak { background:rgba(34,37,46,.45); border-color:rgba(58,62,74,.6); col
 .stat b { display:block; font-family:"Alegreya SC",Georgia,serif; font-size:18px; }
 .stat-note { display:block; font-size:11px; color:var(--dim); }
 .stat.none b { opacity:.45; }
+.stat-num { font-family:Georgia,serif; font-size:14px; color:var(--lamp); letter-spacing:.04em; margin-left:2px; }
