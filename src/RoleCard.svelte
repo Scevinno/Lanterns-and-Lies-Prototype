@@ -20,7 +20,8 @@
   <div class="stats">
     {#each [["Attack", role.attack], ["Defence", role.defence]] as [label, v]}
       {@const given = (v ?? "").endsWith("(given)")}
-      <div class="stat" class:none={!v || v === "None"}><span class="stat-label">{label}</span>{@const lvl = (v ?? "None").replace(" (given)", "")}<b>{lvl}{#if NUM[lvl]} <span class="stat-num">{NUM[lvl]}</span>{/if}</b>{#if given}<span class="stat-note">given to others</span>{/if}</div>
+      {@const lvl = (v ?? "None").replace(" (given)", "")}
+      <div class="stat" class:none={!v || v === "None"}><span class="stat-label">{label}</span><b>{lvl}{#if NUM[lvl]} <span class="stat-num">{NUM[lvl]}</span>{/if}</b>{#if given}<span class="stat-note">given to others</span>{/if}</div>
     {/each}
   </div>
 </div>
