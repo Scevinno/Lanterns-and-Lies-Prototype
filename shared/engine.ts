@@ -65,7 +65,8 @@ export function rosterFor(size: number, mode: "Syndicate" | "Cartel"): RosterSlo
   add("Unbound", "Chaos", 1, ["Chaos"]); add("Unbound", "Killing", size === 15 ? 1 : 0, ["Killing"]);
   return out;
 }
-const UNIQUE_EXTRA = new Set(["Veteran", "Ferryman", "Priest", "Swindler"]);
+// Smuggler added (Nik, 12 Nov): two swappers of one kind make an ambiguous Night.
+const UNIQUE_EXTRA = new Set(["Veteran", "Ferryman", "Priest", "Swindler", "Smuggler"]);
 export const isUnique = (n: string) => { const r = roleDef(n); return r.type === "Power" || r.type === "Protective" || r.faction === "Unbound" || ((r.faction === "Syndicate" || r.faction === "Cartel") && r.type === "Killing") || UNIQUE_EXTRA.has(n); };
 const pool = (f: Faction, types: string[]) => ROLES.filter((r) => r.faction === f && types.includes(r.type)).map((r) => r.name);
 const score = (deck: string[]) => deck.reduce((s, n) => s + roleDef(n).total + 2, 0);
@@ -236,7 +237,7 @@ function seerGroup(s: GameState, p: Player): string {
 }
 
 // ---- Night resolution ----
-interface Act { actor: string; ab: string; targets: string[]; alert?: boolean; borrowed?: boolean; dead?: boolean }
+interface Act { actor: string; ab: string; targets: string[]; alert?: boolean; borrowed?: boolean; dead?: boolean; chosen?: string[] }
 interface Result { to: string; kind: "text" | "role" | "evil" | "type" | "names" | "count" | "friends"; value?: string | number | boolean | string[]; pre?: string; info: boolean; targetName?: string }
 
 export function resolveNight(s: GameState, r: Rng): Msg[] {
@@ -266,6 +267,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (a.second?.[0] && s.commanded === p.id && a.second[0] !== t[0]) acts.push({ actor: p.id, ab: p.ability, targets: [a.second[0]] });
   }
   const has = (ab: string) => acts.filter((a) => a.ab === ab && !a.dead);
+  // What each player picked, before swaps and redirects move it (Nik, 12 Nov): results name these players.
+  for (const a of acts) a.chosen = [...a.targets];
   // Hunter builds even when Held or led astray.
   for (const p of living) if (p.ability === "Hunter" && !fogNight(s.night)) p.hasTrap = true;
 
@@ -455,25 +458,29 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const names = (ids: string[]) => ids.map((x) => P(x).name);
   // Protection lines go in as results, so a Warden watching a Doctor or a Guardsman gets the same copy either way.
   for (const id of protectors) res(id, "text", PROTECTED, "", false);
+  // Results name the player who was chosen, never the one a swap or redirect put there (Nik, 12 Nov),
+  // so nobody sees through the Ferryman, Smuggler, Fence or Pawnbroker. The result itself follows the real target.
+  const cn = (a: Act, i: number) => P(a.chosen?.[i] ?? a.targets[i]).name;
   for (const a of acts) {
-    if (a.dead || !a.targets.length) continue; const t = P(a.targets[0]);
+    if (a.dead || !a.targets.length) continue; const t = P(a.targets[0]); const tn = cn(a, 0);
     switch (a.ab) {
-      case "Constable": res(a.actor, "evil", constableEvil(s, t), t.name); break;
-      case "Detective": res(a.actor, "type", detectiveType(s, t), t.name); break;
-      case "Notary": res(a.actor, "role", exactRole(t, s, true), t.name); break;
-      case "Informant": res(a.actor, "role", exactRole(t, s, false), t.name); break;
-      case "Watchman": { const vs = allVisitorsOf(t.id).filter((v) => v !== a.actor).map((v) => P(v).disguisedAs ?? v); res(a.actor, "names", names(vs), `Visitors to ${t.name}`); break; }
-      case "Tracker": { const o = acts.filter((x) => x.actor === t.id && isVisit(x)).flatMap(visitTargets); res(a.actor, "names", names(o), `${t.name} visited`); break; }
-      case "Seer": { const [x, y] = a.targets.map(P); res(a.actor, "friends", seerGroup(s, x) === seerGroup(s, y), `${x.name} and ${y.name}`); break; }
+      case "Constable": res(a.actor, "evil", constableEvil(s, t), tn); break;
+      case "Detective": res(a.actor, "type", detectiveType(s, t), tn); break;
+      case "Notary": res(a.actor, "role", exactRole(t, s, true), tn); break;
+      case "Informant": res(a.actor, "role", exactRole(t, s, false), tn); break;
+      case "Watchman": { const vs = allVisitorsOf(t.id).filter((v) => v !== a.actor).map((v) => P(v).disguisedAs ?? v); res(a.actor, "names", names(vs), `Visitors to ${tn}`); break; }
+      case "Tracker": { const o = acts.filter((x) => x.actor === t.id && isVisit(x)).flatMap(visitTargets); res(a.actor, "names", names(o), `${tn} visited`); break; }
+      case "Seer": { const [x, y] = a.targets.map(P); res(a.actor, "friends", seerGroup(s, x) === seerGroup(s, y), `${cn(a, 0)} and ${cn(a, 1)}`); break; }
       case "Oracle": {
-        const good = (p: Player) => !constableEvil(s, p), pool2 = living.filter((p) => p.id !== a.actor && p.id !== t.id);
+        const ch = a.chosen?.[0] ?? t.id;
+        const good = (p: Player) => !constableEvil(s, p), pool2 = living.filter((p) => p.id !== a.actor && p.id !== t.id && p.id !== ch);
         const lkAlive = living.some((p) => p.id !== a.actor && p.faction === "Lanternkeepers");
         if (!lkAlive) { res(a.actor, "text", "Your power can no longer be used.", "", false); break; }
         const bad = shuffle(pool2.filter((p) => !good(p)), r), rest = shuffle(pool2.filter((p) => !bad.slice(0, 1).includes(p)), r);
         const trio = [t, ...(good(t) && bad[0] ? [bad[0]] : []), ...rest].slice(0, 3);
-        res(a.actor, "names", names(shuffle(trio.map((p) => p.id), r)), "Your Vision shows"); results[results.length - 1].targetName = t.name; break;
+        res(a.actor, "names", names(shuffle(trio.map((p) => (p.id === t.id ? ch : p.id)), r)), "Your Vision shows"); results[results.length - 1].targetName = tn; break;
       }
-      case "Loan Shark": res(a.actor, "role", t.role, t.name); break;
+      case "Loan Shark": res(a.actor, "role", t.role, tn); break;
       case "Warden": { const pa = P(a.actor).patrol ?? []; P(a.actor).patrol = [...pa, t.id].slice(-2); break; }
       case "Fence": case "Pawnbroker": break;
       default: break;

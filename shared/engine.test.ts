@@ -160,7 +160,7 @@ describe("Holds and redirects", () => {
     const s = game(["Ferryman", "Tinkerer", "Spy", "Detective"]); s.players[2].planted = true; act(s, 0, 2, 3); act(s, 1, 1); run(s); expect(dead(s, 2)).toBe(true); expect(dead(s, 3)).toBe(false);
   });
   it("Fence sends a visitor to a neighbour; not the Seer", () => {
-    const s = game(["Fence", "Detective", "Spy", "Doctor", "Godfather"]); act(s, 0, 1); act(s, 1, 2); const m = run(s); expect(said(m, 1)).toContain("N3");
+    const s = game(["Fence", "Detective", "Spy", "Doctor", "Godfather"]); act(s, 0, 1); act(s, 1, 2); const m = run(s); expect(said(m, 1)).toContain("N2 is a Protective role"); // led to the Doctor, still named as the chosen player
     const u = game(["Fence", "Seer", "Spy", "Doctor"]); act(u, 0, 1); act(u, 1, 2, 3); expect(said(run(u), 1)).toContain("N2 and N3");
   });
   it("Pawnbroker draws a visit, and not a two-target visitor", () => {
@@ -703,5 +703,17 @@ describe("roster: the town grows the same way in both modes (Nik, 11 Nov)", () =
     const syn = [8, 9, 10, 11, 12, 13, 14, 15].map((n) => lk(n, "Syndicate")), car = [8, 9, 10, 11, 12, 13, 14, 15].map((n) => lk(n, "Cartel"));
     expect(car).toEqual(syn); for (let i = 1; i < syn.length; i++) expect(syn[i]).toBeGreaterThanOrEqual(syn[i - 1]);
     for (let n = 8; n <= 15; n++) expect(rosterFor(n, "Cartel").reduce((a, x) => a + x.count, 0)).toBe(n);
+  });
+});
+
+describe("Results name the chosen player (Nik, 12 Nov)", () => {
+  it("a swapped Seer target is named as chosen, the result follows the real target", () => {
+    const s = game(["Ferryman", "Seer", "Spy", "Doctor", "Ripper"]); act(s, 0, 3, 4); act(s, 1, 2, 3); const m = said(run(s), 1);
+    expect(m).toContain("N2 and N3 are enemies"); expect(m).not.toContain("N4");
+  });
+  it("Detective, Tracker and Watchman keep the chosen name through a swap", () => {
+    const d = game(["Ferryman", "Detective", "Spy", "Doctor"]); act(d, 0, 2, 3); act(d, 1, 2); expect(said(run(d), 1)).toContain("N2 is a Protective role");
+    const t = game(["Ferryman", "Tracker", "Spy", "Doctor"]); act(t, 0, 2, 3); act(t, 1, 2); act(t, 3, 0); const mt = said(run(t), 1); expect(mt).toContain("N2 visited: N0"); expect(mt).not.toContain("N3 visited");
+    const w = game(["Ferryman", "Watchman", "Spy", "Doctor", "Constable"]); act(w, 0, 2, 3); act(w, 1, 2); act(w, 4, 3); expect(said(run(w), 1)).toContain("Visitors to N2");
   });
 });

@@ -151,3 +151,7 @@ button.weak { background:rgba(34,37,46,.45); border-color:rgba(58,62,74,.6); col
 .slot:has(.slotbtn) { padding:0; }
 .slotbtn { width:100%; display:flex; gap:10px; align-items:center; background:transparent; border:none; text-align:left; padding:10px 12px; min-height:44px; }
 .slotbtn .cat { flex:1; } .slotbtn:hover .cat { text-decoration:underline; text-underline-offset:3px; }
+
+/* Unique role badge (Nik, 12 Nov): only one of this role can be dealt in a game. */
+.unique { display:inline-flex; align-items:center; justify-content:center; width:1.25em; height:1.25em; border-radius:50%; border:1.5px solid currentColor; font-size:.75em; font-weight:700; line-height:1; vertical-align:.1em; }
+.unique-line { text-align:center; font-size:13px; margin:-2px 0 8px; opacity:.85; }
