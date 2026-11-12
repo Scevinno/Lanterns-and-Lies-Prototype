@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { afterUpdate, onDestroy, onMount } from "svelte";
+  import { afterUpdate, onDestroy, onMount, tick as svelteTick } from "svelte";
   import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
   import { allRoles, roleByName, summaryHtml, type Role } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
@@ -13,6 +13,9 @@
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
   let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
   let rosterView: "roster" | "roles" = "roster", libF = "All", libT = "All", libSearch = "", libRole: Role | null = null;
+  // Back from a role card returns to where the library was scrolled to (Nik, 12 Nov).
+  let sheetEl: HTMLDivElement | null = null, sheetScroll = 0;
+  const closeLibRole = async () => { libRole = null; await svelteTick(); if (sheetEl) sheetEl.scrollTop = sheetScroll; };
   const closeRoster = () => { showRoster = false; rosterView = "roster"; libRole = null; };
   let showRoster = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
   // Game over (Nik, 8 Nov): the players or the chat fill the screen, one at a time, with Home on both.
@@ -211,13 +214,13 @@
   {/if}
   {#if showRoster}
     <div class="overlay" role="dialog" aria-modal="true" aria-label="Roster">
-      <div class="sheet scroll">
+      <div class="sheet scroll" bind:this={sheetEl}>
         {#if !libRole}<h2>{rosterView === "roles" ? "Roles" : "Roster"}</h2>{/if}
         {#if libRole}
-          <button class="link back" on:click={() => (libRole = null)}>Back</button><RoleCard role={libRole} />
+          <button class="link back" on:click={closeLibRole}>Back</button><RoleCard role={libRole} />
         {:else if rosterView === "roles"}
           <button class="link back" on:click={() => (rosterView = "roster")}>Back to the roster</button>
-          <Library roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => (libRole = r)} />
+          <Library roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => { sheetScroll = sheetEl?.scrollTop ?? 0; libRole = r; if (sheetEl) sheetEl.scrollTop = 0; }} />
         {:else}
           <p class="dim small">{pub.size} players · evil side: {pub.setup}. Tap a line to see its roles.</p>
           <Roster size={pub.size} mode={pub.setup} onPick={(f, t) => { libF = f; libT = t; libSearch = ""; rosterView = "roles"; }} />

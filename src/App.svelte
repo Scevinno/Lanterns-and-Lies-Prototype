@@ -9,6 +9,9 @@
   import NumberStrip from "./NumberStrip.svelte";
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
+  // Back from a role card returns to where the library was scrolled to (Nik, 12 Nov).
+  let libScroll = 0;
+  const closeRole = async () => { openRole = null; await svelteTick(); scrollTo(0, libScroll); };
   import Library from "./Library.svelte";
 
   let session: any = null, ready = false, route = "home", err = "", busy = false;
@@ -206,12 +209,12 @@
   </main>
 {:else if route === "guide"}
   <main class="narrow">
-    <button class="link back" on:click={() => (openRole ? (openRole = null) : go("home"))}>Back</button>
+    <button class="link back" on:click={() => (openRole ? closeRole() : go("home"))}>Back</button>
     {#if openRole}<RoleCard role={openRole} />
     {:else}
       <div class="tabs top"><button class:on={guideTab === "roles"} on:click={() => (guideTab = "roles")}>Roles</button><button class:on={guideTab === "rosters"} on:click={() => (guideTab = "rosters")}>Rosters</button></div>
       {#if guideTab === "roles"}
-        <Library {roles} bind:factionFilter bind:typeFilter bind:search onOpen={(r) => { openRole = r; scrollTo(0, 0); }} />
+        <Library {roles} bind:factionFilter bind:typeFilter bind:search onOpen={(r) => { libScroll = scrollY; openRole = r; scrollTo(0, 0); }} />
       {:else}
         <h3>Players</h3>
         <NumberStrip bind:value={rSize} valid={SIZES} />
