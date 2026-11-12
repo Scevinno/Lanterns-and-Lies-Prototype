@@ -14,7 +14,7 @@
   <p class="meta {FACTION_CLASS[role.faction]}">{role.faction} {role.type}</p>
   {#if isUnique(role.name)}<p class="unique-line"><span class="unique" aria-hidden="true">1</span> Unique</p>{/if}
   {#if role.placeholder}<p class="dim small">Placeholder picture</p>{/if}
-  <p>{@html summaryHtml(role.summary)}</p>
+  <p class="lore">{@html summaryHtml(role.summary)}</p>
   <div class="rules">{@html abilityHtml(role.ability, role.faction)}</div>
   <!-- Attack and Defence (Nik, 12 Nov): the highest level, own or given; one format on every card. -->
   <div class="stats">
