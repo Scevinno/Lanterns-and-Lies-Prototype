@@ -192,19 +192,19 @@
     <h1 class="ptitle">Create private party</h1>
     <h3>Where are you playing?</h3>
     <div class="setting">
-      <button type="button" class:on={inPerson} aria-pressed={inPerson} on:click={() => setSetting(true)}><b>In person</b><span class="small">One room, talking out loud</span></button>
-      <button type="button" class:on={!inPerson} aria-pressed={!inPerson} on:click={() => setSetting(false)}><b>Online</b><span class="small">Apart, talking in chat</span></button>
+      <button type="button" class:on={inPerson} aria-pressed={inPerson} on:click={() => setSetting(true)}><b>In person</b><span class="small">Talk together</span></button>
+      <button type="button" class:on={!inPerson} aria-pressed={!inPerson} on:click={() => setSetting(false)}><b>Online</b><span class="small">Talk in chat</span></button>
     </div>
     <ul class="dim small effects">
       {#if inPerson}
-        <li>Town and dead chats are off: talk out loud. Only the evil side chats, at night.</li>
-        <li>Your role stays hidden after the start. Tap Role to peek; it hides again by itself.</li>
+        <li>Town chats are off. Only the evil side chats at night.</li>
+        <li>Your role stays hidden after the start; tap Role to peek.</li>
         <li>Anyone can pause the game, for a break or a late arrival.</li>
         <li>Everyone gets a screen to tap at night, so nobody gives away that they have no action.</li>
-        <li>Phones buzz when the phase changes. Longer timers are set by default.</li>
       {:else}
-        <li>Town chat is on and is how the town talks.</li>
-        <li>Your role stays on screen. No pause: the game runs on its timers.</li>
+        <li>Town chat is on.</li>
+        <li>Your role and your evil side's roles stay visible on the screen.</li>
+        <li>The game runs on its timers with no pause.</li>
       {/if}
     </ul>
     <h3>Players</h3>
@@ -215,10 +215,13 @@
     {#if showCreateRoster}
       <Roster size={size} mode={evil === "Cartel" ? "Cartel" : evil === "Syndicate" ? "Syndicate" : "Random"} />
     {/if}
-    {#each TIMER_ROWS as [k, label]}
-      <h3>{label}</h3>
-      <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
-    {/each}
+    <!-- Online games run on fixed timers (Nik, 12 Nov): 4 min talk, 30 s vote, 30 s defence, 15 s verdict, 1 min night. -->
+    {#if inPerson}
+      {#each TIMER_ROWS as [k, label]}
+        <h3>{label}</h3>
+        <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
+      {/each}
+    {/if}
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
