@@ -386,6 +386,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   }
   const lethalVet = (id: string) => vetVictims.has(id) && Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0, healers.has(id) ? 2 : 0) < 2;
   for (const a of acts) if (!a.dead && lethalVet(a.actor) && !["Ferryman", "Smuggler", "Hollowman"].includes(a.ab)) a.dead = true;
+  // The Innkeeper still shelters his guests (Nik, 12 Nov): everyone who visits him, the drawn guest included, gets Light Defence, unless he is Held.
+  for (const inn of living.filter((p) => p.ability === "Innkeeper" && !held.has(p.id))) for (const u of allVisitorsOf(inn.id)) addDef(u, 1);
   const guards = new Map<string, string[]>(); for (const a of has("Guardsman")) guards.set(a.targets[0], [...(guards.get(a.targets[0]) ?? []), a.actor]);
 
   // Marks made tonight, before anyone investigates.
