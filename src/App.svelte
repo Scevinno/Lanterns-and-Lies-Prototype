@@ -215,13 +215,11 @@
     {#if showCreateRoster}
       <Roster size={size} mode={evil === "Cartel" ? "Cartel" : evil === "Syndicate" ? "Syndicate" : "Random"} />
     {/if}
-    <!-- Online games run on fixed timers (Nik, 12 Nov): 4 min talk, 30 s vote, 30 s defence, 15 s verdict, 1 min night. -->
-    {#if inPerson}
-      {#each TIMER_ROWS as [k, label]}
-        <h3>{label}</h3>
-        <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
-      {/each}
-    {/if}
+    <!-- Both private-party settings choose their timers; Online starts from 4 min, 30 s, 30 s, 15 s, 1 min (Nik, 12 Nov). -->
+    {#each TIMER_ROWS as [k, label]}
+      <h3>{label}</h3>
+      <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
+    {/each}
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>

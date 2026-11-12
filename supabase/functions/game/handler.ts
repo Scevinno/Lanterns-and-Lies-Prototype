@@ -111,8 +111,6 @@ async function beginGame(party: Record<string, any>) {
   const { data: ok } = await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
   if (ok) { await db.from("invites").delete().eq("party_id", party.id); await notify(rows.map((r) => r.user_id), { title: "The game has started", body: "Read your role before Night 1.", url: `${SITE}#/party/${party.id}`, tag: "phase-" + party.id }); }
 }
-// Online private parties always use these (Nik, 12 Nov); only in-person parties choose their timers.
-const ONLINE_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, verdict: 15, night: 60 } as Timers;
 function validTimers(t: Record<string, number>): Timers {
   const out = {} as Timers;
   for (const k of Object.keys(PRIVATE_OPTIONS) as (keyof Timers)[]) { if (!PRIVATE_OPTIONS[k].includes(Number(t?.[k]))) throw new Oops("That timer is not available."); out[k] = Number(t[k]); }
@@ -145,7 +143,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     const { data: prof } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
     const name = prof?.display_name ?? clean(u.user_metadata?.display_name, 20) ?? "Player";
     for (let i = 0; i < 6; i++) {
-      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: b.inPerson === true ? validTimers(b.timers) : ONLINE_TIMERS, in_person: b.inPerson === true, town_chat: b.inPerson !== true }).select().single();
+      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: validTimers(b.timers), in_person: b.inPerson === true, town_chat: b.inPerson !== true }).select().single();
       if (error) continue;
       await db.from("party_players").insert({ party_id: data.id, user_id: u.id, name }); return { id: data.id, code: data.code };
     }
