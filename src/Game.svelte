@@ -6,6 +6,7 @@
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
   import Library from "./Library.svelte";
+  import { buzz, prefs } from "./prefs";
 
   export let party: any;
   export let onHome: () => void;
@@ -27,7 +28,7 @@
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
-  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase && pub.inPerson) try { navigator.vibrate?.(180); } catch { /* not supported */ } lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
+  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase) buzz(); lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
   $: if (view?.action && phase === "night" && !picks.length) { picks = [...(view.action.targets ?? [])]; second = view.action.second?.[0] ?? ""; }
   $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
   $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
@@ -67,7 +68,7 @@
     // The server moves the game by itself. A phone that's watching can also nudge it, so it moves the instant time is up.
     if (left <= 0 && Date.now() - lastNudge > 2500) { lastNudge = Date.now(); call("tick", { party: party.id }).then(refresh).catch(() => (online = false)); }
   }
-  const keepAwake = async () => { try { if ("wakeLock" in navigator && document.visibilityState === "visible") wake = await (navigator as any).wakeLock.request("screen"); } catch { /* not available */ } };
+  const keepAwake = async () => { if (!prefs.awake) return; try { if ("wakeLock" in navigator && document.visibilityState === "visible") wake = await (navigator as any).wakeLock.request("screen"); } catch { /* not available */ } };
   async function wakeUp() { if (document.visibilityState !== "visible") return; await Promise.all([syncClock(true), refresh()]); keepAwake(); resubscribe(); tick(); }
 
   let channel: any;

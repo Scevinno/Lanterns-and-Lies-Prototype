@@ -1,5 +1,6 @@
 // The game server. Every move goes through here; phones are never trusted with the rules or the clock.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import webpush from "npm:web-push@3.6.7";
 import { ROLES } from "../../../shared/roles.ts";
 import {
   advance, canChat, cmdCondemn, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, PRIVATE_OPTIONS, privateView, publicView,
@@ -21,6 +22,39 @@ async function userOf(req: Request) {
 const codeChars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from({ length: 6 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
 const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : null);
+const SITE = "https://scevinno.github.io/Lanterns-and-Lies-Prototype/";
+
+// Push notifications (Nik, 12 Nov). Keys live in the function's secrets; without them nothing is sent.
+const VAPID_PUBLIC = Deno.env.get("VAPID_PUBLIC_KEY"), VAPID_PRIVATE = Deno.env.get("VAPID_PRIVATE_KEY");
+if (VAPID_PUBLIC && VAPID_PRIVATE) webpush.setVapidDetails(SITE, VAPID_PUBLIC, VAPID_PRIVATE);
+async function notify(userIds: (string | null)[], msg: { title: string; body: string; url?: string; tag?: string }) {
+  const ids = [...new Set(userIds.filter(Boolean))] as string[]; if (!ids.length || !VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  const { data } = await db.from("push_subscriptions").select("*").in("user_id", ids);
+  await Promise.allSettled((data ?? []).map(async (r) => {
+    try { await webpush.sendNotification({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }, JSON.stringify(msg), { TTL: 300, urgency: "high" }); }
+    catch (e) { const code = (e as { statusCode?: number }).statusCode; if (code === 404 || code === 410) await db.from("push_subscriptions").delete().eq("endpoint", r.endpoint); else console.error("push", code, (e as Error).message); }
+  }));
+}
+// Who to tell when the game moves on: players who have something to do now.
+function phaseNotice(s: GameState, rows: { id: string; user_id: string | null }[], partyId: string) {
+  const url = `${SITE}#/party/${partyId}`; const alive = new Set(s.players.filter((p) => p.alive).map((p) => p.id));
+  const users = rows.filter((r) => alive.has(r.id)).map((r) => r.user_id);
+  if (s.phase === "night") return notify(users, { title: `Night ${s.night}`, body: "Night falls on Emberhollow. Choose your action.", url, tag: "phase-" + partyId });
+  if (s.phase === "vote") return notify(users, { title: `Day ${s.day}: the vote`, body: "Voting has started.", url, tag: "phase-" + partyId });
+  if (s.phase === "over") return notify(rows.map((r) => r.user_id), { title: "The game is over", body: s.winner ? `${s.winner} won.` : "See how it ended.", url, tag: "phase-" + partyId });
+}
+const USERNAME = /^[a-z0-9_]{3,20}$/;
+async function freeUsername(name: string) {
+  const base = (name.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 16) || "player").padEnd(3, "_");
+  for (let i = 1; i < 500; i++) { const u = i === 1 ? base : base + i; const { data } = await db.from("profiles").select("id").eq("username", u).maybeSingle(); if (!data) return u; }
+  return base + Date.now().toString().slice(-4);
+}
+async function profileBy(username: string) {
+  const u = clean(username, 21).toLowerCase().replace(/^@/, "");
+  const { data } = await db.from("profiles").select("id, display_name, username").eq("username", u).maybeSingle();
+  if (!data) throw new Oops("Nobody has that username."); return data;
+}
+const pair = (x: string, y: string) => (x < y ? { a: x, b: y } : { a: y, b: x });
 
 async function loadParty(id: string) {
   const { data, error } = await db.from("parties").select("*").eq("id", id).single();
@@ -54,7 +88,7 @@ async function turn(partyId: string, step: (s: GameState) => Msg[]) {
     const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: isPaused(s) ? null : iso(s.endsAt), public_state: publicView(s), status: s.phase === "over" ? "finished" : "playing" };
     const { data: ok, error } = await db.rpc("apply_turn", { p_party: partyId, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
     if (error) throw error;
-    if (ok) return;
+    if (ok) { if (s.phaseNo !== before) await phaseNotice(s, rows, partyId); return; }
     await new Promise((r) => setTimeout(r, 40 + Math.random() * 120));
   }
   throw new Oops("The game is busy. Try again.");
@@ -66,7 +100,8 @@ async function beginGame(party: Record<string, any>) {
   const { state: s, msgs } = createGame({ players: rows.map((r) => ({ id: r.id, name: r.name, bot: r.is_bot })), mode, timers: party.timers as Timers, townChat: party.town_chat, inPerson: !!party.in_person, setup: party.mode }, mathRng, Date.now());
   const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: iso(s.endsAt), public_state: publicView(s), status: "playing" };
   const events = [{ phase_no: s.phaseNo, kind: "start", data: { mode, size: party.size, players: s.players.map((p) => ({ name: p.name, role: p.role })) } }];
-  await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
+  const { data: ok } = await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
+  if (ok) { await db.from("invites").delete().eq("party_id", party.id); await notify(rows.map((r) => r.user_id), { title: "The game has started", body: "Read your role before Night 1.", url: `${SITE}#/party/${party.id}`, tag: "phase-" + party.id }); }
 }
 function validTimers(t: Record<string, number>): Timers {
   const out = {} as Timers;
@@ -76,7 +111,7 @@ function validTimers(t: Record<string, number>): Timers {
 
 const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   async seed() {
-    const { error } = await db.from("roles").upsert(ROLES.map(({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder }) => ({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder })));
+    const { error } = await db.from("roles").upsert(ROLES.map(({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder, attack, defence }) => ({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder, attack, defence })));
     if (error) throw error; return { roles: ROLES.length };
   },
   // Prototype sign-up: creates a confirmed account, so trials don't depend on email delivery.
@@ -85,7 +120,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     if (name.length < 2) throw new Oops("Choose a name of at least 2 characters."); if (!email.includes("@")) throw new Oops("Enter a valid email."); if (password.length < 8) throw new Oops("Passwords need at least 8 characters.");
     const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: name } });
     if (error) throw new Oops(/already|registered|exists/i.test(error.message) ? "That email already has an account. Sign in instead." : error.message);
-    await db.from("profiles").insert({ id: data.user.id, display_name: name }); return { ok: true };
+    await db.from("profiles").insert({ id: data.user.id, display_name: name, username: await freeUsername(name) }); return { ok: true };
   },
   async tick(b) {
     const party = await loadParty(b.party); const end = party.ends_at ? new Date(party.ends_at).getTime() : Infinity;
@@ -114,7 +149,8 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     if (party.status !== "lobby") throw new Oops("That game has already started.");
     if ((await roster(party.id)).length >= party.size) throw new Oops("That party is full.");
     const { data: prof } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
-    await db.from("party_players").insert({ party_id: party.id, user_id: u.id, name: prof?.display_name ?? "Player" }); return { id: party.id, code };
+    await db.from("party_players").insert({ party_id: party.id, user_id: u.id, name: prof?.display_name ?? "Player" });
+    await db.from("invites").delete().eq("party_id", party.id).eq("to_user", u.id); return { id: party.id, code };
   },
   async leaveParty(b, req) {
     const u = await userOf(req); const party = await loadParty(b.party);
@@ -151,6 +187,81 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     if (!(await roster(b.party)).some((r) => r.is_bot)) throw new Oops("Skipping is only for test games.");
     await turn(b.party, (s) => (isPaused(s) ? [] : forceAdvance(s, Date.now(), mathRng))); return { ok: true };
   },
+  // Settings (Nik, 12 Nov). Email changes and password resets wait for the domain and an email service.
+  async me(_b, req) {
+    const u = await userOf(req); const { data: p } = await db.from("profiles").select("display_name, username").eq("id", u.id).maybeSingle();
+    return { name: p?.display_name ?? "", username: p?.username ?? "", email: u.email, verified: !!u.email_confirmed_at };
+  },
+  async updateProfile(b, req) {
+    const u = await userOf(req); const name = clean(b.name, 20), username = clean(b.username, 21).toLowerCase().replace(/^@/, "");
+    if (name.length < 2) throw new Oops("Names need 2 to 20 characters."); if (!USERNAME.test(username)) throw new Oops("Usernames use 3 to 20 lowercase letters, numbers or underscores.");
+    const { data: taken } = await db.from("profiles").select("id").eq("username", username).neq("id", u.id).maybeSingle(); if (taken) throw new Oops("That username is taken.");
+    const { error } = await db.from("profiles").update({ display_name: name, username }).eq("id", u.id); if (error) throw new Oops("Could not save. Try again.");
+    await db.auth.admin.updateUserById(u.id, { user_metadata: { ...u.user_metadata, display_name: name } }); return { ok: true };
+  },
+  // Deleting an account removes the person and keeps their past games under "Deleted player".
+  async deleteAccount(_b, req) {
+    const u = await userOf(req); const { data: rows } = await db.from("party_players").select("party_id, name").eq("user_id", u.id);
+    for (const r of rows ?? []) await db.from("messages").update({ sender: "Deleted player" }).eq("party_id", r.party_id).eq("sender", r.name);
+    await db.from("party_players").update({ name: "Deleted player", user_id: null }).eq("user_id", u.id);
+    await db.from("player_secrets").update({ user_id: null }).eq("user_id", u.id);
+    const { error } = await db.auth.admin.deleteUser(u.id); if (error) throw new Oops("Could not delete the account. Try again.");
+    return { ok: true };
+  },
+  async pushSubscribe(b, req) {
+    const u = await userOf(req); const sub = b.sub ?? {}; if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) throw new Oops("Notifications could not be set up.");
+    await db.from("push_subscriptions").upsert({ endpoint: String(sub.endpoint), user_id: u.id, p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) }); return { ok: true };
+  },
+  async pushUnsubscribe(b, req) { const u = await userOf(req); await db.from("push_subscriptions").delete().eq("endpoint", String(b.endpoint ?? "")).eq("user_id", u.id); return { ok: true }; },
+  async pushTest(_b, req) { const u = await userOf(req); await notify([u.id], { title: "Lanterns & Lies", body: "Notifications are on.", tag: "test" }); return { ok: true }; },
+
+  // Friends and invites (Nik, 12 Nov).
+  async friends(_b, req) {
+    const u = await userOf(req);
+    const { data: fs } = await db.from("friendships").select("*").or(`a.eq.${u.id},b.eq.${u.id}`);
+    const otherIds = (fs ?? []).map((f) => (f.a === u.id ? f.b : f.a));
+    const { data: inv } = await db.from("invites").select("id, party_id, from_user, created_at, parties(code, status)").eq("to_user", u.id).order("created_at", { ascending: false });
+    const live = (inv ?? []).filter((i: any) => i.parties?.status === "lobby");
+    const ids = [...new Set([...otherIds, ...live.map((i: any) => i.from_user)])];
+    const { data: profs } = ids.length ? await db.from("profiles").select("id, display_name, username").in("id", ids) : { data: [] as any[] };
+    const P = (id: string) => (profs ?? []).find((p: any) => p.id === id) ?? { display_name: "Player", username: "" };
+    const { data: me } = await db.from("profiles").select("username").eq("id", u.id).maybeSingle();
+    const out = { username: me?.username ?? "", friends: [] as unknown[], incoming: [] as unknown[], outgoing: [] as unknown[], invites: live.map((i: any) => ({ id: i.id, party: i.party_id, code: i.parties.code, from: P(i.from_user).display_name })) };
+    for (const f of fs ?? []) {
+      const o = f.a === u.id ? f.b : f.a; const p = P(o); const item = { name: p.display_name, username: p.username };
+      if (f.status === "accepted") out.friends.push(item); else if (f.requested_by === u.id) out.outgoing.push(item); else out.incoming.push(item);
+    }
+    return out;
+  },
+  async friendRequest(b, req) {
+    const u = await userOf(req); const o = await profileBy(b.username); if (o.id === u.id) throw new Oops("That's you.");
+    const k = pair(u.id, o.id); const { data: f } = await db.from("friendships").select("*").match(k).maybeSingle();
+    if (f?.status === "accepted") return { ok: true };
+    if (f && f.requested_by !== u.id) { await db.from("friendships").update({ status: "accepted" }).match(k); return { ok: true }; } // they had already asked
+    if (!f) {
+      await db.from("friendships").insert({ ...k, requested_by: u.id });
+      const { data: me } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
+      await notify([o.id], { title: "Friend request", body: `${me?.display_name ?? "Someone"} wants to be friends.`, url: `${SITE}#/friends`, tag: "friend-" + u.id });
+    }
+    return { ok: true };
+  },
+  async friendRespond(b, req) {
+    const u = await userOf(req); const o = await profileBy(b.username); const k = pair(u.id, o.id);
+    if (b.accept) await db.from("friendships").update({ status: "accepted" }).match(k).neq("requested_by", u.id); else await db.from("friendships").delete().match(k);
+    return { ok: true };
+  },
+  async unfriend(b, req) { const u = await userOf(req); const o = await profileBy(b.username); await db.from("friendships").delete().match(pair(u.id, o.id)); return { ok: true }; },
+  async invite(b, req) {
+    const u = await userOf(req); const me = await myPlayer(b.party, u.id); const party = await loadParty(b.party);
+    if (party.status !== "lobby") throw new Oops("The game has already started."); const o = await profileBy(b.username);
+    const { data: f } = await db.from("friendships").select("status").match(pair(u.id, o.id)).maybeSingle(); if (f?.status !== "accepted") throw new Oops("You can only invite friends.");
+    const { data: inParty } = await db.from("party_players").select("id").eq("party_id", party.id).eq("user_id", o.id).maybeSingle(); if (inParty) return { ok: true };
+    await db.from("invites").upsert({ party_id: party.id, from_user: u.id, to_user: o.id }, { onConflict: "party_id,to_user" });
+    await notify([o.id], { title: "You're invited", body: `${me.name} invited you to a party (${party.code}).`, url: `${SITE}#/join/${party.code}`, tag: "invite-" + party.id });
+    return { ok: true };
+  },
+  async dismissInvite(b, req) { const u = await userOf(req); await db.from("invites").delete().eq("id", Number(b.id)).eq("to_user", u.id); return { ok: true }; },
+
   async chat(b, req) {
     const u = await userOf(req); const me = await myPlayer(b.party, u.id); const body = clean(b.body, 300); if (!body) return { ok: true };
     const { data: gs } = await db.from("game_state").select("state").eq("party_id", b.party).single(); const s = gs?.state as GameState; if (!s) throw new Oops("The game has not started.");

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy, onMount, tick as svelteTick } from "svelte";
-  import QRCode from "qrcode";
   import { call, fmt, sb, serverNow, shareLink, syncClock, timerLabel, FACTION_CLASS } from "./api";
   import { setRoles, type Role } from "./richtext";
   import { PRIVATE_OPTIONS } from "../shared/engine";
@@ -13,6 +12,8 @@
   let libScroll = 0;
   const closeRole = async () => { openRole = null; await svelteTick(); scrollTo(0, libScroll); };
   import Library from "./Library.svelte";
+  import Settings from "./Settings.svelte";
+  import Friends from "./Friends.svelte";
 
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
@@ -32,6 +33,10 @@
   // Join, party, library
   let code = "", party: any = null, players: any[] = [], qr = "", copied = false, remaining = 0, chan: any = null, clock: any = null;
   let search = "", factionFilter = "All", openRole: Role | null = null, games: any[] = [];
+  // Friends and invites (Nik, 12 Nov): the count on Home, and the invite list in a lobby.
+  let invites = 0, requests = 0, friendList: { name: string; username: string }[] = [], showInvite = false, invited: string[] = [];
+  async function loadFriends() { try { const f = await call("friends"); invites = f.invites.length; requests = f.incoming.length; friendList = f.friends; } catch { /* offline */ } }
+  async function inviteFriend(u: string) { try { await call("invite", { party: party.id, username: u }); invited = [...invited, u]; } catch (e) { fail(e); } }
 
   const fail = (e: unknown) => { err = (e as Error).message; setTimeout(() => (err = ""), 4000); };
   const go = (r: string) => { location.hash = "#/" + r; };
@@ -44,6 +49,7 @@
     if (h === "guide") guideTab = "roles";
     route = h; leaveChannel();
     if (h === "games") loadGames();
+    if (h === "home" && session) loadFriends();
   }
   async function submitAuth() {
     busy = true; err = "";
@@ -77,6 +83,8 @@
   async function openParty(id: string) {
     leaveChannel(); route = "party"; await Promise.all([syncClock(), loadLobby(id)]);
     if (!party) { fail(new Error("You are not in that party.")); go("play"); return; }
+    showInvite = false; invited = []; loadFriends();
+    const QRCode = (await import("qrcode")).default; // loaded only when a lobby opens
     qr = await QRCode.toDataURL(shareLink(party.code), { margin: 1, width: 360, color: { dark: "#14161C", light: "#EDE6D6" } });
     chan = sb.channel("lobby-" + id)
       .on("postgres_changes", { event: "*", schema: "public", table: "parties", filter: `id=eq.${id}` }, () => loadLobby(id))
@@ -98,7 +106,6 @@
     const { data: mine } = await sb.from("party_players").select("party_id, parties!party_players_party_id_fkey(id, code, status, size, public_state, created_at, finished_at)").eq("user_id", session.user.id).order("joined_at", { ascending: false }).limit(30);
     games = (mine ?? []).map((m: any) => m.parties).filter(Boolean);
   }
-  async function signOut() { await sb.auth.signOut(); go("home"); }
 
   $: full = party && players.length === party.size;
   // Menu screens get the river port, list screens the quiet river. The game sets its own day or night picture.
@@ -114,6 +121,7 @@
     if (data?.length) { roles = data as Role[]; setRoles(roles); try { localStorage.setItem("lnl-roles", JSON.stringify(data)); } catch { /* storage blocked */ } }
     session = s; ready = true;
     await route_();
+    if (session && route === "home") loadFriends();
     window.addEventListener("hashchange", onHash);
     authSub = sb.auth.onAuthStateChange(async (_e, s2) => { const was = session; session = s2; if (!was && s2) { await svelteTick(); route_(); } }).data.subscription;
   });
@@ -143,6 +151,13 @@
     <p class="code" aria-label="Party code">{party.code}</p>
     {#if qr}<img class="qr" src={qr} alt="QR code to join this party" width="180" height="180" />{/if}
     <button class="ghost wide" on:click={share}>{copied ? "Link copied" : "Share link"}</button>
+    {#if party.status === "lobby"}
+      <button class="ghost wide" on:click={() => (showInvite = !showInvite)}>{showInvite ? "Hide friends" : "Invite friends"}</button>
+      {#if showInvite}
+        {#if !friendList.length}<p class="dim small">No friends yet. Add them from Friends on the home screen.</p>{/if}
+        <ul class="plain picker">{#each friendList.filter((f) => !players.some((p) => p.name === f.name && p.user_id)) as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><button class="go" disabled={invited.includes(f.username)} on:click={() => inviteFriend(f.username)}>{invited.includes(f.username) ? "Invited" : "Invite"}</button></li>{/each}</ul>
+      {/if}
+    {/if}
     <p class="row"><b>Players</b><span>{players.length} of {party.size}</span></p>
     <ul class="plain roster">{#each players as p}<li><span>{p.name}</span></li>{/each}</ul>
     <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: only the evil side's night chat, roles hidden, pause on." : "Online: town chat on."}</p>
@@ -224,6 +239,10 @@
       {/if}
     {/if}
   </main>
+{:else if route === "settings"}
+  <Settings onBack={() => go("home")} onSignOut={() => go("home")} />
+{:else if route === "friends"}
+  <Friends onBack={() => go("home")} onJoin={(c) => join(c)} />
 {:else if route === "games"}
   <main class="narrow">
     <button class="link back" on:click={() => go("home")}>Back</button>
@@ -238,8 +257,9 @@
     <div class="stack">
       <button class="go wide" on:click={() => go("play")}>Play</button>
       <button class="wide" on:click={() => go("guide")}>Role guide</button>
+      <button class="wide" on:click={() => go("friends")}>Friends{#if invites + requests}<span class="badge" aria-label="{invites + requests} new">{invites + requests}</span>{/if}</button>
       <button class="wide" on:click={() => go("games")}>My games</button>
-      <button class="wide weak" on:click={signOut}>Sign out</button>
+      <button class="wide weak" on:click={() => go("settings")}>Settings</button>
     </div>
     <p class="dim small tc">Prototype</p>
   </main>

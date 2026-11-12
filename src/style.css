@@ -1,3 +1,7 @@
+/* Fonts served from this site (Latin only), shown at once with a fallback while they load. */
+@font-face { font-family:"Source Sans 3"; font-style:normal; font-weight:200 900; font-display:swap; src:url("/fonts/source-sans-3.woff2") format("woff2"); }
+@font-face { font-family:"Almendra"; font-style:normal; font-weight:700; font-display:swap; src:url("/fonts/almendra-700.woff2") format("woff2"); }
+@font-face { font-family:"Alegreya SC"; font-style:normal; font-weight:700; font-display:swap; src:url("/fonts/alegreya-sc-700.woff2") format("woff2"); }
 :root { --night:#14161C; --panel:#22252E; --line:#3A3E4A; --text:#EDE6D6; --dim:#A9A497; --lamp:#D9A441; --lk:#4ade80; --syn:#ef4444; --car:#B5AA92; --ub:#93c5fd; color-scheme:dark; }
 * { box-sizing:border-box; }
 html,body { margin:0; height:100%; background:var(--night); color:var(--text); font:16px/1.45 "Source Sans 3",system-ui,sans-serif; -webkit-text-size-adjust:100%; }
@@ -165,3 +169,17 @@ button.weak { background:rgba(34,37,46,.45); border-color:rgba(58,62,74,.6); col
 .stat-num { font-family:Georgia,serif; font-size:14px; color:var(--lamp); letter-spacing:.04em; margin-left:2px; }
 /* Lore in italics, set apart from the Unique line above and the ability text below (Nik, 12 Nov). */
 .rolecard .lore { font-style:italic; margin:14px 0 20px; }
+/* Settings and Friends (Nik, 12 Nov). */
+.settings .group { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:22px 0 6px; }
+.line { width:100%; display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:left; margin:6px 0; }
+.line.static { min-height:44px; padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); box-sizing:border-box; }
+.toggle { flex:none; width:42px; height:24px; border-radius:12px; background:var(--line); position:relative; transition:background .15s; }
+.toggle::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:var(--text); transition:transform .15s; }
+.toggle.on { background:var(--lamp); } .toggle.on::after { transform:translateX(18px); background:#1b1608; }
+.stack.end { margin-top:28px; }
+button.danger { border-color:var(--syn); color:#ffb4b4; }
+.at { display:flex; align-items:center; gap:4px; } .at input { flex:1; }
+.check { display:flex; align-items:center; gap:8px; color:var(--text); }
+.toast.ok { background:#1f3a26; border-color:var(--lk); }
+.invite { display:flex; justify-content:space-between; align-items:center; gap:8px; } .invite .btns { display:flex; gap:6px; }
+.badge { display:inline-block; min-width:20px; margin-left:8px; padding:0 6px; border-radius:10px; background:var(--lamp); color:#1b1608; font-size:13px; font-weight:700; line-height:20px; }
