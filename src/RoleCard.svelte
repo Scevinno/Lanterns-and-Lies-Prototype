@@ -14,4 +14,11 @@
   {#if role.placeholder}<p class="dim small">Placeholder picture</p>{/if}
   <p>{@html summaryHtml(role.summary)}</p>
   <div class="rules">{@html abilityHtml(role.ability, role.faction)}</div>
+  <!-- Attack and Defence (Nik, 12 Nov): the highest level, own or given; one format on every card. -->
+  <div class="stats">
+    {#each [["Attack", role.attack], ["Defence", role.defence]] as [label, v]}
+      {@const given = (v ?? "").endsWith("(given)")}
+      <div class="stat" class:none={!v || v === "None"}><span class="stat-label">{label}</span><b>{(v ?? "None").replace(" (given)", "")}</b>{#if given}<span class="stat-note">given to others</span>{/if}</div>
+    {/each}
+  </div>
 </div>

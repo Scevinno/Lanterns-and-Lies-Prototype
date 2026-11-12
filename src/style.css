@@ -155,3 +155,10 @@ button.weak { background:rgba(34,37,46,.45); border-color:rgba(58,62,74,.6); col
 /* Unique role badge (Nik, 12 Nov): only one of this role can be dealt in a game. */
 .unique { display:inline-flex; align-items:center; justify-content:center; width:1.25em; height:1.25em; border-radius:50%; border:1.5px solid currentColor; font-size:.75em; font-weight:700; line-height:1; vertical-align:.1em; }
 .unique-line { text-align:center; font-size:13px; margin:-2px 0 8px; opacity:.85; }
+/* Attack and Defence block under the ability text (Nik, 12 Nov). */
+.stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0 4px; }
+.stat { border:1px solid var(--line); border-radius:8px; padding:8px 10px; text-align:center; background:var(--panel); }
+.stat-label { display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
+.stat b { display:block; font-family:"Alegreya SC",Georgia,serif; font-size:18px; }
+.stat-note { display:block; font-size:11px; color:var(--dim); }
+.stat.none b { opacity:.45; }

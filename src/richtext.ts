@@ -1,6 +1,6 @@
 import { FACTION_CLASS } from "./api";
 
-export interface Role { id: number; name: string; faction: string; type: string; summary: string; ability: string; image: string; placeholder: boolean }
+export interface Role { id: number; name: string; faction: string; type: string; summary: string; ability: string; image: string; placeholder: boolean; attack?: string; defence?: string }
 let roles: Role[] = [];
 let pattern: RegExp | null = null;
 const words = new Map<string, string>();
