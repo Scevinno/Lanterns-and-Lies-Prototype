@@ -129,7 +129,7 @@ const fogNight = (n: number) => n % 2 === 0;
 // The Ferryman and Smuggler are Hold-immune (Nik, 7 Nov): a swap that redirects a Hold onto the swapper could otherwise cancel itself.
 const IMMUNE_HOLD = new Set(["Locksmith", "Enforcer", "Quartermaster", "Ferryman", "Smuggler"]);
 const IMMUNE_DETECT = new Set(["Godfather", "Kingpin", "Loan Shark", "Harbour Master"]);
-const NO_VISIT = new Set(["Innkeeper", "Archivist", "Spy", "Outcast", "Judge", "Mayor", "Martyr", "Town Crier"]);
+const NO_VISIT = new Set(["Archivist", "Spy", "Outcast", "Judge", "Mayor", "Martyr", "Town Crier"]);
 const NO_ASTRAY = new Set(["Seer", "Ferryman", "Assassin"]);
 const HOLDERS = new Set(["Locksmith", "Enforcer", "Quartermaster"]);
 // A Coroner may borrow a dead Loan Shark (Nik, 10 Nov); the Debt is void at nightfall, since no Loan Shark lives to collect it.
@@ -174,6 +174,8 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
     case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
+    // Innkeeper (Nik, 12 Nov): the Pawnbroker's draw on the good side; any player but himself.
+    case "Innkeeper": return one("Invite a guest to your inn", others);
     case "Smuggler": case "Ferryman": { const c = all; // the Smuggler may choose his own side (Nik, 11 Nov)
       return { label: "Swap two players", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Kingpin": { const crew = others.filter((x) => x.faction === "Cartel"); if (crew.length) return one("Command a Cartel member", crew.filter((x) => x.role !== "Foreman" && x.role !== "Swindler")); return p.recruited ? null : one("New crew: recruit a player as the Foreman"); }
@@ -212,7 +214,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Tinkerer": return { label: "Plant an explosive, or choose yourself to Trigger", slots: [{ label: "Target", options: opts(all) }] };
     case "Ripper": return s.night > 1 ? one("Murder a player") : null;
     case "Assassin": { const c = s.players.filter((x) => x.id !== p.id); return { label: "Name the two contract targets", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
-    default: return null; // Innkeeper, Archivist, Spy, Town Crier, Martyr, Outcast
+    default: return null; // Archivist, Spy, Town Crier, Martyr, Outcast
   }
 }
 
@@ -307,7 +309,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const h = holderActs.find((x) => x.actor === f.targets[0]); if (!h || heldByAnother(f.actor, h.actor)) continue;
     const n = neighbourOf(P(h.targets[0]), h.actor, living); if (n) h.targets = [n.id];
   }
-  for (const pb of acts.filter((x) => x.ab === "Pawnbroker")) {
+  for (const pb of acts.filter((x) => x.ab === "Pawnbroker" || x.ab === "Innkeeper")) {
     const h = holderActs.find((x) => x.actor === pb.targets[0]); if (!h || heldByAnother(pb.actor, h.actor)) continue;
     h.targets = [pb.actor];
   }
@@ -347,7 +349,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       if (n) o.targets = [n.id];
     }
   }
-  for (const a of has("Pawnbroker")) for (const o of acts) if (o.actor === a.targets[0] && !o.dead && o.targets.length === 1 && !HOLDERS.has(o.ab)) o.targets = [a.actor];
+  for (const a of [...has("Pawnbroker"), ...has("Innkeeper")]) for (const o of acts) if (o.actor === a.targets[0] && !o.dead && o.targets.length === 1 && !HOLDERS.has(o.ab)) o.targets = [a.actor];
 
   // Who visits whom.
   const isVisit = (a: Act) => !a.dead && !a.alert && a.targets.length > 0 && !NO_VISIT.has(a.ab);
@@ -384,7 +386,6 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   }
   const lethalVet = (id: string) => vetVictims.has(id) && Math.max(baseDefence(s, P(id)), defenceAdd.get(id) ?? 0, healers.has(id) ? 2 : 0) < 2;
   for (const a of acts) if (!a.dead && lethalVet(a.actor) && !["Ferryman", "Smuggler", "Hollowman"].includes(a.ab)) a.dead = true;
-  for (const inn of living.filter((p) => p.ability === "Innkeeper" && !held.has(p.id))) for (const u of allVisitorsOf(inn.id)) addDef(u, 1);
   const guards = new Map<string, string[]>(); for (const a of has("Guardsman")) guards.set(a.targets[0], [...(guards.get(a.targets[0]) ?? []), a.actor]);
 
   // Marks made tonight, before anyone investigates.
@@ -482,7 +483,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       }
       case "Loan Shark": res(a.actor, "role", t.role, tn); break;
       case "Warden": { const pa = P(a.actor).patrol ?? []; P(a.actor).patrol = [...pa, t.id].slice(-2); break; }
-      case "Fence": case "Pawnbroker": break;
+      case "Fence": case "Pawnbroker": case "Innkeeper": break;
       default: break;
     }
   }

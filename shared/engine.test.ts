@@ -126,9 +126,11 @@ describe("attacks and defence", () => {
     const s = game(["Hollowman", "Constable"], 1); act(s, 1, 0); expect(said(run(s), 1)).toContain("Evil");
     const f = game(["Hollowman", "Constable"], 3); act(f, 1, 0); expect(said(run(f), 1)).toContain("Evil");
   });
-  it("Innkeeper gives visitors Light Defence, unless Held", () => {
-    const s = game(["Foreman", "Innkeeper", "Detective"], 1, "Cartel"); act(s, 0, 2); act(s, 2, 1); run(s); expect(dead(s, 2)).toBe(false);
-    const h = game(["Foreman", "Innkeeper", "Detective", "Locksmith"], 1, "Cartel"); act(h, 0, 2); act(h, 2, 1); act(h, 3, 1); run(h); expect(dead(h, 2)).toBe(true);
+  it("Innkeeper draws a visit to himself, like the Pawnbroker (Nik, 12 Nov)", () => {
+    const s = game(["Foreman", "Innkeeper", "Detective"], 1, "Cartel"); act(s, 0, 2); act(s, 1, 0); run(s); expect(dead(s, 2)).toBe(false); expect(dead(s, 1)).toBe(true);
+    const h = game(["Foreman", "Innkeeper", "Detective", "Locksmith"], 1, "Cartel"); act(h, 0, 2); act(h, 1, 0); act(h, 3, 1); run(h); expect(dead(h, 2)).toBe(true); // Held, so no draw
+    const l = game(["Locksmith", "Innkeeper", "Detective"]); act(l, 0, 2); act(l, 1, 0); act(l, 2, 1); const m = run(l); expect(said(m, 1)).toContain("Held"); expect(said(m, 2)).not.toContain("Held");
+    const t = game(["Ferryman", "Innkeeper", "Spy", "Doctor"]); act(t, 0, 2, 3); act(t, 1, 0); run(t); expect(dead(t, 1)).toBe(false); // two-target visitor is not drawn
   });
   it("Hunter builds on odd Nights, sets on even; trap kills evil visitors and protects the target", () => {
     const s = game(["Hunter", "Foreman", "Spy"], 1, "Cartel"); run(s); expect(s.players[0].hasTrap).toBe(true);
