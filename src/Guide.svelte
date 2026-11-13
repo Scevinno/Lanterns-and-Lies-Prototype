@@ -12,7 +12,7 @@
   const back = () => { if (page === "term" && history.length > 1) history.back(); else go(page === "guide" ? "home" : page === "term" ? "glossary" : "guide"); };
   // Winning lines take the edge colour of the side they are about.
   const side = (t: string) => (t.startsWith("Lanternkeepers") ? "lk" : t.startsWith("The evil side") ? "syn" : /^(An|Other) Unbound/.test(t) ? "ub" : "");
-  const label = (t: string) => { const i = t.indexOf(": "); return i > 0 && i < 20 ? [t.slice(0, i), t.slice(i + 2)] : ["", t]; };
+  const label = (t: string) => { const i = t.indexOf(": "); if (i <= 0 || i >= 20) return ["", t]; const r = t.slice(i + 2); return [t.slice(0, i), r.charAt(0).toUpperCase() + r.slice(1)]; };
   export let roles: Role[] = [];
   const go = (r: string) => { location.hash = "#/" + r; scrollTo(0, 0); };
   const NUM: Record<string, string> = { Light: "I", Heavy: "II", Absolute: "III" };
@@ -40,7 +40,7 @@
       <section class="htp {s.tone ?? ''}">
         <h3>{s.title}</h3>
         {#if s.kind === "order"}
-          <ol class="order">{#each s.body as p}<li>{@html paintHtml(p)}</li>{/each}</ol>
+          <ol class="order">{#each s.body as p}<li><span>{@html paintHtml(p)}</span></li>{/each}</ol>
         {:else if s.kind === "steps"}
           <ul class="plain steps">{#each s.body.map(label) as [l, t]}<li class:note={!l}>{#if l}<span class="step">{l}</span>{/if}<span>{@html paintHtml(t)}</span></li>{/each}</ul>
         {:else if s.kind === "sides"}
