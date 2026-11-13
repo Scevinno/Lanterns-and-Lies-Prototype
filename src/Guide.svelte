@@ -58,7 +58,8 @@
       <section class="htp {s.tone ?? ''}">
         <h3>{s.title}</h3>
         {#if s.kind === "order"}
-          <ol class="order">{#each s.body as p}<li><span>{@html paintHtml(p)}</span></li>{/each}</ol>
+          <ol class="order">{#each s.body.filter((p) => !p.startsWith("~ ")).map(label) as [l, t]}<li><span>{#if l}<b class="phase">{l}</b> {/if}{@html paintHtml(t)}</span></li>{/each}</ol>
+          {#each s.body.filter((p) => p.startsWith("~ ")) as p}<p class="order-note">{@html paintHtml(p.slice(2))}</p>{/each}
         {:else if s.kind === "steps"}
           <ul class="plain steps">{#each s.body.map(label) as [l, t]}<li class:note={!l}>{#if l}<span class="step">{l}</span>{/if}<span>{@html paintHtml(t)}</span></li>{/each}</ul>
         {:else if s.kind === "modes"}

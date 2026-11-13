@@ -289,3 +289,8 @@ main.signin { padding-left:calc(20px + env(safe-area-inset-left)); padding-right
 .submodes { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
 .submode { border-left:3px solid var(--lamp); border-radius:0 8px 8px 0; padding:8px 10px; background:rgba(217,164,65,.08); font-size:14px; }
 .submode b { display:block; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--lamp); margin-bottom:2px; }
+/* How a game runs (Nik, 13 Nov): numbered phases with the phase name in bold, then a closing note. */
+.order .phase { color:var(--lamp); margin-right:2px; }
+.htp:not(.night) .order li::before { background:rgba(217,164,65,.16); color:var(--lamp); border-color:rgba(217,164,65,.45); }
+.order li { align-items:flex-start; } .order li::before { margin-top:1px; }
+.order-note { margin:8px 0 0; color:var(--dim); font-size:14px; }

@@ -2,7 +2,7 @@
 // How to play, Attack & Defence and the Glossary. Role cards link game words here (tap a word, a half sheet opens).
 
 // How to play formatting (Nik, 13 Nov): each section sits in a translucent box; `tone` tints it (night blue, dawn and day amber),
-// `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines, "sides" gives each line its faction's edge;
+// `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines (a "Name: text" line gets a bold name; a "~ " line is an unnumbered note after the list), "sides" gives each line its faction's edge;
 // "modes" makes each "Name: text" line a card, and "> Name: text" lines tiles inside the card above (Setting up).
 export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" | "modes" }
 
@@ -19,10 +19,12 @@ export const HOW_TO_PLAY: Section[] = [
     "> In person: One room, talking out loud. Phones are for roles, votes and Night choices.",
     "> Online: Everyone talks in the chat.",
   ] },
-  { title: "How a game runs", body: [
-    "Everyone gets 30 seconds to read their role. Then Night 1 falls, followed by Day 1, Night 2, Day 2, and so on up to Day 7.",
-    "Every even Night is a Fog Night. The narrator announces it at nightfall.",
-    "The game ends as soon as a side has won, or at the end of Day 7.",
+  { title: "How a game runs", kind: "order", body: [
+    "Role: everyone gets 30 seconds to read their role.",
+    "Night: players with a Night ability choose their targets. Every even Night is a Fog Night.",
+    "Dawn: the narrator says whose lantern went out, and private results arrive.",
+    "Day: the town talks, votes and holds Trials, then Dusk falls. The next Night follows.",
+    "~ Nights and Days repeat up to Day 7. The game ends as soon as a side has won, or at the end of Day 7.",
   ] },
   { title: "Winning", kind: "sides", body: [
     "Lanternkeepers win when the evil side and every Unbound killer are eliminated.",
@@ -34,12 +36,12 @@ export const HOW_TO_PLAY: Section[] = [
   { title: "Night", tone: "night", body: [
     "Each player with a Night ability chooses their target or targets, or chooses to do nothing.",
     "A Lanternkeeper investigator or Power role who dies that Night learns nothing.",
-    "The evil side has its own chat at Night.",
+    "The Syndicate or Cartel has its own chat at Night.",
   ] },
   { title: "Night order", tone: "night", kind: "order", body: [
     "Swaps and Holds",
     "The Unbound",
-    "The evil side",
+    "Syndicate or Cartel",
     "Lanternkeeper Killing and Protective roles",
     "Lanternkeeper Investigative, Support and Power roles",
   ] },
