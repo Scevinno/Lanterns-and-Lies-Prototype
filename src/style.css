@@ -186,10 +186,6 @@ button.danger { border-color:var(--syn); color:#ffb4b4; }
 .create-go { margin-top:32px; }
 /* Guide and the glossary sheet (Nik, 12 Nov). */
 .guide-row { padding:12px; } .guide h3 { color:var(--lamp); margin-top:22px; }
-.combat { width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; } .combat th,.combat td { border:1px solid var(--line); padding:6px; text-align:center; }
-.combat th { background:var(--panel); font-weight:600; } .combat td { color:var(--lk); } .combat td.dies { color:var(--syn); }
-.who li { display:flex; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); }
-.glossary dt { font-weight:700; color:var(--lamp); margin-top:14px; } .glossary dd { margin:2px 0 0; }
 button.term { all:unset; cursor:pointer; color:inherit; text-decoration:underline dotted var(--lamp); text-underline-offset:3px; text-decoration-thickness:1.5px; }
 button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; border-radius:2px; }
 .term-scrim { position:fixed; inset:0; background:rgba(8,9,12,.6); z-index:20; }
@@ -228,3 +224,47 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .steps li.note { color:var(--dim); font-style:italic; padding-left:104px; }
 .sides li { margin:6px 0; padding:8px 12px; border-left:3px solid var(--line); border-radius:0 8px 8px 0; background:rgba(20,22,28,.5); }
 .sides .s-lk { border-color:var(--lk); background:rgba(74,222,128,.07); } .sides .s-syn { border-color:var(--syn); background:rgba(239,68,68,.07); } .sides .s-ub { border-color:var(--ub); background:rgba(147,197,253,.07); }
+
+/* Library filters (Nik, 13 Nov; Idea A): side tabs and a type menu. */
+.segf { display:grid; grid-template-columns:repeat(5,1fr); margin:10px 0 8px; border-bottom:1px solid var(--line); }
+.segf button { background:none; border:none; border-bottom:3px solid transparent; border-radius:0; padding:8px 0 6px; min-height:40px; font-size:14px; font-weight:600; color:var(--dim); }
+.segf button.on { border-bottom-color:currentColor; }
+.segf button.on:not([class*="f-"]) { color:var(--text); border-bottom-color:var(--lamp); }
+.segf button[class*="f-"]:not(.on) { opacity:.6; }
+.selwrap { display:flex; align-items:center; gap:8px; margin:0 0 6px; }
+.selwrap span { font-size:13px; color:var(--dim); }
+.selwrap select { flex:1; min-height:40px; padding:6px 10px; background:var(--panel); border:1px solid var(--line); border-radius:8px; font:inherit; font-size:15px; color:var(--text); }
+.selwrap select.set { border-color:var(--lamp); }
+/* Level badges, the result grid and the role table (Nik, 13 Nov). */
+.bd { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:22px; padding:0 6px; border-radius:5px; font-family:Georgia,serif; font-size:13px; font-weight:700; letter-spacing:.03em; position:relative; vertical-align:middle; }
+.bd.a0,.bd.d0 { color:#5d6070; background:transparent; border:1px solid #2e313b; font-family:"Source Sans 3",sans-serif; }
+.bd.a1 { background:#4a2a2a; color:#f5c1c1; } .bd.a2 { background:#7e2f2f; color:#ffd9d9; } .bd.a3 { background:#c53a3a; color:#fff; }
+.bd.d1 { background:#28394d; color:#c3dbf5; } .bd.d2 { background:#33557c; color:#dcecff; } .bd.d3 { background:#4f86c9; color:#fff; }
+.bd.given { background:transparent !important; border:1.5px dashed currentColor; } .bd.given.d1 { color:#9ec0e6; } .bd.given.d2 { color:#b9d6f7; }
+.bd .mk { position:absolute; top:-8px; right:-9px; font-family:"Source Sans 3",sans-serif; font-size:10px; line-height:14px; width:14px; height:14px; border-radius:50%; background:var(--night); border:1px solid var(--line); color:var(--text); }
+.rule1 { text-align:center; margin:6px 0 14px; }
+.mx { width:100%; border-collapse:separate; border-spacing:3px; font-size:13px; }
+.mx th { font-weight:600; color:var(--dim); padding:4px 2px; text-align:center; } .mx th small { display:block; font-weight:400; font-size:10px; margin-top:2px; }
+.mx th.rowh { text-align:left; padding-left:4px; }
+.mx td { text-align:center; height:42px; border-radius:6px; font-size:18px; font-weight:700; position:relative; }
+.mx td.die { background:rgba(239,68,68,.22); color:#ff9a9a; } .mx td.live { background:rgba(74,222,128,.16); color:#8af0b0; }
+.mx td.eq { outline:2px dashed var(--lamp); outline-offset:-3px; } .mx td.eq::after { content:"="; position:absolute; top:2px; right:5px; font-size:10px; color:var(--lamp); }
+.mxkey { display:flex; gap:12px; justify-content:center; font-size:12px; color:var(--dim); margin:6px 0 2px; flex-wrap:wrap; } .k-die { color:#ff9a9a; } .k-live { color:#8af0b0; }
+.legend { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12px; color:var(--dim); align-items:center; padding:4px 0 8px; } .legend > span { display:flex; align-items:center; gap:5px; }
+.thead { display:grid; grid-template-columns:1fr 66px 66px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); padding:6px 2px 4px; border-bottom:1px solid var(--line); }
+.thead span:not(:first-child),.trow > span:not(:first-child) { text-align:center; }
+.fh { display:flex; justify-content:space-between; align-items:baseline; font-family:"Almendra",Georgia,serif; font-size:19px; margin:14px 0 2px; padding-bottom:3px; border-bottom:1px solid currentColor; }
+.fh em { font-family:"Source Sans 3",sans-serif; font-size:12px; font-style:normal; color:var(--dim); }
+.trow { display:grid; grid-template-columns:1fr 66px 66px; align-items:center; min-height:34px; border-bottom:1px solid #262932; padding:0 2px; }
+.trow .nm { font-family:"Alegreya SC",Georgia,serif; font-size:15px; }
+/* Glossary (Variant B) and the term page. */
+.ghead { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:18px 0 6px; }
+.ggrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.gbox { width:100%; display:flex; align-items:center; gap:8px; padding:9px 10px; min-height:44px; background:rgba(255,255,255,.07); border:1px solid #2e313b; border-radius:10px; text-align:left; }
+.gbox b { flex:1; min-width:0; font-family:"Alegreya SC",Georgia,serif; font-size:14.5px; font-weight:700; }
+.gbox .arr { color:var(--dim); font-size:20px; flex:none; }
+.glabel { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:18px 0 8px; }
+.rel { display:flex; flex-wrap:wrap; gap:6px; }
+.rel button { min-height:34px; padding:3px 12px; border:1px solid var(--line); background:rgba(255,255,255,.07); border-radius:17px; font-size:14px; }
+.rel span { font-family:"Alegreya SC",Georgia,serif; font-size:14px; font-weight:700; border:1px solid #2e313b; border-radius:6px; padding:2px 8px; }
+.term-all { margin-top:28px; }

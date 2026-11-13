@@ -1,5 +1,5 @@
 import { FACTION_CLASS } from "./api";
-import { TERM_WORDS } from "./guide";
+import { TERM_WORDS, ACTION_TERMS } from "./guide";
 
 export interface Role { id: number; name: string; faction: string; type: string; summary: string; ability: string; image: string; placeholder: boolean; attack?: string; defence?: string }
 let roles: Role[] = [];
@@ -20,9 +20,10 @@ export const allRoles = () => roles;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // Role and faction names in their colour. Each glossary word becomes a button the first time it appears on a card;
 // without a `seen` set (chat, results) words stay plain text.
-const paint = (s: string, seen?: Set<string>) => (pattern ? esc(s).replace(pattern, (m) => {
+// Night actions link only inside ability bullets, never in the lore (Nik, 13 Nov).
+const paint = (s: string, seen?: Set<string>, bullet = false) => (pattern ? esc(s).replace(pattern, (m) => {
   if (words.has(m)) return `<span class="${words.get(m)}">${m}</span>`;
-  const id = terms.get(m); if (!id || !seen || seen.has(id)) return m;
+  const id = terms.get(m); if (!id || !seen || seen.has(id) || (!bullet && ACTION_TERMS.has(id))) return m;
   seen.add(id); return `<button type="button" class="term" data-term="${id}">${m}</button>`;
 }) : esc(s));
 
@@ -31,7 +32,7 @@ export function abilityHtml(text: string, faction: string, seen: Set<string> = n
   let out = "", open = false;
   for (const raw of text.split("\n")) {
     const line = raw.trim(); if (!line) continue;
-    if (line.startsWith("•")) { if (!open) { out += "<ul>"; open = true; } out += `<li>${paint(line.slice(1).trim(), seen)}</li>`; }
+    if (line.startsWith("•")) { if (!open) { out += "<ul>"; open = true; } out += `<li>${paint(line.slice(1).trim(), seen, true)}</li>`; }
     else { if (open) { out += "</ul>"; open = false; } out += `<p class="power ${FACTION_CLASS[faction]}">${esc(line)}</p>`; }
   }
   return out + (open ? "</ul>" : "");

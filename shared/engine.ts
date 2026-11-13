@@ -172,7 +172,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     // Evil roles are never offered their known allies (Nik, 8 Nov). The Kingpin is unknown to them, so he stays on the list.
     case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Cartel" || x.role === "Kingpin"));
     // Swindler (Nik, 7 Nov): any two players outside the Cartel. Known Cartel members are not offered; the Kingpin, whom he does not know, is.
-    case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Swap two players' roles (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
+    case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Cartel" && x.role !== "Kingpin")); return { label: "Deal Roles to two players (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
     // Innkeeper (Nik, 12 Nov): the Pawnbroker's draw on the good side; any player but himself.
     case "Innkeeper": return one("Invite a guest to your inn", others);
@@ -604,7 +604,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const [x, y] = a.targets.map(P);
     if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Cartel" || y.faction === "Cartel") { say(a.actor, FAILED); continue; }
     P(a.actor).swindled = true; swindledTonight.add(x.id); swindledTonight.add(y.id);
-    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.crierTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.crierTarget = q.crierTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.crierTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was swapped. You are now the ${ry}.`); say(y.id, `Your role was swapped. You are now the ${rx}.`);
+    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.crierTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.crierTarget = q.crierTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.crierTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was Dealt away. You are now the ${ry}.`); say(y.id, `Your role was Dealt away. You are now the ${rx}.`);
       // Handed the Town Crier role while being its target: become the Martyr at once (Nik, 7 Nov).
       for (const z of [x, y]) if (z.role === "Town Crier" && z.crierTarget === z.id) { setRole(z, "Martyr"); say(z.id, "You are your own target. You are now the Martyr: you win if you are voted out."); } }
   }

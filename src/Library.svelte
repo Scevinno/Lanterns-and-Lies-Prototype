@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The role library: search, faction and type filters, and a two-column picture grid.
+  // The role library: search, side tabs, a type menu, and a two-column picture grid.
   // Used from the Role guide and from the in-game Roster, which can open it pre-filtered.
   import { FACTION_CLASS } from "./api";
   import type { Role } from "./richtext";
@@ -18,8 +18,9 @@
 </script>
 
 <input type="search" bind:value={search} placeholder="Search by name or summary" aria-label="Search roles" />
-<div class="chips" role="group" aria-label="Faction">{#each ["All", "Lanternkeepers", "Syndicate", "Cartel", "Unbound"] as f}<button class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
-<div class="chips" role="group" aria-label="Type">{#each ["All", ...(typeFilter === "Random" ? ["Random"] : []), ...types] as t}<button class:on={typeFilter === t} on:click={() => (typeFilter = t)}>{t === "All" ? "All types" : t}</button>{/each}</div>
+<!-- Filters (Nik, 13 Nov; Creative Coach Idea A): a tab per side, and the role type in a menu. -->
+<div class="segf" role="tablist" aria-label="Side">{#each ["All", "Lanternkeepers", "Syndicate", "Cartel", "Unbound"] as f}<button role="tab" aria-selected={factionFilter === f} class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
+<label class="selwrap"><span>Type</span><select bind:value={typeFilter} class:set={typeFilter !== "All"}>{#each ["All", ...(typeFilter === "Random" ? ["Random"] : []), ...types] as t}<option value={t}>{t === "All" ? "All types" : t === "Random" ? "Random slot" : t}</option>{/each}</select></label>
 <p class="dim small">{filtered.length} of {roles.length} roles</p>
 <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile" on:click={() => onOpen(r)}><img src={import.meta.env.BASE_URL + r.image} alt="" width="272" height="264" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
 {#if !filtered.length}<p class="dim tc">No roles match.</p>{/if}

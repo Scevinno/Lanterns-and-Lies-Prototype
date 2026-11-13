@@ -4,7 +4,6 @@
 // How to play formatting (Nik, 13 Nov): each section sits in a translucent box; `tone` tints it (night blue, dawn and day amber),
 // `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines, "sides" gives each line its faction's edge.
 export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" }
-export interface Term { id: string; title: string; text: string; match: string[] }
 
 export const HOW_TO_PLAY: Section[] = [
   { title: "The town", tone: "town", body: [
@@ -67,68 +66,94 @@ export const HOW_TO_PLAY: Section[] = [
   ] },
 ];
 
-export const COMBAT_INTRO: string[] = [
-  "Every attack and every defence has a level: Light (I), Heavy (II) or Absolute (III).",
-  "An attack kills only if it is stronger than the target's defence. If they are equal, the target survives.",
-  "A player with no defence dies to any attack.",
-];
-export const COMBAT_TABLE: [string, string, string, string, string][] = [
-  ["", "No defence", "Light", "Heavy", "Absolute"],
-  ["Light attack", "Dies", "Survives", "Survives", "Survives"],
-  ["Heavy attack", "Dies", "Dies", "Survives", "Survives"],
-  ["Absolute attack", "Dies", "Dies", "Dies", "Survives"],
-];
-export const COMBAT_RULES: Section[] = [
-  { title: "Own defence and given defence", body: [
-    "Some roles always have a defence of their own, shown on their card.",
-    "Others give defence to someone else for one Night: the Doctor's Heal (Heavy), the Quartermaster's Hold (Heavy), the Hunter's trap (Heavy, to its target), the Innkeeper's shelter (Light, to everyone who visits him).",
-    "A player keeps the highest defence they have that Night; defences don't add up.",
-  ] },
-  { title: "Protection that fights back", body: [
-    "The Guardsman doesn't give defence. He steps in front of one attack and strikes back: he and the attacker both take a Heavy Attack.",
-    "He can't stop the Veteran, another Guardsman, an unpaid Debt, the Tinkerer's Trigger or the Assassin.",
-  ] },
-  { title: "Attacks that can't be stopped", body: [
-    "Absolute attacks beat every defence except Absolute: the Assassin's hit, the Rogue's guilt, an unpaid Debt and the Tinkerer's Trigger.",
-    "The Hollowman's clear-Night attack hits his target and everyone who visits them. A Doctor who Heals his target dies instead of them.",
-  ] },
-  { title: "What you're told", body: [
-    "If you are attacked you hear about it at dawn, whether you survive or not.",
-    "A Doctor or Guardsman whose protection saved someone is told so.",
-    "An attacker whose target survives hears that their ability failed.",
-  ] },
-];
+// Attack & Defence page (Nik, 13 Nov): the result grid and a table of every role; the special cases live in the Glossary.
+export const COMBAT_RULE = "An attack kills only if it is stronger than the defence. Equal means the target survives.";
 
-// Glossary. `match` lists the exact words that become tappable in role text (first time each appears on a card).
+// Glossary (Nik, 13 Nov): six groups shown as boxes; each term has its own page (#/term/<id>).
+// `match` lists the exact words that become tappable in role text (first time each appears on a card).
+// `action` terms are tappable only in a card's ability bullets, never in its lore or ability titles.
+// `type` terms list every role of that type on their page.
+export const TERM_GROUPS = ["Levels", "Night actions", "Attributes", "Nights", "Days", "Role types"] as const;
+export interface Term { id: string; title: string; text: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
+const T = (group: Term["group"], id: string, title: string, match: string[], text: string, extra: Partial<Term> = {}): Term => ({ group, id, title, match, text, ...extra });
+const A = (id: string, title: string, match: string[], text: string) => T("Night actions", id, title, match, text, { action: true });
 export const GLOSSARY: Term[] = [
-  { id: "light", title: "Light (I)", match: ["Light Attack", "Light Defence"], text: "The lowest attack and defence level. A Light attack kills only players with no defence." },
-  { id: "heavy", title: "Heavy (II)", match: ["Heavy Attack", "Heavy Defence"], text: "The middle level. A Heavy attack beats Light defence; Heavy defence stops Light and Heavy attacks." },
-  { id: "absolute", title: "Absolute (III)", match: ["Absolute Attack", "Absolute Defence", "Absolute Attacks"], text: "The highest level. An Absolute attack beats every defence except Absolute; Absolute defence stops every attack." },
-  { id: "visit", title: "Visit", match: ["visits", "visit"], text: "Using an ability on another player at Night means visiting them. Some roles see, trap, Plant or attack visitors. A few abilities don't visit, and those cards say so." },
-  { id: "hold", title: "Hold / Held", match: ["Hold-immune", "Holds", "Hold", "Held"], text: "A Held player's Night ability doesn't happen, and they are told. The Locksmith, Enforcer and Quartermaster Hold. Hold-immune roles can't be Held, and the player who tried is told it failed." },
-  { id: "swap", title: "Swap", match: ["swapped", "swap"], text: "The Ferryman and the Smuggler swap two players: everyone who visits one of them visits the other instead. Swapped players are told; their visitors are not." },
-  { id: "astray", title: "Led astray", match: ["led astray", "lead astray"], text: "The Fence sends a player to a neighbour instead of their chosen target. They aren't told. Some roles can't be led astray." },
-  { id: "planted", title: "Planted / Trigger", match: ["Planted", "Trigger", "Plant"], text: "The Tinkerer Plants explosives in houses; Planted players aren't told and look evil to investigators. When he Triggers, every Planted player takes an Absolute Attack." },
-  { id: "framed", title: "Framed", match: ["Framed", "Frame"], text: "The Framer makes a player look evil to the Seer, Detective, Oracle and Constable." },
-  { id: "disguised", title: "Disguised", match: ["Disguised", "disguise"], text: "The Tailor dresses a Syndicate member up as another player, so investigators get misleading results until the next Night." },
-  { id: "debt", title: "Debt / Collection Night", match: ["Collection Night", "Debt"], text: "The Loan Shark puts players in Debt. The next Night is their Collection Night: they must visit the Loan Shark to pay, or die at the end of the Night. Every Debt clears if the Loan Shark dies." },
-  { id: "reveal", title: "Reveal", match: ["Revealed", "Reveal"], text: "The Mayor and the Judge can Reveal themselves at Night from Night 2. The narrator confirms it at dawn. Revealed players gain power but become easy targets." },
-  { id: "condemn", title: "Condemn", match: ["Condemn"], text: "A Revealed Judge can Condemn a player during the vote when nobody is on Trial: they are found Guilty and executed. Condemning a Lanternkeeper costs the Judge their life." },
-  { id: "trial", title: "Trial / voted out", match: ["voted out", "Trial", "Guilty"], text: "A majority vote puts a player on Trial. After their defence, the town votes Guilty or Innocent; Guilty means execution. A tie is Innocent." },
-  { id: "fog", title: "Fog Night", match: ["Fog Nights", "Fog Night", "Fog"], text: "Every even Night. While the Hollowman lives, every information result on a Fog Night is random. The Hollowman can't attack then, but has Absolute Defence." },
-  { id: "clear", title: "Clear Night", match: ["Clear Nights", "clear Nights", "Clear Night", "clear Night"], text: "Every odd Night (1, 3, 5, 7). The Hollowman attacks on Clear Nights." },
-  { id: "evil", title: "Evil / Innocent", match: ["look evil", "Evil", "Innocent"], text: "The Constable's result. Syndicate, Cartel, Unbound killers, the Town Crier and the Assassin read Evil. Framed and Planted players look evil too." },
-  { id: "immunity", title: "Detection Immunity", match: ["Detection Immunity"], text: "Some evil leaders read as Lanternkeepers to the Constable, the Oracle and the Seer. The Detective and the Spy still see through it." },
-  { id: "heal", title: "Heal", match: ["Healed", "Heal"], text: "The Doctor's protection: Heavy Defence for one Night. It can't stop Absolute attacks." },
-  { id: "alert", title: "Alert", match: ["Alerts", "Alert"], text: "The Veteran's ability, twice a game. On Alert he deals a Heavy Attack to every visitor and has Light Defence." },
-  { id: "deceptive", title: "Deceptive roles", match: ["Deceptive roles", "Deceptive"], text: "Roles that twist information or movement: they can change what investigators learn or where people go." },
-  { id: "investigative", title: "Investigative roles", match: ["Investigative role", "investigators", "investigator"], text: "Roles that learn something at Night. Their results can be changed by Deceptive roles and by the Fog." },
-  { id: "power", title: "Power roles", match: ["Power role", "Power roles"], text: "Each side's leaders and strongest roles. They are always Unique, and several abilities fail on them." },
-  { id: "unique", title: "Unique", match: ["Unique"], text: "A role that is never dealt twice in one game." },
-  { id: "passage", title: "Passage", match: ["Passage"], text: "The Harbour Master ships a player out for the Day: they can't vote or be voted for. Only a Judge's Condemn can still reach them." },
-  { id: "dusk", title: "Dusk", match: ["Dusk"], text: "A 15-second close to every Day before Night falls." },
+  T("Levels", "light-attack", "Light Attack (I)", ["Light Attack"], "The weakest attack. It kills only a player with no defence."),
+  T("Levels", "light-defence", "Light Defence (I)", ["Light Defence"], "The lowest defence. It stops Light Attacks; Heavy and Absolute Attacks still kill."),
+  T("Levels", "heavy-attack", "Heavy Attack (II)", ["Heavy Attack"], "Kills a player with no defence or Light Defence."),
+  T("Levels", "heavy-defence", "Heavy Defence (II)", ["Heavy Defence"], "Stops Light and Heavy Attacks. Absolute Attacks still kill."),
+  T("Levels", "absolute-attack", "Absolute Attack (III)", ["Absolute Attacks", "Absolute Attack"], "The strongest attack: it beats every defence except Absolute. The Assassin's hit, the Rogue's guilt, an unpaid Debt and the Tinkerer's Trigger are Absolute."),
+  T("Levels", "absolute-defence", "Absolute Defence (III)", ["Absolute Defence"], "Stops every attack. Only the Hollowman has it, and only on Fog Nights."),
+
+  A("attack", "Attack", ["attack"], "Choosing a player to kill at Night. It kills only if it is stronger than the target's defence. A player who is attacked hears about it at dawn, whether they survive or not; an attacker whose target survives is told it failed."),
+  A("hold", "Hold", ["Hold-immune", "Holds", "Hold", "Held"], "A Held player's Night ability doesn't happen, and they are told. The Locksmith, Enforcer and Quartermaster Hold. Hold-immune roles can't be Held, and the player who tried is told it failed."),
+  A("heal", "Heal / Protect", ["Healed", "Heal", "protect"], "Giving another player defence for one Night. The Doctor's Heal and the Quartermaster's Hold give Heavy Defence, the Hunter's trap gives its target Heavy Defence, and the Innkeeper gives Light Defence to everyone who visits him. A player keeps only their highest defence; defences don't add up."),
+  A("guard", "Guard", ["guarding"], "The Guardsman steps in front of one attack on his target and strikes back: he and the attacker both take a Heavy Attack. He can't stop the Veteran, another Guardsman, an unpaid Debt, the Tinkerer's Trigger or the Assassin."),
+  A("trap", "Trap", ["trapped", "traps", "trap"], "The Hunter builds a trap on odd Nights and sets it on a player on even Nights. When anyone visits that player it goes off: Lanternkeepers are Held, and one evil or Unbound Killing visitor takes a Heavy Attack."),
+  A("patrol", "Patrol", ["Patrol"], "The Warden gets every Night result their target gets, and learns who killed them if they die. Never the same player more than two Nights in a row."),
+  A("alert", "Alert", ["Alerts", "Alert"], "The Veteran's ability, twice a game. On Alert he deals a Heavy Attack to every visitor and has Light Defence."),
+  A("astray", "Lead astray", ["led astray", "lead astray"], "The Fence sends a player to a neighbour instead of their chosen target. They aren't told. Some roles can't be led astray."),
+  A("swap", "Swap", ["swapped", "swap"], "The Ferryman and the Smuggler swap two players: everyone who visits one of them visits the other instead. Swapped players are told; their visitors are not."),
+  A("draw", "Invite / Draw", ["draw"], "The Innkeeper and the Pawnbroker pull one player's visit to themselves: that player's ability lands on them instead of the target, and the player isn't told. Neither can draw a player who visits two targets."),
+  A("deal", "Deal Roles", ["Deal Roles", "Dealt"], "The Swindler, once per game: two players outside the Cartel trade roles. Each is told their new role, not who had it. Faction and ability go with the role; Debt, Planted, Framed and Held stay with the player."),
+  A("plant", "Plant", ["Planting", "plant", "Plant"], "The Tinkerer hides an explosive in a player's house, and they aren't told. Everyone who visits the Tinkerer is Planted too."),
+  A("trigger", "Trigger", ["Trigger"], "The Tinkerer visits himself to set off every explosive: every Planted player takes an Absolute Attack. Swaps don't save them."),
+  A("frame", "Frame", ["Frame"], "The Framer chooses a player to look evil to investigators."),
+  A("forge", "Forge", ["Forge"], "The Forger visits a player. If they are an investigator, whatever they learn that Night is false."),
+  A("investigate", "Investigate", ["Investigate"], "The Detective learns a player's role type."),
+  A("watch", "Watch", ["watch"], "The Watchman watches a house and learns everyone who visited it."),
+  A("vision", "Vision", ["Vision"], "The Oracle names a player and gets three names, including that player. At least one of the three is on an opposing side."),
+  A("search", "Search", ["Search"], "The Constable searches a house and learns whether the player is Evil or Innocent."),
+  A("learn", "Learn", ["exact role"], "Some roles learn a player's exact role: the Informant and the Notary from the player they check, the Loan Shark from everyone he visits and everyone who visits him."),
+  A("guess", "Guess", ["guess"], "The Assassin is given two roles and guesses each Night which players have them. Naming both on the same Night gives each an Absolute Attack and wins."),
+  A("put-debt", "Put in Debt", ["put them in Debt", "put in Debt"], "The Loan Shark visits a player and puts them in Debt. Anyone who visits him while not in Debt is put in Debt too."),
+  A("raise", "Raise", ["raises", "raise", "raising"], "The Priest brings one dead Lanternkeeper back, once per game, with their abilities and nothing else from before."),
+  A("command", "Command", ["Commanded", "Command"], "The Kingpin chooses a Cartel member, who uses their ability twice that Night on different targets. Not the Foreman or the Swindler."),
+  A("recruit", "Recruit", ["Recruiting", "recruited", "recruit"], "Once the Kingpin is the last Cartel member alive, he can turn one player into the Foreman, once per game. It fails on Power roles and Unbound Killing roles."),
+  A("passage", "Passage", ["Passage"], "The Harbour Master ships a player out for the Day: they can't vote or be voted for. Only a Judge's Condemn can still reach them."),
+  A("guns", "Guns", ["Guns"], "The Harbour Master's even-Night shipment: a Cartel member also deals a Light Attack to the player they visit. If he is the last of the Cartel, he takes the Guns himself."),
+
+  T("Attributes", "evil", "Evil / Innocent", ["look evil", "Evil", "Innocent"], "The Constable's result. Syndicate, Cartel, Unbound killers, the Town Crier and the Assassin read Evil. Framed and Planted players look evil too."),
+  T("Attributes", "framed", "Framed", ["Framed"], "Chosen by the Framer. They look evil to the Seer, Detective, Oracle and Constable; the Informant still sees their true role."),
+  T("Attributes", "disguised", "Disguised", ["Disguised", "disguise"], "The Tailor dresses a Syndicate member up as another player, so investigators get misleading results until the next Night."),
+  T("Attributes", "immune", "Detection Immune", ["Detection Immunity", "Detection Immune"], "Some evil leaders read as Lanternkeepers to the Constable, the Oracle and the Seer. The Detective and the Spy still see through it."),
+  T("Attributes", "planted", "Planted", ["Planted"], "Has the Tinkerer's explosive in their house, and isn't told. They look evil to investigators, show as the Tinkerer to the Informant and Notary, and take an Absolute Attack when he Triggers."),
+  T("Attributes", "in-debt", "In Debt", ["Collection Night", "in Debt", "Debt"], "Owes the Loan Shark. At the start of the next Night, their Collection Night, they are told, and must visit the Loan Shark to pay; that is their whole action. If they don't, they die at the end of that Night by an Absolute Attack. Every Debt clears if the Loan Shark dies."),
+  T("Attributes", "forged", "Forged", ["forged"], "An investigator the Forger visited. Whatever they learn that Night is false, even on a Fog Night."),
+
+  T("Nights", "visit", "Visit", ["visits", "visit"], "Using an ability on another player at Night means visiting them. Some roles see, trap, Plant or attack visitors. A few abilities don't visit, and those cards say so."),
+  T("Nights", "clear", "Clear Night", ["Clear Nights", "clear Nights", "Clear Night", "clear Night"], "Every odd Night (1, 3, 5, 7). The Hollowman attacks on Clear Nights."),
+  T("Nights", "fog", "Fog Night", ["Fog Nights", "Fog Night", "Fog"], "Every even Night. While the Hollowman lives, every information result on a Fog Night is random. The Hollowman can't attack then, but has Absolute Defence."),
+
+  T("Days", "dawn", "Dawn", ["dawn"], "The start of each Day. The narrator says whose lantern went out, and private results arrive."),
+  T("Days", "discussion", "Discussion", ["Discussion"], "The first part of the Day: talk it through, out loud in person or in the town chat online."),
+  T("Days", "voting", "Voting", ["Voting Phase", "votes", "vote"], "Votes are public. A majority of living players puts someone on Trial, up to three Trials a Day. A Revealed Mayor's vote counts as three; a Paymaster's bribe makes his count two and his target's zero."),
+  T("Days", "trial", "Trial", ["voted out", "Trial", "Guilty"], "A majority vote puts a player on Trial. After their defence, the town votes Guilty or Innocent; Guilty means execution. A tie is Innocent."),
+  T("Days", "trial-defence", "Trial defence", [], "Only the accused may speak, to argue for their life before the town gives its verdict."),
+  T("Days", "condemn", "Condemn", ["Condemn"], "A Revealed Judge can Condemn a player during the vote when nobody is on Trial: they are found Guilty and executed. Condemning a Lanternkeeper costs the Judge their life."),
+  T("Days", "reveal", "Reveal", ["Revealed", "Reveal"], "The Mayor and the Judge can Reveal themselves at Night from Night 2. The narrator confirms it at dawn. Revealed players gain power but become easy targets."),
+  T("Days", "dusk", "Dusk", ["Dusk"], "A 15-second close to every Day before Night falls."),
+
+  T("Role types", "investigative", "Investigative", ["Investigative role", "investigators", "investigator"], "Lanternkeepers who learn something at Night. Deceptive roles and the Fog can change what they learn.", { type: "Investigative" }),
+  T("Role types", "protective", "Protective", ["Protective roles", "Protective role"], "Lanternkeepers who keep other players alive.", { type: "Protective" }),
+  T("Role types", "killing", "Killing", ["Killing roles", "Killing role"], "Roles whose ability kills. Unbound Killing roles fight for themselves alone.", { type: "Killing" }),
+  T("Role types", "power", "Power", ["Power roles", "Power role"], "Each side's leaders and strongest roles. They are always Unique, and several abilities fail on them.", { type: "Power" }),
+  T("Role types", "support", "Support", [], "Roles that help their side without killing or investigating: Holds, swaps, bribes, raising the dead and more.", { type: "Support" }),
+  T("Role types", "deceptive", "Deceptive", ["Deceptive roles", "Deceptive"], "Roles that twist information or movement: they change what investigators learn or where people go.", { type: "Deceptive" }),
+  T("Role types", "chaos", "Chaos", ["Chaos"], "Unbound roles with their own goals. They can win alongside anyone.", { type: "Chaos" }),
+  T("Role types", "unique", "Unique", ["Unique"], "A role that is never dealt twice in one game."),
 ];
 
 /** Every word that should become tappable in role text, longest first so "Heavy Defence" wins over "Defence". */
 export const TERM_WORDS: [string, string][] = GLOSSARY.flatMap((t) => t.match.map((m) => [m, t.id] as [string, string])).sort((a, b) => b[0].length - a[0].length);
 export const termById = (id: string) => GLOSSARY.find((t) => t.id === id);
+/** Matches any of the given words as whole words (case-sensitive, like the card links). */
+export const wordRx = (ws: string[]) => new RegExp(`\\b(${ws.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`);
+/** Other glossary words a term's own text mentions, longest first so "Heavy Attack" wins over "attack". */
+export const relatedTerms = (t: Term): Term[] => {
+  const ids = new Set<string>(); let rest = t.text;
+  for (const [w, id] of TERM_WORDS) { const rx = wordRx([w]); if (rx.test(rest)) { if (id !== t.id) ids.add(id); rest = rest.replace(new RegExp(rx.source, "g"), " "); } }
+  return [...ids].map((id) => termById(id)!);
+};
+/** Terms that link only inside ability bullets (Nik, 13 Nov). */
+export const ACTION_TERMS = new Set(GLOSSARY.filter((t) => t.action).map((t) => t.id));
