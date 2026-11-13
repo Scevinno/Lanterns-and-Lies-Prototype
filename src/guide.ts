@@ -76,11 +76,11 @@ export const COMBAT_RULE = "An attack kills only if it is stronger than the defe
 // Glossary (Nik, 13 Nov): six groups shown as boxes; each term has its own page (#/term/<id>).
 // `match` lists the exact words that become tappable in role text (first time each appears on a card).
 // `action` terms are tappable only in a card's ability bullets, never in its lore or ability titles.
-// `type` terms list every role of that type on their page. `points` list possible results only, nothing more: the role cards hold the detail (Nik, 13 Nov).
+// `type` terms list every role of that type on their page.
 export const TERM_GROUPS = ["Levels", "Night actions", "Attributes", "Nights", "Days", "Role types"] as const;
-export interface Term { id: string; title: string; text: string; points?: string[]; hint?: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
+export interface Term { id: string; title: string; text: string; hint?: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
 const T = (group: Term["group"], id: string, title: string, match: string[], text: string, extra: Partial<Term> = {}): Term => ({ group, id, title, match, text, ...extra });
-const A = (id: string, title: string, match: string[], text: string, points?: string[]) => T("Night actions", id, title, match, text, { action: true, points });
+const A = (id: string, title: string, match: string[], text: string) => T("Night actions", id, title, match, text, { action: true });
 export const GLOSSARY: Term[] = [
   T("Levels", "light-attack", "Light Attack (I)", ["Light Attack"], "The weakest attack. It kills only a player with no defence."),
   T("Levels", "light-defence", "Light Defence (I)", ["Light Defence"], "The lowest defence. It stops Light Attacks; Heavy and Absolute Attacks still kill."),
@@ -104,12 +104,10 @@ export const GLOSSARY: Term[] = [
   A("trigger", "Trigger", ["Trigger"], "The Tinkerer visits himself to set off every explosive: every Planted player takes an Absolute Attack. Swaps don't save them."),
   A("frame", "Frame", ["Frame"], "The Framer chooses a player to look evil to investigators."),
   A("forge", "Forge", ["Forge"], "The Forger visits a player. If they are an investigator, whatever they learn that Night is false."),
-  A("investigate", "Investigate", ["Investigate"], "The Detective learns a player's role type.", ["Results: Investigative, Protective, Support, Killing, Power, Deceptive or Chaos."]),
+  A("investigate", "Investigate", ["Investigate"], "The Detective learns a player's role type."),
   A("watch", "Watch", ["watch"], "The Watchman watches a house and learns everyone who visited it."),
   A("vision", "Vision", ["Vision"], "The Oracle names a player and gets three names, including that player. At least one of the three is on an opposing side."),
-  A("search", "Search", ["Search"], "The Constable searches a house and learns whether the player is Evil or Innocent.", ["Evil: Syndicate and Cartel members, Unbound Killing roles, the Town Crier and the Assassin.", "Innocent: Lanternkeepers, the Martyr and the Outcast."]),
-  A("intuition", "Intuition", [], "The Seer visits two players and learns whether they are friends or enemies."),
-  A("follow", "Follow", ["follow one player"], "The Tracker follows a player and sees who they visit."),
+  A("search", "Search", ["Search"], "The Constable searches a house and learns whether the player is Evil or Innocent."),
   A("learn", "Learn", ["exact role"], "Some roles learn a player's exact role: the Informant and the Notary from the player they check, the Loan Shark from everyone he visits and everyone who visits him."),
   A("guess", "Guess", ["guess"], "The Assassin is given two roles and guesses each Night which players have them. Naming both on the same Night gives each an Absolute Attack and wins."),
   A("put-debt", "Put in Debt", ["put them in Debt", "put in Debt"], "The Loan Shark visits a player and puts them in Debt. Anyone who visits him while not in Debt is put in Debt too."),
@@ -119,7 +117,7 @@ export const GLOSSARY: Term[] = [
   A("passage", "Passage", ["Passage"], "The Harbour Master ships a player out for the Day: they can't vote or be voted for. Only a Judge's Condemn can still reach them."),
   A("guns", "Guns", ["Guns"], "The Harbour Master's even-Night shipment: a Cartel member also deals a Light Attack to the player they visit. If he is the last of the Cartel, he takes the Guns himself."),
 
-  T("Attributes", "evil", "Evil / Innocent", ["look evil", "Evil", "Innocent"], "The two results of the Constable's Search. Who reads which is listed under Search."),
+  T("Attributes", "evil", "Evil / Innocent", ["look evil", "Evil", "Innocent"], "The Constable's result. Syndicate, Cartel, Unbound killers, the Town Crier and the Assassin read Evil. Framed and Planted players look evil too."),
   T("Attributes", "framed", "Framed", ["Framed"], "Chosen by the Framer. They look evil to the Seer, Detective, Oracle and Constable; the Informant still sees their true role."),
   T("Attributes", "disguised", "Disguised", ["Disguised", "disguise"], "The Tailor dresses a Syndicate member up as another player, so investigators get misleading results until the next Night."),
   T("Attributes", "immune", "Detection Immune", ["Detection Immunity", "Detection Immune"], "Some evil leaders read as Lanternkeepers to the Constable, the Oracle and the Seer. The Detective and the Spy still see through it."),
@@ -177,8 +175,6 @@ const HINTS: Record<string, string> = {
   "watch": "See who visits a house",
   "vision": "Three names, at least one opposed",
   "search": "Learn if a player is Evil or Innocent",
-  "intuition": "Are two players friends or enemies",
-  "follow": "See who a player visits",
   "learn": "Find out a player's exact role",
   "guess": "Name the Assassin's two targets",
   "put-debt": "Make a player owe the Loan Shark",
@@ -187,7 +183,7 @@ const HINTS: Record<string, string> = {
   "recruit": "Turn a player into the Foreman",
   "passage": "Ship a player out for the Day",
   "guns": "A Cartel member also attacks",
-  "evil": "The two results of a Search",
+  "evil": "The Constable's two results",
   "framed": "Looks evil to investigators",
   "disguised": "Looks like another player",
   "immune": "Reads as a Lanternkeeper",

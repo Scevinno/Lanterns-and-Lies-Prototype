@@ -38,7 +38,6 @@
     <div class="grab" on:pointerdown={down} on:pointermove={move} on:pointerup={up} on:pointercancel={up} aria-hidden="true"><div class="handle"></div></div>
     <h2 id="term-title">{term.title}</h2>
     <p>{term.text}</p>
-    {#if term.points}<ul class="term-points">{#each term.points as x}<li>{x}</li>{/each}</ul>{/if}
     <div class="term-actions">
       {#if guideLinks}<a class="link" href="#/glossary" on:click={onClose}>All game words</a>{:else}<span></span>{/if}
       <button class="go" on:click={onClose}>Got it</button>
