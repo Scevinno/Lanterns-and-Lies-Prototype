@@ -36,4 +36,6 @@ export function abilityHtml(text: string, faction: string, seen: Set<string> = n
   }
   return out + (open ? "</ul>" : "");
 }
+/** Role and faction names in their colour, game words left plain (Guide text). */
+export const paintHtml = (s: string) => paint(s);
 export const summaryHtml = (s: string, seen?: Set<string>) => paint(s, seen);

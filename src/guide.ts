@@ -1,11 +1,13 @@
 // Guide content (Creative Coach draft, 12 Nov, for Nik's review). One home for the rules text:
 // How to play, Attack & Defence and the Glossary. Role cards link game words here (tap a word, a half sheet opens).
 
-export interface Section { title: string; body: string[] }
+// How to play formatting (Nik, 13 Nov): each section sits in a translucent box; `tone` tints it (night blue, dawn and day amber),
+// `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines, "sides" gives each line its faction's edge.
+export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" }
 export interface Term { id: string; title: string; text: string; match: string[] }
 
 export const HOW_TO_PLAY: Section[] = [
-  { title: "The town", body: [
+  { title: "The town", tone: "town", body: [
     "Emberhollow is a river-port town where a living fog, the Gloam, rolls in every night. Every house keeps a lantern burning until dawn. A house whose lantern is out by morning has lost someone.",
     "Every game has three sides. The Lanternkeepers are the townsfolk. One evil side hides among them: the Syndicate or the Cartel, never both. The Unbound are drifters with their own aims.",
     "Nobody knows anyone else's role. Evil players know their allies; everyone else has to work it out.",
@@ -20,17 +22,24 @@ export const HOW_TO_PLAY: Section[] = [
     "Every even Night (2, 4, 6) is a Fog Night. The narrator announces it at nightfall.",
     "The game ends as soon as a side has won, or at the end of Day 7.",
   ] },
-  { title: "Night", body: [
+  { title: "Night", tone: "night", body: [
     "Each player with a Night ability chooses a target, or chooses to do nothing. Everyone gets a screen to tap, so nobody gives away that they have no action.",
-    "Abilities resolve in a fixed order: swaps and Holds first, then the Unbound, the evil side, Lanternkeeper Killing and Protective roles, then Lanternkeeper Investigative and Power roles, then Support.",
     "A Lanternkeeper investigator or Power role who dies that Night learns nothing.",
     "In an online game, the evil side has its own chat at Night.",
   ] },
-  { title: "Dawn", body: [
+  { title: "Night order", tone: "night", kind: "order", body: [
+    "Swaps and Holds",
+    "The Unbound",
+    "The evil side",
+    "Lanternkeeper Killing and Protective roles",
+    "Lanternkeeper Investigative and Power roles",
+    "Support",
+  ] },
+  { title: "Dawn", tone: "dawn", body: [
     "The narrator says whose lantern went out. Roles stay hidden until the game ends.",
     "Your private results arrive at dawn: what you learned, whether you were attacked, swapped or Held, and anything else that happened to you.",
   ] },
-  { title: "Day", body: [
+  { title: "Day", tone: "day", kind: "steps", body: [
     "Discussion: talk it through. In person, out loud; online, in the town chat.",
     "Vote: votes are public. A majority of living players puts someone on Trial. The Mayor's vote counts as three once Revealed, and a Paymaster's bribe moves votes.",
     "Defence: only the accused may speak.",
@@ -38,7 +47,7 @@ export const HOW_TO_PLAY: Section[] = [
     "After an Innocent verdict the town may vote again, up to three Trials a Day. A Judge's Condemn also ends the Day.",
     "Dusk: 15 seconds before Night, with the town chat still open online.",
   ] },
-  { title: "Winning", body: [
+  { title: "Winning", kind: "sides", body: [
     "Lanternkeepers win when the evil side and every Unbound killer are gone.",
     "The evil side wins when every Lanternkeeper and every Unbound killer is gone, or if it is still alive at the end of Day 7.",
     "An Unbound killer wins only by being the last one standing before Day 7 ends. If only an Unbound killer is left at the end of Day 7, nobody wins.",

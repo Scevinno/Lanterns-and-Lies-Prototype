@@ -1,5 +1,6 @@
 <script lang="ts">
   // Friends and invites (Nik, 12 Nov): add by username, accept requests, see invites to private parties.
+  // Requests answer with small square tick and cross buttons on the right; Cancel hugs its word (Nik, 13 Nov).
   import { onMount } from "svelte";
   import { call } from "./api";
   export let onBack: () => void;
@@ -39,7 +40,7 @@
 
     {#if data.incoming.length}
       <h3>Requests</h3>
-      <ul class="plain picker">{#each data.incoming as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><span class="btns"><button class="go" disabled={busy} on:click={() => act("friendRespond", { username: f.username, accept: true }, `${f.name} added.`)}>Accept</button><button class="weak" disabled={busy} on:click={() => act("friendRespond", { username: f.username, accept: false })}>Decline</button></span></li>{/each}</ul>
+      <ul class="plain picker">{#each data.incoming as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><span class="btns"><button class="go sq" aria-label={`Accept ${f.name}`} title="Accept" disabled={busy} on:click={() => act("friendRespond", { username: f.username, accept: true }, `${f.name} added.`)}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg></button><button class="weak sq" aria-label={`Decline ${f.name}`} title="Decline" disabled={busy} on:click={() => act("friendRespond", { username: f.username, accept: false })}><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" /></svg></button></span></li>{/each}</ul>
     {/if}
 
     <h3>Friends</h3>
@@ -51,7 +52,7 @@
 
     {#if data.outgoing.length}
       <h3>Waiting for an answer</h3>
-      <ul class="plain picker">{#each data.outgoing as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><button class="weak" disabled={busy} on:click={() => act("unfriend", { username: f.username })}>Cancel</button></li>{/each}</ul>
+      <ul class="plain picker">{#each data.outgoing as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><button class="weak fit" disabled={busy} on:click={() => act("unfriend", { username: f.username })}>Cancel</button></li>{/each}</ul>
     {/if}
   {/if}
   {#if msg}<p class="toast ok" role="status">{msg}</p>{/if}

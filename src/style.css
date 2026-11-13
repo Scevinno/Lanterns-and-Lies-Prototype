@@ -198,3 +198,33 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .term-sheet h2 { font-family:"Alegreya SC",Georgia,serif; color:var(--lamp); margin:4px 0 8px; }
 .term-actions { display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
 .stats-link { display:block; text-align:center; font-size:13px; margin-top:6px; }
+
+/* Friends (Nik, 13 Nov): square tick and cross for requests, snapped right; Cancel sized to its word. */
+.picker button.sq { width:40px; height:40px; min-height:40px; padding:0; flex:none; justify-content:center; }
+.picker button.fit { width:auto; flex:none; min-height:36px; padding:4px 14px; }
+.invite > span:first-child { flex:1; min-width:0; overflow-wrap:anywhere; }
+/* Term sheet: a wide strip at the top to drag by (Nik, 13 Nov). */
+.term-sheet { transition:transform .2s ease, max-height .2s ease, min-height .2s ease; }
+.term-sheet.dragging { transition:none; }
+.term-sheet .grab { margin:-10px -20px 4px; padding:12px 0 10px; cursor:grab; touch-action:none; }
+.term-sheet .grab .handle { margin:0 auto; width:48px; height:5px; background:#5a5f6e; }
+/* Term page (#/term/<id>). */
+.term-title { font-family:"Alegreya SC",Georgia,serif; color:var(--lamp); margin-top:18px; }
+.term-text { font-size:18px; line-height:1.55; margin:14px 0 24px; }
+.term-all { display:block; text-align:center; }
+/* How to play (Nik, 13 Nov): translucent boxes, tinted by part of the game. */
+.htp { margin:12px 0; padding:12px 14px; border-radius:10px; background:rgba(34,37,46,.55); border:1px solid rgba(58,62,74,.75); }
+.guide .htp h3 { margin:0 0 8px; }
+.htp p:last-child { margin-bottom:0; }
+.htp.town { background:rgba(217,164,65,.08); border-color:rgba(217,164,65,.35); }
+.htp.night { background:rgba(60,80,140,.22); border-color:rgba(147,197,253,.28); } .guide .htp.night h3 { color:#BFD8FF; }
+.htp.dawn { background:linear-gradient(rgba(60,80,140,.16),rgba(217,164,65,.12)); border-color:rgba(217,164,65,.3); }
+.htp.day { background:rgba(217,164,65,.07); border-color:rgba(217,164,65,.28); }
+.order { margin:0; padding:0; list-style:none; counter-reset:o; }
+.order li { counter-increment:o; display:flex; align-items:center; gap:10px; padding:5px 0; }
+.order li::before { content:counter(o); flex:none; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; background:rgba(147,197,253,.18); color:#BFD8FF; border:1px solid rgba(147,197,253,.4); }
+.steps li { display:flex; gap:10px; align-items:flex-start; padding:6px 0; border-bottom:1px solid rgba(58,62,74,.6); } .steps li:last-child { border-bottom:none; }
+.step { flex:none; min-width:78px; text-align:center; font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px; background:rgba(217,164,65,.18); color:var(--lamp); margin-top:1px; }
+.steps li.note { color:var(--dim); font-style:italic; padding-left:88px; }
+.sides li { margin:6px 0; padding:8px 12px; border-left:3px solid var(--line); border-radius:0 8px 8px 0; background:rgba(20,22,28,.5); }
+.sides .s-lk { border-color:var(--lk); background:rgba(74,222,128,.07); } .sides .s-syn { border-color:var(--syn); background:rgba(239,68,68,.07); } .sides .s-ub { border-color:var(--ub); background:rgba(147,197,253,.07); }

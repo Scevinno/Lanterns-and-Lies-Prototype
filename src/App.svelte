@@ -33,7 +33,7 @@
   const TIMER_ROWS: [string, string][] = [["discussion", "Discussion"], ["vote", "Vote"], ["defence", "Defence"], ["verdict", "Verdict"], ["night", "Night"]];
   // Join, party, library
   let code = "", party: any = null, players: any[] = [], qr = "", copied = false, remaining = 0, chan: any = null, clock: any = null;
-  let search = "", factionFilter = "All", openRole: Role | null = null, games: any[] = [];
+  let search = "", factionFilter = "All", openRole: Role | null = null, termId = "", cardScroll = 0, games: any[] = [];
   // Friends and invites (Nik, 12 Nov): the count on Home, and the invite list in a lobby.
   let invites = 0, requests = 0, friendList: { name: string; username: string }[] = [], showInvite = false, invited: string[] = [];
   async function loadFriends() { try { const f = await call("friends"); invites = f.invites.length; requests = f.incoming.length; friendList = f.friends; } catch { /* offline */ } }
@@ -47,8 +47,11 @@
     if (h.startsWith("join/")) { pendingCode = h.slice(5).toUpperCase(); if (session) { await join(pendingCode); pendingCode = ""; } else route = "home"; return; }
     if (h.startsWith("party/")) { await openParty(h.slice(6)); return; }
     if (h === "rosters") { guideTab = "rosters"; openRole = null; route = "roles"; leaveChannel(); return; }
+    if (h.startsWith("term/")) { termId = h.slice(5); route = "term"; leaveChannel(); scrollTo(0, 0); return; }
     if (h === "roles") guideTab = "roles";
-    route = h; leaveChannel();
+    // Coming back from a term page (dragged up from a role card) lands at the same place on the card.
+    const fromTerm = route === "term"; route = h; leaveChannel();
+    if (fromTerm && h === "roles" && openRole) { await svelteTick(); scrollTo(0, cardScroll); }
     if (h === "games") loadGames();
     if (h === "home" && session) loadFriends();
   }
@@ -224,12 +227,12 @@
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
-{:else if route === "guide" || route === "rules" || route === "combat" || route === "glossary"}
-  <Guide page={route} {roles} />
+{:else if route === "guide" || route === "rules" || route === "combat" || route === "glossary" || route === "term"}
+  <Guide page={route} {roles} {termId} />
 {:else if route === "roles"}
   <main class="narrow">
     <button class="link back" on:click={() => (openRole ? closeRole() : go("guide"))}>Back</button>
-    {#if openRole}<RoleCard role={openRole} />
+    {#if openRole}<RoleCard role={openRole} onOpenTerm={(id) => { cardScroll = scrollY; go("term/" + id); }} />
     {:else}
       <div class="tabs top"><button class:on={guideTab === "roles"} on:click={() => (guideTab = "roles")}>Roles</button><button class:on={guideTab === "rosters"} on:click={() => (guideTab = "rosters")}>Rosters</button></div>
       {#if guideTab === "roles"}

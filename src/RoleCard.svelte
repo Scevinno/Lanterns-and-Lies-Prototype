@@ -6,6 +6,8 @@
   export let role: Role;
   /** Off inside a game, so a link never takes a player out of it. */
   export let guideLinks = true;
+  /** Opens a game word's own page when its sheet is pulled up (Nik, 13 Nov). Not given inside a game. */
+  export let onOpenTerm: ((id: string) => void) | null = null;
   const base = import.meta.env.BASE_URL;
   // Roman numerals beside the level as a quick visual cue (Nik, 12 Nov).
   const NUM: Record<string, string> = { Light: "I", Heavy: "II", Absolute: "III" };
@@ -36,4 +38,4 @@
   </div>
   {#if guideLinks}<a class="link stats-link" href="#/combat">How Attack and Defence work</a>{/if}
 </div>
-<TermSheet id={term} {guideLinks} onClose={() => (term = null)} />
+<TermSheet id={term} {guideLinks} onExpand={onOpenTerm} onClose={() => (term = null)} />
