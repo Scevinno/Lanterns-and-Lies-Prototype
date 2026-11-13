@@ -270,3 +270,4 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .rel span { font-family:"Alegreya SC",Georgia,serif; font-size:14px; font-weight:700; border:1px solid #2e313b; border-radius:6px; padding:2px 8px; }
 .term-all { margin-top:28px; }
 .bd:has(.mk) { margin-right:8px; } /* room for the ☾ marker */
+.lvn { font-family:Georgia,serif; font-size:.85em; color:var(--lamp); letter-spacing:.03em; } /* level numeral after Light/Heavy/Absolute Attack or Defence */

@@ -7,6 +7,7 @@ let pattern: RegExp | null = null;
 const words = new Map<string, string>();
 // Game words from the Glossary (Nik, 12 Nov): tapping one on a card opens a half-screen explanation.
 const terms = new Map<string, string>(TERM_WORDS);
+const LEVEL_NUM: Record<string, string> = { light: "I", heavy: "II", absolute: "III" };
 const rx = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function setRoles(r: Role[]) {
   roles = r; words.clear();
@@ -23,8 +24,11 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 // Game words link only inside ability bullets; the lore line has none (Nik, 13 Nov).
 const paint = (s: string, seen?: Set<string>, bullet = false) => (pattern ? esc(s).replace(pattern, (m) => {
   if (words.has(m)) return `<span class="${words.get(m)}">${m}</span>`;
-  const id = terms.get(m); if (!id || !seen || seen.has(id) || (!bullet && ACTION_TERMS.has(id))) return m;
-  seen.add(id); return `<button type="button" class="term" data-term="${id}">${m}</button>`;
+  const id = terms.get(m);
+  // Levels carry their numeral wherever they appear: "Light Attack (I)" (Nik, 13 Nov).
+  const n = id ? LEVEL_NUM[id.split("-")[0]] : undefined; const w = n && /(Attack|Defence)s?$/.test(m) ? `${m} <span class="lvn">(${n})</span>` : m;
+  if (!id || !seen || seen.has(id) || (!bullet && ACTION_TERMS.has(id))) return w;
+  seen.add(id); return `<button type="button" class="term" data-term="${id}">${w}</button>`;
 }) : esc(s));
 
 /** Same treatment as the old library: role and faction names in their colour, power names in the role's colour, rules as a list. */
