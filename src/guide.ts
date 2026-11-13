@@ -76,11 +76,11 @@ export const COMBAT_RULE = "An attack kills only if it is stronger than the defe
 // Glossary (Nik, 13 Nov): six groups shown as boxes; each term has its own page (#/term/<id>).
 // `match` lists the exact words that become tappable in role text (first time each appears on a card).
 // `action` terms are tappable only in a card's ability bullets, never in its lore or ability titles.
-// `type` terms list every role of that type on their page. `points` are bullet details under the text (Nik, 13 Nov).
+// `type` terms list every role of that type on their page. `points` list possible results only, nothing more: the role cards hold the detail (Nik, 13 Nov).
 export const TERM_GROUPS = ["Levels", "Night actions", "Attributes", "Nights", "Days", "Role types"] as const;
 export interface Term { id: string; title: string; text: string; points?: string[]; hint?: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
 const T = (group: Term["group"], id: string, title: string, match: string[], text: string, extra: Partial<Term> = {}): Term => ({ group, id, title, match, text, ...extra });
-const A = (id: string, title: string, match: string[], text: string) => T("Night actions", id, title, match, text, { action: true });
+const A = (id: string, title: string, match: string[], text: string, points?: string[]) => T("Night actions", id, title, match, text, { action: true, points });
 export const GLOSSARY: Term[] = [
   T("Levels", "light-attack", "Light Attack (I)", ["Light Attack"], "The weakest attack. It kills only a player with no defence."),
   T("Levels", "light-defence", "Light Defence (I)", ["Light Defence"], "The lowest defence. It stops Light Attacks; Heavy and Absolute Attacks still kill."),
@@ -90,12 +90,7 @@ export const GLOSSARY: Term[] = [
   T("Levels", "absolute-defence", "Absolute Defence (III)", ["Absolute Defence"], "Stops every attack. Only the Hollowman has it, and only on Fog Nights."),
 
   A("attack", "Attack", ["attack"], "Choosing a player to kill at Night. It kills only if it is stronger than the target's defence. A player who is attacked hears about it at dawn, whether they survive or not; an attacker whose target survives is told it failed."),
-  T("Night actions", "hold", "Hold", ["Hold-immune", "Holds", "Hold", "Held"], "A Held player's Night ability doesn't happen, and they are told. The Locksmith, Enforcer and Quartermaster Hold.", { action: true, points: [
-    "Hold-immune: the Locksmith, Enforcer, Quartermaster, Ferryman and Smuggler. Whoever tries is told it failed.",
-    "Holding the Ripper, or the Hollowman on a Clear Night, gets you attacked.",
-    "A Quartermaster's Hold also gives Heavy Defence for that Night.",
-    "Holds can't stop abilities used in the Day.",
-  ] }),
+  A("hold", "Hold", ["Hold-immune", "Holds", "Hold", "Held"], "A Held player's Night ability doesn't happen, and they are told. The Locksmith, Enforcer and Quartermaster Hold. Hold-immune roles can't be Held, and the player who tried is told it failed."),
   A("heal", "Heal / Protect", ["Healed", "Heal", "protect"], "Giving another player defence for one Night. The Doctor's Heal and the Quartermaster's Hold give Heavy Defence, the Hunter's trap gives its target Heavy Defence, and the Innkeeper gives Light Defence to everyone who visits him. A player keeps only their highest defence; defences don't add up."),
   A("guard", "Guard", ["guarding"], "The Guardsman steps in front of one attack on his target and strikes back: he and the attacker both take a Heavy Attack. He can't stop the Veteran, another Guardsman, an unpaid Debt, the Tinkerer's Trigger or the Assassin."),
   A("trap", "Trap", ["trapped", "traps", "trap"], "The Hunter builds a trap on odd Nights and sets it on a player on even Nights. When anyone visits that player it goes off: Lanternkeepers are Held, and one evil or Unbound Killing visitor takes a Heavy Attack."),
@@ -109,37 +104,13 @@ export const GLOSSARY: Term[] = [
   A("trigger", "Trigger", ["Trigger"], "The Tinkerer visits himself to set off every explosive: every Planted player takes an Absolute Attack. Swaps don't save them."),
   A("frame", "Frame", ["Frame"], "The Framer chooses a player to look evil to investigators."),
   A("forge", "Forge", ["Forge"], "The Forger visits a player. If they are an investigator, whatever they learn that Night is false."),
-  T("Night actions", "investigate", "Investigate", ["Investigate"], "The Detective learns a player's role type.", { action: true, points: [
-    "Possible results: Investigative, Protective, Support, Killing, Power, Deceptive or Chaos.",
-    "A Framed player shows Deceptive.",
-    "A Planted player shows Killing.",
-    "A Disguised player shows the type of the role they are dressed as.",
-    "Deceptive roles, the Forger and the Fog can change the result.",
-  ] }),
-  T("Night actions", "watch", "Watch", ["watch"], "The Watchman watches a house and learns everyone who visited it.", { action: true, points: [
-    "You get the names of every visitor, never your own.",
-    "A player who visits two targets may show up at either house.",
-    "A Disguised Syndicate member shows as the player they are dressed as.",
-    "Deceptive roles can change the names.",
-  ] }),
-  T("Night actions", "vision", "Vision", ["Vision"], "The Oracle names a player and gets three names, including that player. At least one of the three is on an opposing side.", { action: true, points: [
-    "Good: Lanternkeepers, Disguised Syndicate members, Detection Immune leaders, the Martyr and the Outcast.",
-    "Opposing: everyone else, and Framed or Planted Lanternkeepers.",
-    "With no other Lanternkeepers left, the Vision stops working.",
-  ] }),
-  T("Night actions", "search", "Search", ["Search"], "The Constable searches a house and learns whether the player is Evil or Innocent.", { action: true, points: [
-    "Evil: Syndicate and Cartel members, Unbound Killing roles, the Town Crier and the Assassin.",
-    "Innocent: Lanternkeepers, the Martyr and the Outcast.",
-    "Framed and Planted players read Evil.",
-    "Detection Immune leaders, and players Disguised as a Lanternkeeper, read Innocent.",
-    "Deceptive roles and the Fog can change the result.",
-  ] }),
+  A("investigate", "Investigate", ["Investigate"], "The Detective learns a player's role type.", ["Results: Investigative, Protective, Support, Killing, Power, Deceptive or Chaos."]),
+  A("watch", "Watch", ["watch"], "The Watchman watches a house and learns everyone who visited it."),
+  A("vision", "Vision", ["Vision"], "The Oracle names a player and gets three names, including that player. At least one of the three is on an opposing side."),
+  A("search", "Search", ["Search"], "The Constable searches a house and learns whether the player is Evil or Innocent.", ["Evil: Syndicate and Cartel members, Unbound Killing roles, the Town Crier and the Assassin.", "Innocent: Lanternkeepers, the Martyr and the Outcast."]),
   A("intuition", "Intuition", [], "The Seer visits two players and learns whether they are friends or enemies."),
   A("follow", "Follow", ["follow one player"], "The Tracker follows a player and sees who they visit."),
-  T("Night actions", "learn", "Learn", ["exact role"], "Some roles learn a player's exact role: the Informant and the Notary from the player they check, the Loan Shark from everyone he visits and everyone who visits him.", { action: true, points: [
-    "A Planted player shows as the Tinkerer.",
-    "A Framed player still shows their true role.",
-  ] }),
+  A("learn", "Learn", ["exact role"], "Some roles learn a player's exact role: the Informant and the Notary from the player they check, the Loan Shark from everyone he visits and everyone who visits him."),
   A("guess", "Guess", ["guess"], "The Assassin is given two roles and guesses each Night which players have them. Naming both on the same Night gives each an Absolute Attack and wins."),
   A("put-debt", "Put in Debt", ["put them in Debt", "put in Debt"], "The Loan Shark visits a player and puts them in Debt. Anyone who visits him while not in Debt is put in Debt too."),
   A("raise", "Raise", ["raises", "raise", "raising"], "The Priest brings one dead Lanternkeeper back, once per game, with their abilities and nothing else from before."),
