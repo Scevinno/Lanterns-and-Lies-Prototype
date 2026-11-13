@@ -2,8 +2,9 @@
 // How to play, Attack & Defence and the Glossary. Role cards link game words here (tap a word, a half sheet opens).
 
 // How to play formatting (Nik, 13 Nov): each section sits in a translucent box; `tone` tints it (night blue, dawn and day amber),
-// `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines, "sides" gives each line its faction's edge.
-export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" }
+// `kind` lays it out: "steps" puts the text before a colon in a label chip, "order" numbers the lines, "sides" gives each line its faction's edge;
+// "modes" makes each "Name: text" line a card, and "> Name: text" lines tiles inside the card above (Setting up).
+export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" | "modes" }
 
 export const HOW_TO_PLAY: Section[] = [
   // Nik's rewording, 13 Nov.
@@ -12,11 +13,11 @@ export const HOW_TO_PLAY: Section[] = [
     "Every game has three sides. The Lanternkeepers are the townsfolk. One evil side hides among them: the Syndicate or the Cartel. The Unbound are drifters with their own aims.",
     "Nobody knows anyone else's role. Evil players know their allies; everyone else has to work it out.",
   ] },
-  { title: "Setting up", kind: "steps", body: [
-    "Public: a 15-player game open to anyone. Coming after private parties.",
+  { title: "Setting up", kind: "modes", body: [
+    "Public: A 15-player game open to anyone. Coming after private parties.",
     "Private: 8 to 15 players you invite with a code, link or QR. Whoever creates the party picks the evil side and the timers.",
-    "In person: a private party in one room, talking out loud. Phones are for roles, votes and Night choices.",
-    "Online: a private party where everyone talks in the chat.",
+    "> In person: One room, talking out loud. Phones are for roles, votes and Night choices.",
+    "> Online: Everyone talks in the chat.",
   ] },
   { title: "How a game runs", body: [
     "Everyone gets 30 seconds to read their role. Then Night 1 falls, followed by Day 1, Night 2, Day 2, and so on up to Day 7.",

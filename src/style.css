@@ -281,3 +281,11 @@ main.signin { padding-left:calc(20px + env(safe-area-inset-left)); padding-right
 .game { padding-top:calc(8px + env(safe-area-inset-top)); padding-bottom:calc(8px + env(safe-area-inset-bottom)); padding-left:calc(12px + env(safe-area-inset-left)); padding-right:calc(12px + env(safe-area-inset-right)); }
 .overlay { padding-top:calc(16px + env(safe-area-inset-top)); padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
 .toast { bottom:calc(16px + env(safe-area-inset-bottom)); }
+/* Setting up (Nik, 13 Nov): a card per game mode; In person and Online sit inside the Private card. */
+.modes { display:flex; flex-direction:column; gap:10px; }
+.mode { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:rgba(20,22,28,.55); }
+.mode-name { display:block; font-family:"Almendra",Georgia,serif; font-size:18px; color:var(--lamp); margin-bottom:2px; }
+.mode p { margin:0; }
+.submodes { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.submode { border-left:3px solid var(--lamp); border-radius:0 8px 8px 0; padding:8px 10px; background:rgba(217,164,65,.08); font-size:14px; }
+.submode b { display:block; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--lamp); margin-bottom:2px; }

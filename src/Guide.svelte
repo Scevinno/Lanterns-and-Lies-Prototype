@@ -14,6 +14,9 @@
   const back = () => { if (page === "term" && history.length > 1) history.back(); else go(page === "guide" ? "home" : page === "term" ? "glossary" : "guide"); };
   // Winning lines take the edge colour of the side they are about.
   const side = (t: string) => (t.startsWith("Lanternkeepers") ? "lk" : t.startsWith("The evil side") ? "syn" : /^(An|Other) Unbound/.test(t) ? "ub" : "");
+  // Setting up (Nik, 13 Nov): "Name: text" is a mode card; "> Name: text" is a tile inside the card above it.
+  type Mode = { name: string; text: string; subs: { name: string; text: string }[] };
+  const modes = (lines: string[]) => { const out: Mode[] = []; for (const l of lines) { const sub = l.startsWith("> "); const [name, text] = label(sub ? l.slice(2) : l); if (sub && out.length) out[out.length - 1].subs.push({ name, text }); else out.push({ name, text, subs: [] }); } return out; };
   const label = (t: string) => { const i = t.indexOf(": "); if (i <= 0 || i >= 20) return ["", t]; const r = t.slice(i + 2); return [t.slice(0, i), r.charAt(0).toUpperCase() + r.slice(1)]; };
 
   // Level badges (Creative Coach design, Nik's pick 13 Nov): 0 none, 1 Light, 2 Heavy, 3 Absolute; dashed when given to others.
@@ -58,6 +61,8 @@
           <ol class="order">{#each s.body as p}<li><span>{@html paintHtml(p)}</span></li>{/each}</ol>
         {:else if s.kind === "steps"}
           <ul class="plain steps">{#each s.body.map(label) as [l, t]}<li class:note={!l}>{#if l}<span class="step">{l}</span>{/if}<span>{@html paintHtml(t)}</span></li>{/each}</ul>
+        {:else if s.kind === "modes"}
+          <div class="modes">{#each modes(s.body) as m}<div class="mode"><b class="mode-name">{m.name}</b><p>{m.text}</p>{#if m.subs.length}<div class="submodes">{#each m.subs as x}<div class="submode"><b>{x.name}</b><p>{x.text}</p></div>{/each}</div>{/if}</div>{/each}</div>
         {:else if s.kind === "sides"}
           <ul class="plain sides">{#each s.body as p}<li class={"s-" + (side(p) || "none")}>{@html paintHtml(p)}</li>{/each}</ul>
         {:else}
