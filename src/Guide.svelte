@@ -29,6 +29,11 @@
   const bullets = (r: Role) => r.ability.split("\n").filter((l) => l.trim().startsWith("•")).join(" ");
   const onCards = (t: Term) => (t.type ? roles.filter((r) => r.type === t.type) : t.match.length ? roles.filter((r) => wordRx(t.match).test(bullets(r) + (t.action ? "" : " " + r.summary))) : []);
 
+  // Glossary search and the one-line hint under each word (its first sentence).
+  let q = "";
+  const matches = (t: Term, s: string) => { const x = s.trim().toLowerCase(); return !x || t.title.toLowerCase().includes(x) || t.text.toLowerCase().includes(x); };
+  const hint = (t: Term) => (t.text.match(/^.*?\.(?=\s|$)/)?.[0] ?? t.text);
+
   const ROWS = [
     { to: "roles", title: "Roles", sub: "Every role, and the roster for each player count" },
     { to: "rules", title: "How to play", sub: "A game from start to end" },
@@ -94,11 +99,16 @@
       <a class="link term-all" href="#/glossary">All game words</a>
     {:else}<p class="dim tc">That game word isn't in the Glossary.</p>{/if}
   {:else}
-    <!-- Glossary (Nik, 13 Nov; Creative Coach Variant B): grouped boxes, each opening the word's own page. -->
+    <!-- Glossary (Nik, 13 Nov): Variant A's search and one box per row with a one-line hint, under Variant B's group headings. -->
     <h1 class="ptitle">Glossary</h1>
+    <input type="search" bind:value={q} placeholder="Search game words" aria-label="Search game words" />
     {#each TERM_GROUPS as g}
-      <div class="ghead">{g}</div>
-      <div class="ggrid">{#each GLOSSARY.filter((t) => t.group === g) as t (t.id)}<button class="gbox" on:click={() => go("term/" + t.id)}><b>{t.title}</b><span class="arr" aria-hidden="true">›</span></button>{/each}</div>
+      {@const ts = GLOSSARY.filter((t) => t.group === g && matches(t, q))}
+      {#if ts.length}
+        <div class="ghead">{g}</div>
+        {#each ts as t (t.id)}<button class="gbox" on:click={() => go("term/" + t.id)}><span class="gt"><b>{t.title}</b><span class="hint">{hint(t)}</span></span><span class="arr" aria-hidden="true">›</span></button>{/each}
+      {/if}
     {/each}
+    {#if !GLOSSARY.some((t) => matches(t, q))}<p class="dim tc">No words match.</p>{/if}
   {/if}
 </main>

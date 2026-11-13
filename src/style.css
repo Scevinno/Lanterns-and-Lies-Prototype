@@ -259,12 +259,14 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .trow .nm { font-family:"Alegreya SC",Georgia,serif; font-size:15px; }
 /* Glossary (Variant B) and the term page. */
 .ghead { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:18px 0 6px; }
-.ggrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.gbox { width:100%; display:flex; align-items:center; gap:8px; padding:9px 10px; min-height:44px; background:rgba(255,255,255,.07); border:1px solid #2e313b; border-radius:10px; text-align:left; }
-.gbox b { flex:1; min-width:0; font-family:"Alegreya SC",Georgia,serif; font-size:14.5px; font-weight:700; }
+.gbox { width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; margin:0 0 6px; min-height:44px; background:rgba(255,255,255,.07); border:1px solid #2e313b; border-radius:10px; text-align:left; }
+.gbox .gt { flex:1; min-width:0; }
+.gbox .hint { display:block; font-size:12.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gbox b { display:block; font-family:"Alegreya SC",Georgia,serif; font-size:16px; font-weight:700; }
 .gbox .arr { color:var(--dim); font-size:20px; flex:none; }
 .glabel { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:18px 0 8px; }
 .rel { display:flex; flex-wrap:wrap; gap:6px; }
 .rel button { min-height:34px; padding:3px 12px; border:1px solid var(--line); background:rgba(255,255,255,.07); border-radius:17px; font-size:14px; }
 .rel span { font-family:"Alegreya SC",Georgia,serif; font-size:14px; font-weight:700; border:1px solid #2e313b; border-radius:6px; padding:2px 8px; }
 .term-all { margin-top:28px; }
+.bd:has(.mk) { margin-right:8px; } /* room for the ☾ marker */
