@@ -1,6 +1,15 @@
 // Tips on role cards (Nik, 13 Nov): 2 to 10 short pointers on how to play a role and use what it learns.
 // Drafted by Creative Coach from each card's rules, for Nik's review. Shown under the Attack and Defence block.
+// Investigative roles first (Detective approved by Nik; the other seven drafted for review, 13 Nov).
 export const TIPS: Record<string, string[]> = {
+  Archivist: [
+    "You learn which roles are in play, not who has them. Use your list to test what people claim.",
+    "When your results stop, your list is complete. Anyone claiming a role that isn't on it is lying.",
+    "An evil role on your list tells the town which tricks to expect, such as a Framer or a Forger.",
+    "A count above one tells you how many players share a role, which helps spot a false claim.",
+    "You never visit, so Watchmen, Trackers, traps and the Veteran can't catch you. Keep it that way by staying quiet in the Day.",
+    "Deceptive roles can change your results, but the Tailor can't. Treat a result that doesn't fit with care.",
+  ],
   Detective: [
     "A role type is not a side. Killing could be the Veteran or the Rogue as much as a Mobster or the Ripper.",
     "Compare your result with what the player claims. A self-declared Doctor who shows Killing has some explaining to do.",
@@ -9,5 +18,55 @@ export const TIPS: Record<string, string[]> = {
     "On a Fog Night, while the Hollowman lives, your result is random. Don't build a case on it.",
     "A result that clashes with everything else may be the Forger's work.",
     "Speaking up early makes you a target. Gather two or three results before you go public, or share them with someone you trust.",
+  ],
+  Watchman: [
+    "Watch the players most likely to be attacked. If your target dies, the killer is probably among your names.",
+    "Not every visitor means harm. Doctors, Guardsmen and investigators visit too, so compare names with what people claim.",
+    "A name you didn't expect may be a disguise: a Disguised Syndicate member shows as the player they are dressed as.",
+    "A player who visits two targets may show up at either house, so one sighting doesn't prove where they went.",
+    "Roles that never visit, like the Spy and the Archivist, will never appear in your results.",
+    "You and a Tracker fit together: they see where a player goes, you see who comes.",
+    "On a Fog Night, while the Hollowman lives, your names are random.",
+  ],
+  Oracle: [
+    "Name someone you trust. If they really are good, at least one of the other two names is not.",
+    "Names that keep coming back over several Nights are worth a closer look.",
+    "Detection Immune leaders count as good, so your Vision won't catch the Godfather, Harbour Master, Loan Shark or Kingpin.",
+    "A Framed Lanternkeeper counts as opposing, so one Vision is never proof on its own.",
+    "On a Fog Night, while the Hollowman lives, your result is random.",
+  ],
+  Seer: [
+    "Pair someone you trust with someone you doubt. Enemies means the doubt was right, if your trust was.",
+    "Friends doesn't mean good. Two Syndicate members are friends with each other too.",
+    "Unbound killers, the Town Crier and the Assassin are enemies with everyone. A player who comes up enemies in every pair stands out.",
+    "Detection Immune leaders read as Lanternkeepers to you, so a friendly result can hide an evil leader.",
+    "The Fence can't lead you astray, so your visits always land where you chose.",
+    "You can't choose a Revealed Lanternkeeper. Pair with someone else the town already trusts.",
+    "On a Fog Night, while the Hollowman lives, your result is random.",
+  ],
+  Constable: [
+    "Innocent isn't a clean bill. Detection Immune leaders and players Disguised as a Lanternkeeper read Innocent.",
+    "Evil may be a Framed or Planted Lanternkeeper. A Detective can tell them apart: Framed shows Deceptive, Planted shows Killing.",
+    "The Town Crier and the Assassin read Evil but aren't the evil side. Ask what they want before you vote.",
+    "The Martyr reads Innocent and wants to be voted out. Be wary of an Innocent who seems keen to die.",
+    "On a Fog Night, while the Hollowman lives, your result is random.",
+    "An Evil result makes you a target as soon as you share it. Decide who hears it first.",
+  ],
+  Spy: [
+    "Every name you get is someone the evil side visited. If they died, that was most likely their kill.",
+    "A visited player who is still alive may have been Held, Framed, bribed or protected. Ask what they were told at dawn.",
+    "The evil side rarely visits its own members, so a name on your list is less likely to be one of them.",
+    "You never visit, so nobody can catch you at Night.",
+    "Your list and a Watchman's names together can point to who did the visiting.",
+    "Deceptive roles can change your results, and on a Fog Night, while the Hollowman lives, they are random.",
+  ],
+  Tracker: [
+    "A player who visits two others is the Assassin, Seer, Ferryman or Smuggler, or a Cartel member Commanded by the Kingpin.",
+    "A visit to a dead player means the Medium, Priest or Coroner.",
+    "A visit to someone who died may be the killer, or a Doctor who came too late. Check what they claim.",
+    "Visiting nobody fits a role that doesn't visit, a player who chose to do nothing, or one who was Held.",
+    "Follow players who claim a role: a Doctor who never visits anyone is not much of a Doctor.",
+    "If your target was swapped or led astray, you see where they ended up, not where they meant to go.",
+    "On a Fog Night, while the Hollowman lives, your result is random.",
   ],
 };
