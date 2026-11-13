@@ -14,7 +14,8 @@
   // Game words in the card text open a half-screen explanation (Nik, 12 Nov). Each word is tappable once per card.
   let term: string | null = null;
   $: seen = (role, new Set<string>());
-  $: lore = summaryHtml(role.summary, seen);
+  // No game-word links in the lore line; only the ability bullets link (Nik, 13 Nov).
+  $: lore = summaryHtml(role.summary);
   $: rules = abilityHtml(role.ability, role.faction, seen);
   const tap = (e: MouseEvent) => { const t = (e.target as HTMLElement).closest(".term") as HTMLElement | null; if (t) term = t.dataset.term ?? null; };
 </script>

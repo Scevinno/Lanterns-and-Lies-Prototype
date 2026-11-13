@@ -20,7 +20,7 @@ export const allRoles = () => roles;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // Role and faction names in their colour. Each glossary word becomes a button the first time it appears on a card;
 // without a `seen` set (chat, results) words stay plain text.
-// Night actions link only inside ability bullets, never in the lore (Nik, 13 Nov).
+// Game words link only inside ability bullets; the lore line has none (Nik, 13 Nov).
 const paint = (s: string, seen?: Set<string>, bullet = false) => (pattern ? esc(s).replace(pattern, (m) => {
   if (words.has(m)) return `<span class="${words.get(m)}">${m}</span>`;
   const id = terms.get(m); if (!id || !seen || seen.has(id) || (!bullet && ACTION_TERMS.has(id))) return m;

@@ -25,9 +25,9 @@
   const roleBadge = (r: Role, k: "a" | "d") => { const v = k === "a" ? r.attack : r.defence; return badge(k, lv(v), (v ?? "").includes("given"), k === "d" && FOG_ONLY.has(r.name) ? "☾" : ""); };
   const SIDES = ["Lanternkeepers", "Syndicate", "Cartel", "Unbound"];
 
-  // Term page: the cards a word appears on (actions in ability bullets only, as on the cards), or every role of a type.
+  // Term page: the cards a word links from (ability bullets only, as on the cards), or every role of a type.
   const bullets = (r: Role) => r.ability.split("\n").filter((l) => l.trim().startsWith("•")).join(" ");
-  const onCards = (t: Term) => (t.type ? roles.filter((r) => r.type === t.type) : t.match.length ? roles.filter((r) => wordRx(t.match).test(bullets(r) + (t.action ? "" : " " + r.summary))) : []);
+  const onCards = (t: Term) => (t.type ? roles.filter((r) => r.type === t.type) : t.match.length ? roles.filter((r) => wordRx(t.match).test(bullets(r))) : []);
 
   // Glossary search and the one-line hint under each word (its first sentence).
   let q = "";
