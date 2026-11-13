@@ -122,8 +122,8 @@ export const GLOSSARY: Term[] = [
   T("Attributes", "forged", "Forged", ["forged"], "An investigator the Forger visited. Whatever they learn that Night is false, even on a Fog Night."),
 
   T("Nights", "visit", "Visit", ["visits", "visit"], "Using an ability on another player at Night means visiting them. Some roles see, trap, Plant or attack visitors. A few abilities don't visit, and those cards say so."),
-  T("Nights", "clear", "Clear Night", ["Clear Nights", "clear Nights", "Clear Night", "clear Night"], "Every odd Night (1, 3, 5, 7). The Hollowman attacks on Clear Nights."),
-  T("Nights", "fog", "Fog Night", ["Fog Nights", "Fog Night", "Fog"], "Every even Night. While the Hollowman lives, every information result on a Fog Night is random. The Hollowman can't attack then, but has Absolute Defence."),
+  T("Nights", "clear", "Clear Night", ["Clear Nights", "clear Nights", "Clear Night", "clear Night"], "Every odd Night. While the Hollowman lives, he can attack and has Light Defence."),
+  T("Nights", "fog", "Fog Night", ["Fog Nights", "Fog Night", "Fog"], "Every even Night. While the Hollowman lives, every information result is random; he can't attack, but has Absolute Defence."),
 
   T("Days", "dawn", "Dawn", ["dawn"], "The start of each Day. The narrator says whose lantern went out, and private results arrive."),
   T("Days", "discussion", "Discussion", ["Discussion"], "The first part of the Day: talk it through, out loud in person or in the town chat online."),
