@@ -1,6 +1,6 @@
 // Tips on role cards (Nik, 13 Nov): 2 to 10 short pointers on how to play a role and use what it learns.
 // Drafted by Creative Coach from each card's rules, for Nik's review. Shown under the Attack and Defence block.
-// Investigative roles first (Detective approved by Nik; the other seven drafted for review, 13 Nov).
+// Every role has tips (13 Nov): Detective approved by Nik; the rest drafted for his review.
 export const TIPS: Record<string, string[]> = {
   Archivist: [
     "You learn which roles are in play, not who has them. Use your list to test what people claim.",
@@ -68,5 +68,268 @@ export const TIPS: Record<string, string[]> = {
     "Follow players who claim a role: a Doctor who never visits anyone is not much of a Doctor.",
     "If your target was swapped or led astray, you see where they ended up, not where they meant to go.",
     "On a Fog Night, while the Hollowman lives, your result is random.",
+  ],
+
+  // Lanternkeepers: protective, killing, power and support (drafted for Nik's review, 13 Nov).
+  Guardsman: [
+    "Guard whoever the evil side most wants gone: a player who has just shared strong results.",
+    "If you die guarding, look at who else died that Night. One of them was probably the attacker.",
+    "You only strike visitors who meant harm, so a Doctor or investigator at your target's house is safe.",
+    "A Doctor on the same player keeps you alive: only the attacker dies.",
+    "If your target dies anyway, it was something you can't stop: the Assassin, a Debt, the Trigger or the Veteran.",
+    "Being told you saved someone means they were attacked, so they are unlikely to be on the attacker's side.",
+  ],
+  Doctor: [
+    "Heal the players with the most to lose: investigators who have shared results, or anyone the town now trusts.",
+    "Being told your Heal saved someone means they were attacked. That is a good sign they are not evil.",
+    "Keep your self-Heal for the Night after you go public, when you are most likely to be hit.",
+    "On a Clear Night, healing the Hollowman's target saves them but costs your life.",
+    "A healed player who dies anyway was hit by an Absolute Attack: the Assassin, a Debt, the Trigger or the Rogue's guilt.",
+    "Healing a Guardsman lets him survive his own strike back.",
+  ],
+  Hunter: [
+    "Set your trap on the player the evil side is most likely to visit, such as someone loud with results.",
+    "A trap that never goes off means nobody has visited that player since you set it.",
+    "Lanternkeeper visitors get Held too, so trapping a popular player can block your own Doctor or investigators.",
+    "You still build your trap if you are Held or led astray, so odd Nights are never wasted.",
+    "If an evil visitor dies to your trap, your target is likely on the town's side.",
+  ],
+  Veteran: [
+    "You have two Alerts. Save them for Nights you expect visitors, such as after you've drawn attention in the Day.",
+    "On Alert you kill every visitor, Doctors and investigators included. Tell trusted players when to stay away.",
+    "Compare the number you killed with the deaths at dawn to work out who visited you.",
+    "Letting the town think you might be on Alert can keep the evil side away from you.",
+    "A Doctor can save the visitors you kill, but a Guardsman can't.",
+  ],
+  Rogue: [
+    "You have one bullet. Wait until two or more results point the same way.",
+    "Shooting a Lanternkeeper kills you the next Night. Framed and Disguised make no difference: only their true side counts.",
+    "A Light Attack fails against any defence, so the Godfather and the Cartel's leaders survive it. Aim at players with none.",
+    "Your shot is a good answer to a player the town can't agree to vote out.",
+    "If you are raised by the Priest, you get one bullet back.",
+  ],
+  Mayor: [
+    "Reveal when your three votes decide a Trial, not before. Until then you are just another voice.",
+    "Once Revealed you are the evil side's top target, and your own Protective roles can't help you.",
+    "Pass on what you know before you Reveal. Afterwards you can't have private conversations.",
+    "The narrator confirms a real Reveal. A player who claims to be Mayor but never Reveals is worth doubting.",
+    "If the Swindler Deals your role away before you Reveal, your Reveal won't happen.",
+  ],
+  Judge: [
+    "Condemn only works when nobody is on Trial. Use it when the vote stalls on a player you're sure of.",
+    "Condemning a Lanternkeeper costs your life, so wait for results that agree.",
+    "Your Condemn still reaches a player sent away by Passage.",
+    "Once Revealed you are a target and can't be protected by your side. Reveal when you have a clear suspect.",
+    "You can Condemn once every Day for as long as you live, so one Reveal can decide several Days.",
+  ],
+  Warden: [
+    "Patrol an investigator to check their claims. If they are honest, their results match what they tell the town.",
+    "Patrol a suspect: if they receive an exact role at Night, they are the Informant or the Notary.",
+    "Patrol the players most likely to be attacked. If they die, you learn who killed them.",
+    "You can't Patrol the same player three Nights in a row, so plan a second target.",
+    "Deceptive roles can change what you receive, so check a surprising result against others.",
+  ],
+  Innkeeper: [
+    "Drawing a suspected killer saves their target, but their attack lands on you.",
+    "Your shelter gives every visitor Light Defence, whatever their side. That can save an evil visitor from a Light Attack too.",
+    "A drawn player isn't told, so a player whose result makes no sense may have been drawn to you.",
+    "Draw the player you think is the evil side's Holder: their Hold lands on you instead of a protector.",
+    "If you are Held, nobody gets your shelter that Night.",
+  ],
+  Locksmith: [
+    "Hold the player you think is a killer. A Held killer kills nobody.",
+    "Never Hold the Ripper, or the Hollowman on a Clear Night: you will be attacked. If a Locksmith dies after a Hold, the town should look hard at who was Held.",
+    "A player who says they were Held when you didn't Hold them was Held by the evil side, or is lying.",
+    "The Fence can move your Hold to a neighbour, and the Pawnbroker can draw it. A Hold that seems to do nothing may have been moved.",
+    "Holding a Lanternkeeper by mistake stops their ability for the Night, so be careful with players who claim to protect or investigate.",
+  ],
+  Medium: [
+    "Wait for a strong Lanternkeeper to die. A fresh Doctor, Veteran or Rogue is worth more than an early pick.",
+    "A failed channel means the dead player was not a Lanternkeeper, or was a Power role. That is information the town doesn't have.",
+    "Once you take a new role, you are that role. Decide whether to tell the town, since you may become a target.",
+    "If you and the Priest pick the same dead player, you still become their role.",
+  ],
+  Priest: [
+    "Raise a Lanternkeeper who mattered: an investigator with results to finish, or a Veteran or Rogue.",
+    "A failed raising tells you the dead player was not a Lanternkeeper. You keep your raising for another Night.",
+    "Raised players come back clean: no Debt, Plant or Frame from before.",
+    "The whole town sees a lantern relit, so a raising also tells everyone a Priest is alive.",
+    "Raising a body the Coroner wanted stops them using it that Night.",
+  ],
+  Ferryman: [
+    "Swap a likely target with a suspect, and the attack may land on the suspect instead.",
+    "Swapped players are told, so warn a trusted player in advance and they'll know it was you.",
+    "Your swap always goes first. If the Smuggler targets a player you swapped, their swap fails.",
+    "Swapping also moves investigators' visits, so their results end up about the other player. Don't confuse your own side.",
+    "Swaps don't save Planted players from the Trigger.",
+  ],
+
+  // Syndicate (drafted for Nik's review, 13 Nov).
+  Mobster: [
+    "Agree the target with the Godfather in the Night chat. His choice beats yours.",
+    "When you carry out the hit, investigators see your visit, not his. You are the one most likely to be caught.",
+    "A Light Attack fails against any defence. Pick players unlikely to be protected or on Alert.",
+    "If the Godfather dies you take his place, so staying alive matters.",
+    "A Constable reads you Evil. Have a believable claim ready before the Day.",
+  ],
+  Godfather: [
+    "The Constable, Oracle and Seer read you as a Lanternkeeper. The Detective and the Spy don't.",
+    "Let the Mobster carry out the hit: his visit is the one investigators see.",
+    "Your Light Defence stops the Rogue's shot and the Ripper.",
+    "Agree a backup target with the Mobster in case you are Held.",
+    "Hitting a guarded player can cost you the Mobster to the Guardsman's strike back.",
+  ],
+  Enforcer: [
+    "Hold whoever is most likely to protect or investigate tonight's target.",
+    "Holding the Veteran stops his Alert, which makes him safe to hit that Night.",
+    "Never Hold the Ripper, or the Hollowman on a Clear Night.",
+    "Held players are told, and they'll say so in the Day. If the town knows a Locksmith is alive, the blame may fall there.",
+  ],
+  Informant: [
+    "Exact roles let the Syndicate choose: find the Doctor, the Guardsman and the investigators first.",
+    "A Tinkerer result may be a Planted player. The real Tinkerer is Unbound, not on your list of allies.",
+    "You see past your own Framer: Framed players still show their true role.",
+    "You know real roles, so you can make a convincing false claim as an investigator in the Day.",
+  ],
+  Fence: [
+    "Lead the Doctor or Guardsman away from tonight's target.",
+    "Leading the Locksmith astray moves their Hold, even when it was meant for you.",
+    "You can't lead astray the Seer, the Ferryman or the Assassin, so don't waste a Night on them.",
+    "A Tracker who reports a visit to an odd house may have followed someone you sent there.",
+  ],
+  Tailor: [
+    "Disguise the Syndicate member most likely to be checked, such as one who drew suspicion today.",
+    "Dress them as a living Lanternkeeper with a believable role. A disguise as a dead player can look strange to a Watchman.",
+    "A disguise lasts only until the next Night, so disguise again whoever is still at risk.",
+    "A Planted Syndicate member still shows Killing to the Detective, disguise or not.",
+    "You can disguise yourself when you are the one under suspicion.",
+  ],
+  Framer: [
+    "Frame the player the town trusts most. A Constable's Evil result can get them voted out.",
+    "Frame the players investigators are likely to check, such as the loudest voices.",
+    "The Detective sees a Framed player as Deceptive and the Informant sees the truth, so vary your targets.",
+    "A Frame beats the Tinkerer's Plant on the same player.",
+  ],
+
+  // Cartel (drafted for Nik's review, 13 Nov).
+  "Harbour Master": [
+    "Passage on odd Nights: ship out a Cartel member who is about to be voted on, or a player who would swing the vote.",
+    "Only the Judge can still Condemn a player you shipped out.",
+    "Guns on even Nights turn a Cartel member's visit into a kill as well. A Notary or Quartermaster with Guns does both.",
+    "You read as a Lanternkeeper to the Constable, Oracle and Seer, and your Light Defence stops the Rogue.",
+  ],
+  "Loan Shark": [
+    "Debtors aren't told who you are and must guess who to pay. Stay unsuspected and they'll guess wrong.",
+    "Anyone who visits you falls into Debt, so investigators and Doctors pay for coming near you.",
+    "You learn the exact role of everyone you visit and everyone who visits you. Share it in the Cartel chat.",
+    "A debtor who is Held can't pay. A Quartermaster's Hold on their Collection Night makes the Debt certain.",
+    "If you die, every Debt clears. Keeping you alive matters to the whole Cartel.",
+  ],
+  Kingpin: [
+    "Command the member whose ability is worth most twice: two checks for the Notary, two Holds for the Quartermaster.",
+    "The rest of the Cartel doesn't know you. Read the Night chat and choose quietly.",
+    "Your Heavy Defence lasts only while another Cartel member is alive.",
+    "Once you are alone, recruit a Foreman. A failed recruit means that player is a Power role or an Unbound killer.",
+    "You read as a Lanternkeeper to the Constable, Oracle and Seer.",
+  ],
+  Foreman: [
+    "You are the Cartel's main killer, and the Kingpin can't Command you.",
+    "You don't know the Kingpin. An attack that fails on an unprotected player may have hit his Heavy Defence.",
+    "A Constable reads you Evil. Have a believable claim ready.",
+    "If you die, another Cartel member may take your place, so the killing doesn't have to stop with you.",
+  ],
+  Quartermaster: [
+    "Your Hold also gives Heavy Defence. Never Hold the player your Foreman is attacking.",
+    "Hold a debtor on their Collection Night: they can't pay, and the Debt's Absolute Attack beats your Heavy Defence.",
+    "Hold the Doctor or Guardsman protecting tonight's target.",
+    "Never Hold the Ripper, or the Hollowman on a Clear Night.",
+  ],
+  Paymaster: [
+    "Bribe a swing voter: their vote counts zero and yours counts two, a two-vote swing on a close Trial.",
+    "A bribe on a Power role fails, so don't spend it on the Mayor or the Judge.",
+    "Bribe the player most likely to vote against a Cartel member on Trial.",
+    "Vote with the crowd when you can. A lone double vote stands out.",
+  ],
+  Coroner: [
+    "Borrow a dead investigator's ability to check a player of your choice.",
+    "You learn the dead player's role, a private confirmation the town doesn't get until the end.",
+    "A Tracker sees you visit the dead, which narrows you to the Medium, Priest or Coroner. Claim one of the other two.",
+    "If the Priest raises your body that Night, you lose it. Pick bodies the Priest is unlikely to want.",
+  ],
+  Notary: [
+    "Find the Doctor and the investigators for the Foreman.",
+    "A Tinkerer result may be a Planted player.",
+    "With the Kingpin's Command you check two players; with the Harbour Master's Guns your check is also a kill.",
+    "Exact roles let you make a convincing false claim as an investigator.",
+  ],
+  Forger: [
+    "Visit the investigator most likely to check a Cartel member tonight.",
+    "A forged result is false even on a Fog Night, and it sounds certain. That can get a Lanternkeeper voted out.",
+    "Forging only works on Investigative roles. Use the Notary's and Loan Shark's results to find them first.",
+    "If an investigator's claims start to clash with everyone else's, the town may stop trusting them. Keep at it.",
+  ],
+  Smuggler: [
+    "Swap tonight's target with the player the Doctor is likely to Heal, so the protection lands in the wrong house.",
+    "If your swap fails, the Ferryman touched one of your players. He is in the game.",
+    "You can't be Held, so your swap always happens unless the Ferryman got there first.",
+    "Swapped players are told, so the town learns a swapper is active. Be ready to claim Ferryman.",
+  ],
+  Pawnbroker: [
+    "Draw the Doctor or Guardsman: their protection lands on you and leaves tonight's target open.",
+    "Draw the Locksmith and their Hold lands on you instead of a Cartel member.",
+    "Don't draw an investigator: their check lands on you, and a Detective would see Deceptive.",
+    "Drawing a killer brings their attack to you, and you have no defence.",
+  ],
+  Swindler: [
+    "Deal a Power role away before it is Revealed. An unrevealed Mayor or Judge loses their Reveal that Night.",
+    "Players are told their new role but not who had it, so the Day's claims stop matching. Use the confusion.",
+    "Statuses stay with the player: a debtor stays in Debt, and a Planted player stays Planted.",
+    "You get one Deal. Wait for a target that changes the game, and keep it if it fails.",
+  ],
+
+  // Unbound (drafted for Nik's review, 13 Nov).
+  Tinkerer: [
+    "Plant quietly for several Nights, then Trigger once to kill every Planted player at once.",
+    "Everyone who visits you gets Planted, so investigators who check you are walking into it.",
+    "Planted players look evil to investigators, so the town may vote them out for you.",
+    "The Night you Trigger, you plant nobody. Pick the moment when your list is longest.",
+    "Players raised by the Priest come back clean, without your explosive.",
+  ],
+  Ripper: [
+    "You win only as the last one standing. Let the town and the evil side thin each other out.",
+    "Your Light Attack fails against any defence. Pick players with none.",
+    "Anyone who Holds you is attacked automatically, so the Locksmith and the Enforcer may come to you.",
+    "Your Light Defence stops the Rogue, the Mobster and the Foreman.",
+  ],
+  Hollowman: [
+    "On a Clear Night, pick a player many will visit, such as someone likely to be protected and checked. You hit the visitors too.",
+    "On a Fog Night you can't attack, but every result is random. Let the town argue over bad information.",
+    "A Doctor who Heals your target dies in their place.",
+    "Anyone who Holds you on a Clear Night is attacked.",
+    "You have only Light Defence on Clear Nights, so don't draw attention before one.",
+  ],
+  Assassin: [
+    "Your two targets are on opposing sides. Find one, and you know which side the other is on.",
+    "Use the town's public results and claims to match roles to players.",
+    "You read Evil to the Constable and an enemy to the Seer, so avoid drawing checks.",
+    "A Tracker who follows you sees two visits, which narrows you to five roles. Have a claim ready.",
+    "You win the moment you name both correctly on the same Night, whatever happens to you afterwards.",
+  ],
+  "Town Crier": [
+    "Build a case against your target slowly. A sudden push looks suspicious.",
+    "You read Evil to the Constable, so a check can turn the town against you instead.",
+    "If your target dies any other way, you become the Martyr and want to be voted out yourself.",
+    "Your target is never a Lanternkeeper Power role, so a Revealed Mayor or Judge isn't the one.",
+  ],
+  Martyr: [
+    "You win by being voted out. Act suspicious enough for a Trial, but not so much that the evil side kills you at Night.",
+    "You read Innocent to the Constable and as a Lanternkeeper to the Seer and Oracle, so investigators may defend you. Keep your claim vague.",
+    "When you're voted out your role is revealed, and the town learns it was fooled.",
+  ],
+  Outcast: [
+    "You win by being alive at the end, whoever else wins.",
+    "You never visit, so traps, the Veteran's Alert and the Tinkerer can't catch you as a visitor.",
+    "You read Innocent and as a Lanternkeeper to investigators. Siding with the town keeps you off the Trial list.",
+    "Your Light Defence stops Light Attacks from the Mobster, Foreman, Rogue and Ripper, but nothing Heavy or Absolute. Stay low-key.",
   ],
 };
