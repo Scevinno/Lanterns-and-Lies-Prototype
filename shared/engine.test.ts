@@ -216,8 +216,8 @@ describe("investigations", () => {
   it("Warden learns the killer, but no result from a target killed tonight", () => {
     const s = game(["Warden", "Detective", "Foreman", "Spy"], 1, "Cartel"); act(s, 0, 1); act(s, 1, 2); act(s, 2, 1); const m = run(s); expect(said(m, 0)).not.toContain("Your target's result"); expect(said(m, 0)).toContain("killed by N2");
   });
-  it("Warden cannot Patrol the same player three Nights in a row", () => {
-    const s = game(["Warden", "Spy", "Doctor"]); s.players[0].patrol = ["p1", "p1"]; expect(nightPrompt(s, s.players[0])!.slots[0].options.some((o) => o.id === "p1")).toBe(false);
+  it("Warden can Patrol the same player any number of Nights in a row (Nik, 13 Nov)", () => {
+    const s = game(["Warden", "Spy", "Doctor"]); s.players[0].patrol = ["p1", "p1"]; expect(nightPrompt(s, s.players[0])!.slots[0].options.some((o) => o.id === "p1")).toBe(true);
   });
 });
 

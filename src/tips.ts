@@ -126,7 +126,6 @@ export const TIPS: Record<string, string[]> = {
     "Patrol an investigator to check their claims. If they are honest, their results match what they tell the town.",
     "Patrol a suspect: if they receive an exact role at Night, they are the Informant or the Notary.",
     "Patrol the players most likely to be attacked. If they die, you learn who killed them.",
-    "You can't Patrol the same player three Nights in a row, so plan a second target.",
     "Deceptive roles can change what you receive, so check a surprising result against others.",
   ],
   Innkeeper: [

@@ -196,7 +196,8 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Hunter": return fogNight(s.night) && p.hasTrap ? one("Set your trap on a player") : null;
     case "Doctor": return one("Heal a player", all.filter((x) => !(x.revealed && x.faction === "Lanternkeepers")).filter((x) => x.id !== p.id || (p.selfHeal ?? 0) > 0));
     case "Locksmith": return one("Lock a player in");
-    case "Warden": { const last = p.patrol ?? []; const banned = last.length >= 2 && last[last.length - 1] === last[last.length - 2] ? last[last.length - 1] : null; return one("Patrol a player", others.filter((x) => x.id !== banned)); }
+    // Warden (Nik, 13 Nov): may Patrol the same player any number of Nights in a row.
+    case "Warden": return one("Patrol a player", others);
     case "Oracle": return one("Include a player in your Vision");
     case "Detective": return one("Investigate a player");
     case "Watchman": return one("Watch a player's house");
@@ -484,7 +485,6 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
         res(a.actor, "names", names(shuffle(trio.map((p) => (p.id === t.id ? ch : p.id)), r)), "Your Vision shows"); results[results.length - 1].targetName = tn; break;
       }
       case "Loan Shark": res(a.actor, "role", t.role, tn); break;
-      case "Warden": { const pa = P(a.actor).patrol ?? []; P(a.actor).patrol = [...pa, t.id].slice(-2); break; }
       case "Fence": case "Pawnbroker": case "Innkeeper": break;
       default: break;
     }
