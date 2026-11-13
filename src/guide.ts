@@ -6,52 +6,53 @@
 export interface Section { title: string; body: string[]; tone?: "night" | "dawn" | "day" | "town"; kind?: "steps" | "order" | "sides" }
 
 export const HOW_TO_PLAY: Section[] = [
+  // Nik's rewording, 13 Nov.
   { title: "The town", tone: "town", body: [
     "Emberhollow is a river-port town where a living fog, the Gloam, rolls in every night. Every house keeps a lantern burning until dawn. A house whose lantern is out by morning has lost someone.",
-    "Every game has three sides. The Lanternkeepers are the townsfolk. One evil side hides among them: the Syndicate or the Cartel, never both. The Unbound are drifters with their own aims.",
+    "Every game has three sides. The Lanternkeepers are the townsfolk. One evil side hides among them: the Syndicate or the Cartel. The Unbound are drifters with their own aims.",
     "Nobody knows anyone else's role. Evil players know their allies; everyone else has to work it out.",
   ] },
-  { title: "Setting up", body: [
-    "Private parties have 8 to 15 players. Whoever creates the party picks In person (one room, talking out loud) or Online (talking in chat), the evil side (Syndicate, Cartel or Random) and the timers.",
-    "Share the code, link or QR. When the party is full, anyone can press Start, and anyone can cancel the 10-second countdown.",
-    "The roster for each player count says how many roles of each kind are dealt, never which ones. A Unique role is never dealt twice in one game.",
+  { title: "Setting up", kind: "steps", body: [
+    "Public: a 15-player game open to anyone. Coming after private parties.",
+    "Private: 8 to 15 players you invite with a code, link or QR. Whoever creates the party picks the evil side and the timers.",
+    "In person: a private party in one room, talking out loud. Phones are for roles, votes and Night choices.",
+    "Online: a private party where everyone talks in the chat.",
   ] },
   { title: "How a game runs", body: [
     "Everyone gets 30 seconds to read their role. Then Night 1 falls, followed by Day 1, Night 2, Day 2, and so on up to Day 7.",
-    "Every even Night (2, 4, 6) is a Fog Night. The narrator announces it at nightfall.",
+    "Every even Night is a Fog Night. The narrator announces it at nightfall.",
     "The game ends as soon as a side has won, or at the end of Day 7.",
   ] },
+  { title: "Winning", kind: "sides", body: [
+    "Lanternkeepers win when the evil side and every Unbound killer are eliminated.",
+    "The evil side (Syndicate or Cartel) wins when every Lanternkeeper and every Unbound killer is gone, or if at least one member is alive at the end of Day 7.",
+    "An Unbound killer wins only by being the last one standing before Day 7 ends. If only an Unbound killer is left at the end of Day 7, they win.",
+    "Other Unbound roles chase their own goals, and can win alongside anyone.",
+    "There is no win by numbers: the game runs until a side is actually gone.",
+  ] },
   { title: "Night", tone: "night", body: [
-    "Each player with a Night ability chooses a target, or chooses to do nothing. Everyone gets a screen to tap, so nobody gives away that they have no action.",
+    "Each player with a Night ability chooses their target or targets, or chooses to do nothing.",
     "A Lanternkeeper investigator or Power role who dies that Night learns nothing.",
-    "In an online game, the evil side has its own chat at Night.",
+    "The evil side has its own chat at Night.",
   ] },
   { title: "Night order", tone: "night", kind: "order", body: [
     "Swaps and Holds",
     "The Unbound",
     "The evil side",
     "Lanternkeeper Killing and Protective roles",
-    "Lanternkeeper Investigative and Power roles",
-    "Support",
+    "Lanternkeeper Investigative, Support and Power roles",
   ] },
   { title: "Dawn", tone: "dawn", body: [
     "The narrator says whose lantern went out. Roles stay hidden until the game ends.",
     "Your private results arrive at dawn: what you learned, whether you were attacked, swapped or Held, and anything else that happened to you.",
   ] },
   { title: "Day", tone: "day", kind: "steps", body: [
-    "Discussion: talk it through. In person, out loud; online, in the town chat.",
-    "Vote: votes are public. A majority of living players puts someone on Trial. The Mayor's vote counts as three once Revealed, and a Paymaster's bribe moves votes.",
+    "Discussion: talk it through, out loud in person or in the town chat online.",
+    "Vote: votes are public. A majority of living players puts someone on Trial.",
     "Defence: only the accused may speak.",
     "Verdict: everyone else votes Guilty or Innocent. A tie is Innocent. Guilty means execution, and the Day ends.",
-    "After an Innocent verdict the town may vote again, up to three Trials a Day. A Judge's Condemn also ends the Day.",
+    "After an Innocent verdict the town may vote again, up to three Trials a Day.",
     "Dusk: 15 seconds before Night, with the town chat still open online.",
-  ] },
-  { title: "Winning", kind: "sides", body: [
-    "Lanternkeepers win when the evil side and every Unbound killer are gone.",
-    "The evil side wins when every Lanternkeeper and every Unbound killer is gone, or if it is still alive at the end of Day 7.",
-    "An Unbound killer wins only by being the last one standing before Day 7 ends. If only an Unbound killer is left at the end of Day 7, nobody wins.",
-    "Other Unbound roles chase their own goals, and can win alongside anyone.",
-    "There is no win by numbers: the game runs until a side is actually gone.",
   ] },
   { title: "Results and the narrator", body: [
     "Every result is private. What you share, and whether you tell the truth, is up to you.",
