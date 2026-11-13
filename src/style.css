@@ -196,9 +196,11 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .stats-link { display:block; text-align:center; font-size:13px; margin-top:6px; }
 
 /* Friends (Nik, 13 Nov): square tick and cross for requests, snapped right; Cancel sized to its word. */
-.picker button.sq { width:40px; height:40px; min-height:40px; padding:0; flex:none; justify-content:center; }
-.picker button.fit { width:auto; flex:none; min-height:36px; padding:4px 14px; }
-.invite > span:first-child { flex:1; min-width:0; overflow-wrap:anywhere; }
+.picker .invite button.sq { width:40px; height:40px; min-height:40px; padding:0; flex:none; justify-content:center; }
+.picker .invite button.fit { width:auto; flex:none; min-height:36px; padding:4px 14px; }
+/* Friend and invite rows: the name takes the space, every button sizes to its own content (Remove, Keep, Join, Dismiss, Cancel). */
+.invite > span:first-child { flex:1; min-width:0; overflow-wrap:break-word; }
+.picker .invite button { width:auto; flex:none; }
 /* Term sheet: a wide strip at the top to drag by (Nik, 13 Nov). */
 .term-sheet { transition:transform .2s ease, max-height .2s ease, min-height .2s ease; }
 .term-sheet.dragging { transition:none; }
