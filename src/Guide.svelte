@@ -29,10 +29,10 @@
   const bullets = (r: Role) => r.ability.split("\n").filter((l) => l.trim().startsWith("•")).join(" ");
   const onCards = (t: Term) => (t.type ? roles.filter((r) => r.type === t.type) : t.match.length ? roles.filter((r) => wordRx(t.match).test(bullets(r))) : []);
 
-  // Glossary search and the one-line hint under each word (its first sentence).
+  // Glossary search, and the one-line hint under each word (its own short line in guide.ts).
   let q = "";
   const matches = (t: Term, s: string) => { const x = s.trim().toLowerCase(); return !x || t.title.toLowerCase().includes(x) || t.text.toLowerCase().includes(x); };
-  const hint = (t: Term) => (t.text.match(/^.*?\.(?=\s|$)/)?.[0] ?? t.text);
+  const hint = (t: Term) => t.hint ?? t.text;
 
   const ROWS = [
     { to: "roles", title: "Roles", sub: "Every role, and the roster for each player count" },

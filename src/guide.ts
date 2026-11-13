@@ -74,7 +74,7 @@ export const COMBAT_RULE = "An attack kills only if it is stronger than the defe
 // `action` terms are tappable only in a card's ability bullets, never in its lore or ability titles.
 // `type` terms list every role of that type on their page.
 export const TERM_GROUPS = ["Levels", "Night actions", "Attributes", "Nights", "Days", "Role types"] as const;
-export interface Term { id: string; title: string; text: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
+export interface Term { id: string; title: string; text: string; hint?: string; match: string[]; group: (typeof TERM_GROUPS)[number]; action?: boolean; type?: string }
 const T = (group: Term["group"], id: string, title: string, match: string[], text: string, extra: Partial<Term> = {}): Term => ({ group, id, title, match, text, ...extra });
 const A = (id: string, title: string, match: string[], text: string) => T("Night actions", id, title, match, text, { action: true });
 export const GLOSSARY: Term[] = [
@@ -143,6 +143,70 @@ export const GLOSSARY: Term[] = [
   T("Role types", "chaos", "Chaos", ["Chaos"], "Unbound roles with their own goals. They can win alongside anyone.", { type: "Chaos" }),
   T("Role types", "unique", "Unique", ["Unique"], "A role that is never dealt twice in one game."),
 ];
+
+// One-line hint under each word in the Glossary list, short enough for one row on a phone (Nik, 13 Nov).
+const HINTS: Record<string, string> = {
+  "light-attack": "The weakest attack",
+  "light-defence": "Stops Light Attacks",
+  "heavy-attack": "Beats no defence and Light Defence",
+  "heavy-defence": "Stops Light and Heavy Attacks",
+  "absolute-attack": "Beats every defence but Absolute",
+  "absolute-defence": "Stops every attack",
+  "attack": "Choose a player to kill at Night",
+  "hold": "Stops a player's Night ability",
+  "heal": "Give a player defence for one Night",
+  "guard": "Take an attack and strike back",
+  "trap": "Goes off on anyone who visits",
+  "patrol": "Get every result your target gets",
+  "alert": "Attack everyone who visits the Veteran",
+  "astray": "Send a player to a neighbour instead",
+  "swap": "Visits to one player go to the other",
+  "draw": "Pull a player's visit to yourself",
+  "deal": "Two players trade roles",
+  "plant": "Hide an explosive in a house",
+  "trigger": "Set off every explosive",
+  "frame": "Make a player look evil",
+  "forge": "Make an investigator's result false",
+  "investigate": "Learn a player's role type",
+  "watch": "See who visits a house",
+  "vision": "Three names, at least one opposed",
+  "search": "Learn if a player is Evil or Innocent",
+  "learn": "Find out a player's exact role",
+  "guess": "Name the Assassin's two targets",
+  "put-debt": "Make a player owe the Loan Shark",
+  "raise": "Bring a dead Lanternkeeper back",
+  "command": "A Cartel member acts twice",
+  "recruit": "Turn a player into the Foreman",
+  "passage": "Ship a player out for the Day",
+  "guns": "A Cartel member also attacks",
+  "evil": "The Constable's two results",
+  "framed": "Looks evil to investigators",
+  "disguised": "Looks like another player",
+  "immune": "Reads as a Lanternkeeper",
+  "planted": "Has an explosive in their house",
+  "in-debt": "Must pay the Loan Shark or die",
+  "forged": "Learns something false that Night",
+  "visit": "Using an ability on another player",
+  "clear": "Odd Nights: the Hollowman attacks",
+  "fog": "Even Nights: results are random",
+  "dawn": "Deaths announced, results arrive",
+  "discussion": "Talk it through",
+  "voting": "A majority puts someone on Trial",
+  "trial": "The town votes Guilty or Innocent",
+  "trial-defence": "Only the accused may speak",
+  "condemn": "The Judge executes without a Trial",
+  "reveal": "Show your role to gain power",
+  "dusk": "15 seconds before Night",
+  "investigative": "Learn something at Night",
+  "protective": "Keep other players alive",
+  "killing": "Their ability kills",
+  "power": "Each side's leaders",
+  "support": "Help their side in other ways",
+  "deceptive": "Twist information or movement",
+  "chaos": "Unbound, with their own goals",
+  "unique": "Never dealt twice in one game",
+};
+for (const t of GLOSSARY) t.hint = HINTS[t.id];
 
 /** Every word that should become tappable in role text, longest first so "Heavy Defence" wins over "Defence". */
 export const TERM_WORDS: [string, string][] = GLOSSARY.flatMap((t) => t.match.map((m) => [m, t.id] as [string, string])).sort((a, b) => b[0].length - a[0].length);
