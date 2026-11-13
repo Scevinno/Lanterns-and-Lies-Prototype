@@ -1,7 +1,7 @@
 // Lanterns & Lies service worker (12 Nov): fast reopening and push notifications.
 // Built files have hashed names, so they never change: cache first. Pictures and fonts keep their names, so they
 // are served from the cache at once and refreshed in the background. The page itself always tries the network first.
-const CACHE = "lnl-v2"; // v2: new icons (12 Nov)
+const CACHE = "lnl-v3"; // v3: logo lantern on the loading screen (13 Nov)
 const SCOPE = self.registration.scope;
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -11,7 +11,7 @@ self.addEventListener("activate", (e) => e.waitUntil((async () => {
 })()));
 
 const isHashed = (u) => u.pathname.includes("/assets/");
-const isStatic = (u) => /\/(roles|bg|fonts)\/|(icon|favicon)-[\w-]+\.png$|manifest\.webmanifest$/.test(u.pathname);
+const isStatic = (u) => /\/(roles|bg|fonts)\/|(icon|favicon)-[\w-]+\.png$|lantern-loading\.webp$|manifest\.webmanifest$/.test(u.pathname);
 
 self.addEventListener("fetch", (e) => {
   const req = e.request; if (req.method !== "GET") return;
