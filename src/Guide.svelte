@@ -100,6 +100,7 @@
       {@const cards = onCards(term)}
       <h1 class="ptitle term-title">{term.title}</h1>
       <p class="term-text">{term.text}</p>
+      {#if term.points}<ul class="term-points">{#each term.points as x}<li>{@html paintHtml(x)}</li>{/each}</ul>{/if}
       {#if rel.length}<div class="glabel">Mentioned here</div><div class="rel">{#each rel as x (x.id)}<button on:click={() => go("term/" + x.id)}>{x.title}</button>{/each}</div>{/if}
       {#if cards.length}<div class="glabel">{term.type ? "Roles of this type" : "On these cards"}</div><div class="rel">{#each cards as r (r.id)}<span class={FACTION_CLASS[r.faction]}>{r.name}</span>{/each}</div>{/if}
       <a class="link term-all" href="#/glossary">All game words</a>

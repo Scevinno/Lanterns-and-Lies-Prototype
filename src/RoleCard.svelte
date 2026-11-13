@@ -3,6 +3,8 @@
   import { FACTION_CLASS } from "./api";
   import { isUnique } from "../shared/engine";
   import TermSheet from "./TermSheet.svelte";
+  import { TIPS } from "./tips";
+  import { paintHtml } from "./richtext";
   export let role: Role;
   /** Off inside a game, so a link never takes a player out of it. */
   export let guideLinks = true;
@@ -38,5 +40,6 @@
     {/each}
   </div>
   {#if guideLinks}<a class="link stats-link" href="#/combat">How Attack and Defence work</a>{/if}
+  {#if TIPS[role.name]}<div class="tips"><h3>Tips</h3><ul>{#each TIPS[role.name] as t}<li>{@html paintHtml(t)}</li>{/each}</ul></div>{/if}
 </div>
 <TermSheet id={term} {guideLinks} onExpand={onOpenTerm} onClose={() => (term = null)} />

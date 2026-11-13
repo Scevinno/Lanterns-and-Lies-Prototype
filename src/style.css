@@ -294,3 +294,10 @@ main.signin { padding-left:calc(20px + env(safe-area-inset-left)); padding-right
 .htp:not(.night) .order li::before { background:rgba(217,164,65,.16); color:var(--lamp); border-color:rgba(217,164,65,.45); }
 .order li { align-items:flex-start; } .order li::before { margin-top:1px; }
 .order-note { margin:8px 0 0; color:var(--dim); font-size:14px; }
+/* Glossary bullet points; the Attack and Defence link in grey; Tips on role cards (Nik, 13 Nov). */
+.term-points { margin:-12px 0 22px; padding-left:20px; } .term-points li { margin:4px 0; }
+.term-sheet .term-points { margin:6px 0 0; font-size:15px; }
+a.stats-link { color:var(--dim); font-size:14px; margin-top:8px; }
+.tips { margin:20px 0 6px; padding:12px 14px; border:1px solid rgba(217,164,65,.3); border-radius:10px; background:rgba(217,164,65,.06); }
+.tips h3 { margin:0 0 6px; color:var(--lamp); font-family:"Almendra",Georgia,serif; font-size:18px; }
+.tips ul { margin:0; padding-left:18px; } .tips li { margin:5px 0; }
