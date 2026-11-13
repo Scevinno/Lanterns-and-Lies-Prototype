@@ -324,6 +324,7 @@ export const TIPS: Record<string, string[]> = {
     "You win by being voted out. Act suspicious enough for a Trial, but not so much that the evil side kills you at Night.",
     "You read Innocent to the Constable and as a Lanternkeeper to the Seer and Oracle, so investigators may defend you. Keep your claim vague.",
     "When you're voted out your role is revealed, and the town learns it was fooled.",
+    "Claiming Martyr openly makes every Guilty vote a gamble for the voter. A town that knows may refuse to vote, so a quiet approach often works better.",
   ],
   Outcast: [
     "You win by being alive at the end, whoever else wins.",

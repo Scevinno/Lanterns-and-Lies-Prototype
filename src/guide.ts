@@ -136,6 +136,7 @@ export const GLOSSARY: Term[] = [
   T("Days", "trial-defence", "Trial defence", [], "Only the accused may speak, to argue for their life before the town gives its verdict."),
   T("Days", "condemn", "Condemn", ["Condemn"], "A Revealed Judge can Condemn a player during the vote when nobody is on Trial: they are found Guilty and executed. Condemning a Lanternkeeper costs the Judge their life."),
   T("Days", "reveal", "Reveal", ["Revealed", "Reveal"], "The Mayor and the Judge can Reveal themselves at Night from Night 2. The narrator confirms it at dawn. Revealed players gain power but become easy targets."),
+  T("Days", "pass-guilt", "Pass on Guilt", ["Pass on Guilt"], "When the Martyr is voted out, one player who voted Guilty, chosen at random, becomes the new Martyr. Unbound players are never chosen."),
   T("Days", "dusk", "Dusk", ["Dusk"], "A 15-second close to every Day before Night falls."),
 
   T("Role types", "investigative", "Investigative", ["Investigative role", "investigators", "investigator"], "Lanternkeepers who learn something at Night. Deceptive roles and the Fog can change what they learn.", { type: "Investigative" }),
@@ -200,6 +201,7 @@ const HINTS: Record<string, string> = {
   "trial-defence": "Only the accused may speak",
   "condemn": "The Judge executes without a Trial",
   "reveal": "Show your role to gain power",
+  "pass-guilt": "A Guilty voter becomes the Martyr",
   "dusk": "15 seconds before Night",
   "investigative": "Learn something at Night",
   "protective": "Keep other players alive",

@@ -328,6 +328,33 @@ describe("day flow", () => {
     s.trial = 3; s.phase = "verdict"; s.accused = "p2"; forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("dusk");
   });
   it("the accused cannot judge themselves", () => { const s = day(); s.phase = "verdict"; s.accused = "p2"; expect(() => cmdVerdict(s, "p2", "innocent")).toThrow(); });
+  // Pass on Guilt (Nik, 13 Nov).
+  const verdict = (roles: string[], guilty: number[], innocent: number[] = [], mode: "Syndicate" | "Cartel" = "Syndicate") => {
+    const s = game(roles, 2, mode); s.phase = "verdict"; s.day = 2; s.trial = 1; s.accused = "p0"; s.endsAt = T0;
+    for (const i of guilty) cmdVerdict(s, "p" + i, "guilty"); for (const i of innocent) cmdVerdict(s, "p" + i, "innocent");
+    forceAdvance(s, T0, seeded(3)); return s;
+  };
+  it("Pass on Guilt: one Guilty voter at random becomes the Martyr, never an innocent voter", () => {
+    for (let k = 0; k < 6; k++) {
+      const s = game(["Martyr", "Mayor", "Doctor", "Spy", "Mobster"], 2); s.phase = "verdict"; s.day = 2; s.trial = 1; s.accused = "p0"; s.endsAt = T0;
+      cmdVerdict(s, "p1", "guilty"); cmdVerdict(s, "p2", "guilty"); cmdVerdict(s, "p3", "innocent"); forceAdvance(s, T0, seeded(k));
+      const m = s.players.filter((p) => p.alive && p.role === "Martyr");
+      expect(m.length).toBe(1); expect(["p1", "p2"]).toContain(m[0].id); expect(m[0].faction).toBe("Unbound"); expect(s.players[3].role).toBe("Spy");
+    }
+  });
+  it("Pass on Guilt never falls on an Unbound player", () => {
+    const s = verdict(["Martyr", "Ripper", "Doctor", "Spy"], [1, 2], [3]); expect(s.players[1].role).toBe("Ripper"); expect(s.players[2].role).toBe("Martyr");
+    const t = verdict(["Martyr", "Ripper", "Outcast", "Spy"], [1, 2], [3]); expect(t.players.filter((p) => p.alive && p.role === "Martyr").length).toBe(0);
+  });
+  it("Pass on Guilt can take a Power role, and a Revealed one stops showing", () => {
+    const s = game(["Martyr", "Mayor", "Spy", "Mobster"], 2); s.players[1].revealed = true; s.phase = "verdict"; s.day = 2; s.trial = 1; s.accused = "p0"; s.endsAt = T0;
+    cmdVerdict(s, "p1", "guilty"); forceAdvance(s, T0, seeded(1)); expect(s.players[1].role).toBe("Martyr"); expect(s.players[1].revealed).toBe(false);
+  });
+  it("Pass on Guilt counts as a death for succession: Godfather, Mobster and Foreman", () => {
+    const gf = verdict(["Martyr", "Godfather", "Mobster", "Doctor"], [1]); expect(gf.players[1].role).toBe("Martyr"); expect(gf.players[2].role).toBe("Godfather");
+    const mob = verdict(["Martyr", "Mobster", "Framer", "Doctor"], [1]); expect(mob.players[1].role).toBe("Martyr"); expect(mob.players[2].role).toBe("Mobster");
+    const fm = verdict(["Martyr", "Foreman", "Notary", "Doctor"], [1], [], "Cartel"); expect(fm.players[1].role).toBe("Martyr"); expect(fm.players[2].role).toBe("Foreman");
+  });
   it("Martyr wins when voted out and is Revealed", () => {
     const s = day(); s.phase = "verdict"; s.accused = "p4"; cmdVerdict(s, "p0", "guilty"); forceAdvance(s, T0, seeded(1)); expect(s.players[4].won).toBe(true); expect(s.players[4].revealed).toBe(true);
   });

@@ -628,8 +628,9 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   return msgs;
 }
 function setRole(p: Player, role: string) { const d = roleDef(role); p.role = role; p.ability = role; p.faction = d.faction; }
-function succession(s: GameState, r: Rng, say: (to: string, t: string) => void) {
-  const lv = alive(s); const died = (role: string) => s.players.some((p) => !p.alive && p.role === role);
+/** `gone` lists roles that just left their side without dying (Pass on Guilt), so succession runs as if they were killed. */
+function succession(s: GameState, r: Rng, say: (to: string, t: string) => void, gone: string[] = []) {
+  const lv = alive(s); const died = (role: string) => gone.includes(role) || s.players.some((p) => !p.alive && p.role === role);
   if (s.mode === "Syndicate") {
     const gf = lv.find((p) => p.role === "Godfather"), mob = lv.find((p) => p.role === "Mobster");
     if (!gf && mob && s.hadGodfather) { setRole(mob, "Godfather"); say(mob.id, "The Godfather is dead. You are now the Godfather."); }
@@ -705,6 +706,18 @@ function execute(s: GameState, p: Player, verb: string): Msg[] {
   const say = (to: string, text: string) => msgs.push({ channel: "private", to, text }); succession(s, mathRng, say);
   return msgs;
 }
+// Pass on Guilt (Nik, 13 Nov): when the Martyr is voted out, one living player who voted Guilty, picked at random,
+// becomes the Martyr. Unbound players are never picked; Power roles can be. Losing a role this way counts as a death
+// for the Syndicate and Cartel succession, and for the Loan Shark's Debts.
+function passOnGuilt(s: GameState, r: Rng, martyr: Player, say: (to: string, t: string) => void) {
+  const c = alive(s).filter((p) => p.id !== martyr.id && s.verdicts[p.id] === "guilty" && p.faction !== "Unbound");
+  if (!c.length) return;
+  const n = pick(c, r); const was = n.role;
+  setRole(n, "Martyr"); n.revealed = false;
+  say(n.id, "The Martyr's guilt passes to you. You are now the Martyr: you win if you are voted out.");
+  if (was === "Loan Shark") for (const q of s.players) { q.debt = false; q.collection = false; }
+  succession(s, r, say, [was]);
+}
 const afterExecutionOrDay = (s: GameState, now: number, _r: Rng, msgs: Msg[]): Msg[] => {
   if (checkWin(s)) return [...msgs, overMsg(s)];
   setPhase(s, "dusk", DUSK_SECONDS, now);
@@ -751,7 +764,12 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       const a = byId(s, s.accused!);
       // Verdicts stay anonymous during the stage, then everyone's choice is shown at once.
       const shown: Msg[] = voters(s).filter((p) => p.id !== a.id).map((p) => ({ channel: "town", text: s.verdicts[p.id] ? `${p.name} voted ${s.verdicts[p.id]}.` : `${p.name} did not vote.` }));
-      if (g > n) return afterExecutionOrDay(s, now, r, [...shown, ...execute(s, a, `was found guilty, ${g} to ${n}, and executed.`)]);
+      if (g > n) {
+        const wasMartyr = a.role === "Martyr";
+        const ms = execute(s, a, `was found guilty, ${g} to ${n}, and executed.`);
+        if (wasMartyr) passOnGuilt(s, r, a, (to, text) => ms.push({ channel: "private", to, text }));
+        return afterExecutionOrDay(s, now, r, [...shown, ...ms]);
+      }
       const m: Msg = { channel: "town", text: `${a.name} was found innocent, ${n} to ${g}.` };
       if (s.trial >= MAX_TRIALS) { s.quietDays++; return afterExecutionOrDay(s, now, r, [...shown, m, { channel: "town", text: "No more trials today." }]); }
       return [...shown, m, ...startVote(s, now)];
