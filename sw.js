@@ -1,7 +1,7 @@
 // Lanterns & Lies service worker (12 Nov): fast reopening and push notifications.
 // Built files have hashed names, so they never change: cache first. Pictures and fonts keep their names, so they
 // are served from the cache at once and refreshed in the background. The page itself always tries the network first.
-const CACHE = "lnl-v5"; // v5: new Watchman picture (13 Nov)
+const CACHE = "lnl-v6"; // v6: factions renamed Mafia and Syndicate (14 Nov)
 const SCOPE = self.registration.scope;
 
 self.addEventListener("install", () => self.skipWaiting());
