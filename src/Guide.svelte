@@ -26,7 +26,7 @@
   // The role data holds only the highest level; the Hollowman's Absolute Defence is on Fog Nights only (his card says so).
   const FOG_ONLY = new Set(["Hollowman"]);
   const roleBadge = (r: Role, k: "a" | "d") => { const v = k === "a" ? r.attack : r.defence; return badge(k, lv(v), (v ?? "").includes("given"), k === "d" && FOG_ONLY.has(r.name) ? "☾" : ""); };
-  const SIDES = ["Lanternkeepers", "Syndicate", "Cartel", "Unbound"];
+  const SIDES = ["Lanternkeepers", "Mafia", "Syndicate", "Unbound"];
 
   // Term page: the cards a word links from (ability bullets only, as on the cards), or every role of a type.
   const bullets = (r: Role) => r.ability.split("\n").filter((l) => l.trim().startsWith("•")).join(" ");

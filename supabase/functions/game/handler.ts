@@ -104,7 +104,7 @@ async function turn(partyId: string, step: (s: GameState) => Msg[]) {
 async function beginGame(party: Record<string, any>) {
   const rows = await roster(party.id);
   if (rows.length !== party.size) { await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: { status: "lobby", ends_at: null }, p_state: null, p_secrets: [], p_msgs: [], p_events: [] }); return; }
-  const mode = party.mode === "Random" ? (Math.random() < 0.5 ? "Syndicate" : "Cartel") : party.mode;
+  const mode = party.mode === "Random" ? (Math.random() < 0.5 ? "Mafia" : "Syndicate") : party.mode;
   const { state: s, msgs } = createGame({ players: rows.map((r) => ({ id: r.id, name: r.name, bot: r.is_bot })), mode, timers: party.timers as Timers, townChat: party.town_chat, inPerson: !!party.in_person, setup: party.mode }, mathRng, Date.now());
   const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: iso(s.endsAt), public_state: publicView(s), status: "playing" };
   const events = [{ phase_no: s.phaseNo, kind: "start", data: { mode, size: party.size, players: s.players.map((p) => ({ name: p.name, role: p.role })) } }];
@@ -139,7 +139,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   },
   async createParty(b, req) {
     const u = await userOf(req); const size = Number(b.size); if (!(size >= 8 && size <= 15)) throw new Oops("Choose 8 to 15 players.");
-    if (!["Syndicate", "Cartel", "Random"].includes(b.mode)) throw new Oops("Choose an evil side.");
+    if (!["Mafia", "Syndicate", "Random"].includes(b.mode)) throw new Oops("Choose an evil side.");
     const { data: prof } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
     const name = prof?.display_name ?? clean(u.user_metadata?.display_name, 20) ?? "Player";
     for (let i = 0; i < 6; i++) {

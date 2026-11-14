@@ -39,4 +39,4 @@ export async function syncClock(force = false) {
 export const shareLink = (code: string) => `${location.origin}${import.meta.env.BASE_URL}#/join/${code}`;
 export const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 export const timerLabel = (s: number) => (s >= 60 ? `${s / 60} min` : `${s} s`);
-export const FACTION_CLASS: Record<string, string> = { Lanternkeepers: "f-lk", Syndicate: "f-syn", Cartel: "f-car", Unbound: "f-ub" };
+export const FACTION_CLASS: Record<string, string> = { Lanternkeepers: "f-lk", Mafia: "f-syn", Syndicate: "f-car", Unbound: "f-ub" };

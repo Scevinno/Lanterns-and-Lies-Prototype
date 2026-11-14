@@ -29,7 +29,7 @@
   const setSetting = (v: boolean) => { inPerson = v; timers = { ...(v ? ROOM_TIMERS : ONLINE_TIMERS) }; };
   const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
   // Rosters screen
-  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Syndicate" | "Cartel" = "Syndicate", typeFilter = "All";
+  let guideTab: "roles" | "rosters" = "roles", rSize = 8, rMode: "Mafia" | "Syndicate" = "Mafia", typeFilter = "All";
   const TIMER_ROWS: [string, string][] = [["discussion", "Discussion"], ["vote", "Vote"], ["defence", "Defence"], ["verdict", "Verdict"], ["night", "Night"]];
   // Join, party, library
   let code = "", party: any = null, players: any[] = [], qr = "", copied = false, remaining = 0, chan: any = null, clock: any = null;
@@ -214,10 +214,10 @@
     <h3>Players</h3>
     <NumberStrip bind:value={size} valid={SIZES} />
     <h3>Evil side</h3>
-    <div class="seg">{#each ["Syndicate", "Cartel", "Random"] as m}<button class:on={evil === m} on:click={() => (evil = m)}>{m}</button>{/each}</div>
+    <div class="seg">{#each ["Mafia", "Syndicate", "Random"] as m}<button class:on={evil === m} on:click={() => (evil = m)}>{m}</button>{/each}</div>
     <button type="button" class="link" on:click={() => (showCreateRoster = !showCreateRoster)}>{showCreateRoster ? "Hide roster" : `See the roster for ${size} players`}</button>
     {#if showCreateRoster}
-      <Roster size={size} mode={evil === "Cartel" ? "Cartel" : evil === "Syndicate" ? "Syndicate" : "Random"} />
+      <Roster size={size} mode={evil === "Syndicate" ? "Syndicate" : evil === "Mafia" ? "Mafia" : "Random"} />
     {/if}
     <!-- Both private-party settings choose their timers; Online starts from 4 min, 30 s, 30 s, 15 s, 1 min (Nik, 12 Nov). -->
     {#each TIMER_ROWS as [k, label]}
@@ -241,7 +241,7 @@
         <h3>Players</h3>
         <NumberStrip bind:value={rSize} valid={SIZES} />
         <h3>Evil side</h3>
-        <div class="seg"><button class:on={rMode === "Syndicate"} class="f-syn" on:click={() => (rMode = "Syndicate")}>Syndicate</button><button class:on={rMode === "Cartel"} class="f-car" on:click={() => (rMode = "Cartel")}>Cartel</button></div>
+        <div class="seg"><button class:on={rMode === "Mafia"} class="f-syn" on:click={() => (rMode = "Mafia")}>Mafia</button><button class:on={rMode === "Syndicate"} class="f-car" on:click={() => (rMode = "Syndicate")}>Syndicate</button></div>
         <Roster size={rSize} mode={rMode} onPick={(f, t) => { factionFilter = f; typeFilter = t; search = ""; guideTab = "roles"; scrollTo(0, 0); }} />
       {/if}
     {/if}

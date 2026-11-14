@@ -22,7 +22,7 @@ export const TIPS: Record<string, string[]> = {
   Watchman: [
     "Watch the players most likely to be attacked. If your target dies, the killer is probably among your names.",
     "Not every visitor means harm. Doctors, Guardsmen and investigators visit too, so compare names with what people claim.",
-    "A name you didn't expect may be a disguise: a Disguised Syndicate member shows as the player they are dressed as.",
+    "A name you didn't expect may be a disguise: a Disguised Mafia member shows as the player they are dressed as.",
     "A player who visits two targets may show up at either house, so one sighting doesn't prove where they went.",
     "Roles that never visit, like the Spy and the Archivist, will never appear in your results.",
     "You and a Tracker fit together: they see where a player goes, you see who comes.",
@@ -37,7 +37,7 @@ export const TIPS: Record<string, string[]> = {
   ],
   Seer: [
     "Pair someone you trust with someone you doubt. Enemies means the doubt was right, if your trust was.",
-    "Friends doesn't mean good. Two Syndicate members are friends with each other too.",
+    "Friends doesn't mean good. Two Mafia members are friends with each other too.",
     "Unbound killers, the Town Crier and the Assassin are enemies with everyone. A player who comes up enemies in every pair stands out.",
     "Detection Immune leaders read as Lanternkeepers to you, so a friendly result can hide an evil leader.",
     "The Fence can't lead you astray, so your visits always land where you chose.",
@@ -61,7 +61,7 @@ export const TIPS: Record<string, string[]> = {
     "Deceptive roles can change your results, and on a Fog Night, while the Hollowman lives, they are random.",
   ],
   Tracker: [
-    "A player who visits two others is the Assassin, Seer, Ferryman or Smuggler, or a Cartel member Commanded by the Kingpin.",
+    "A player who visits two others is the Assassin, Seer, Ferryman or Smuggler, or a Syndicate member Commanded by the Kingpin.",
     "A visit to a dead player means the Medium, Priest or Coroner.",
     "A visit to someone who died may be the killer, or a Doctor who came too late. Check what they claim.",
     "Visiting nobody fits a role that doesn't visit, a player who chose to do nothing, or one who was Held.",
@@ -104,7 +104,7 @@ export const TIPS: Record<string, string[]> = {
   Rogue: [
     "You have one bullet. Wait until two or more results point the same way.",
     "Shooting a Lanternkeeper kills you the next Night. Framed and Disguised make no difference: only their true side counts.",
-    "A Light Attack fails against any defence, so the Godfather and the Cartel's leaders survive it. Aim at players with none.",
+    "A Light Attack fails against any defence, so the Godfather and the Syndicate's leaders survive it. Aim at players with none.",
     "Your shot is a good answer to a player the town can't agree to vote out.",
     "If you are raised by the Priest, you get one bullet back.",
   ],
@@ -163,7 +163,7 @@ export const TIPS: Record<string, string[]> = {
     "Swaps don't save Planted players from the Trigger.",
   ],
 
-  // Syndicate (drafted for Nik's review, 13 Nov).
+  // Mafia (drafted for Nik's review, 13 Nov).
   Mobster: [
     "Agree the target with the Godfather in the Night chat. His choice beats yours.",
     "When you carry out the hit, investigators see your visit, not his. You are the one most likely to be caught.",
@@ -185,7 +185,7 @@ export const TIPS: Record<string, string[]> = {
     "Held players are told, and they'll say so in the Day. If the town knows a Locksmith is alive, the blame may fall there.",
   ],
   Informant: [
-    "Exact roles let the Syndicate choose: find the Doctor, the Guardsman and the investigators first.",
+    "Exact roles let the Mafia choose: find the Doctor, the Guardsman and the investigators first.",
     "A Tinkerer result may be a Planted player. The real Tinkerer is Unbound, not on your list of allies.",
     "You see past your own Framer: Framed players still show their true role.",
     "You know real roles, so you can make a convincing false claim as an investigator in the Day.",
@@ -197,10 +197,10 @@ export const TIPS: Record<string, string[]> = {
     "A Tracker who reports a visit to an odd house may have followed someone you sent there.",
   ],
   Tailor: [
-    "Disguise the Syndicate member most likely to be checked, such as one who drew suspicion today.",
+    "Disguise the Mafia member most likely to be checked, such as one who drew suspicion today.",
     "Dress them as a living Lanternkeeper with a believable role. A disguise as a dead player can look strange to a Watchman.",
     "A disguise lasts only until the next Night, so disguise again whoever is still at risk.",
-    "A Planted Syndicate member still shows Killing to the Detective, disguise or not.",
+    "A Planted Mafia member still shows Killing to the Detective, disguise or not.",
     "You can disguise yourself when you are the one under suspicion.",
   ],
   Framer: [
@@ -210,32 +210,32 @@ export const TIPS: Record<string, string[]> = {
     "A Frame beats the Tinkerer's Plant on the same player.",
   ],
 
-  // Cartel (drafted for Nik's review, 13 Nov).
+  // Syndicate (drafted for Nik's review, 13 Nov).
   "Harbour Master": [
-    "Passage on odd Nights: ship out a Cartel member who is about to be voted on, or a player who would swing the vote.",
+    "Passage on odd Nights: ship out a Syndicate member who is about to be voted on, or a player who would swing the vote.",
     "Only the Judge can still Condemn a player you shipped out.",
-    "Guns on even Nights turn a Cartel member's visit into a kill as well. A Notary or Quartermaster with Guns does both.",
+    "Guns on even Nights turn a Syndicate member's visit into a kill as well. A Notary or Quartermaster with Guns does both.",
     "You read as a Lanternkeeper to the Constable, Oracle and Seer, and your Light Defence stops the Rogue.",
   ],
   "Loan Shark": [
     "Debtors aren't told who you are and must guess who to pay. Stay unsuspected and they'll guess wrong.",
     "Anyone who visits you falls into Debt, so investigators and Doctors pay for coming near you.",
-    "You learn the exact role of everyone you visit and everyone who visits you. Share it in the Cartel chat.",
+    "You learn the exact role of everyone you visit and everyone who visits you. Share it in the Syndicate chat.",
     "A debtor who is Held can't pay. A Quartermaster's Hold on their Collection Night makes the Debt certain.",
-    "If you die, every Debt clears. Keeping you alive matters to the whole Cartel.",
+    "If you die, every Debt clears. Keeping you alive matters to the whole Syndicate.",
   ],
   Kingpin: [
     "Command the member whose ability is worth most twice: two checks for the Notary, two Holds for the Quartermaster.",
-    "The rest of the Cartel doesn't know you. Read the Night chat and choose quietly.",
-    "Your Heavy Defence lasts only while another Cartel member is alive.",
+    "The rest of the Syndicate doesn't know you. Read the Night chat and choose quietly.",
+    "Your Heavy Defence lasts only while another Syndicate member is alive.",
     "Once you are alone, recruit a Foreman. A failed recruit means that player is a Power role or an Unbound killer.",
     "You read as a Lanternkeeper to the Constable, Oracle and Seer.",
   ],
   Foreman: [
-    "You are the Cartel's main killer, and the Kingpin can't Command you.",
+    "You are the Syndicate's main killer, and the Kingpin can't Command you.",
     "You don't know the Kingpin. An attack that fails on an unprotected player may have hit his Heavy Defence.",
     "A Constable reads you Evil. Have a believable claim ready.",
-    "If you die, another Cartel member may take your place, so the killing doesn't have to stop with you.",
+    "If you die, another Syndicate member may take your place, so the killing doesn't have to stop with you.",
   ],
   Quartermaster: [
     "Your Hold also gives Heavy Defence. Never Hold the player your Foreman is attacking.",
@@ -246,7 +246,7 @@ export const TIPS: Record<string, string[]> = {
   Paymaster: [
     "Bribe a swing voter: their vote counts zero and yours counts two, a two-vote swing on a close Trial.",
     "A bribe on a Power role fails, so don't spend it on the Mayor or the Judge.",
-    "Bribe the player most likely to vote against a Cartel member on Trial.",
+    "Bribe the player most likely to vote against a Syndicate member on Trial.",
     "Vote with the crowd when you can. A lone double vote stands out.",
   ],
   Coroner: [
@@ -262,7 +262,7 @@ export const TIPS: Record<string, string[]> = {
     "Exact roles let you make a convincing false claim as an investigator.",
   ],
   Forger: [
-    "Visit the investigator most likely to check a Cartel member tonight.",
+    "Visit the investigator most likely to check a Syndicate member tonight.",
     "A forged result is false even on a Fog Night, and it sounds certain. That can get a Lanternkeeper voted out.",
     "Forging only works on Investigative roles. Use the Notary's and Loan Shark's results to find them first.",
     "If an investigator's claims start to clash with everyone else's, the town may stop trusting them. Keep at it.",
@@ -275,7 +275,7 @@ export const TIPS: Record<string, string[]> = {
   ],
   Pawnbroker: [
     "Draw the Doctor or Guardsman: their protection lands on you and leaves tonight's target open.",
-    "Draw the Locksmith and their Hold lands on you instead of a Cartel member.",
+    "Draw the Locksmith and their Hold lands on you instead of a Syndicate member.",
     "Don't draw an investigator: their check lands on you, and a Detective would see Deceptive.",
     "Drawing a killer brings their attack to you, and you have no defence.",
   ],

@@ -33,7 +33,7 @@
   $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
   $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
   $: canType = view?.channels?.[chatChannel] || (phase === "over" && tab === "town");
-  $: isEvil = view && (view.faction === "Syndicate" || view.faction === "Cartel");
+  $: isEvil = view && (view.faction === "Mafia" || view.faction === "Syndicate");
   $: isDead = view && !view.alive;
   $: inPerson = !!pub?.inPerson;
   $: paused = !!pub?.paused;

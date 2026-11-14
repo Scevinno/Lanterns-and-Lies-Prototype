@@ -12,7 +12,7 @@ const rx = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function setRoles(r: Role[]) {
   roles = r; words.clear();
   for (const x of r) words.set(x.name, FACTION_CLASS[x.faction]);
-  for (const [w, c] of [["Lanternkeepers", "f-lk"], ["Lanternkeeper", "f-lk"], ["Syndicate", "f-syn"], ["Cartel", "f-car"], ["Unbound", "f-ub"]]) words.set(w, c);
+  for (const [w, c] of [["Lanternkeepers", "f-lk"], ["Lanternkeeper", "f-lk"], ["Mafia", "f-syn"], ["Syndicate", "f-car"], ["Unbound", "f-ub"]]) words.set(w, c);
   const all = [...new Set([...words.keys(), ...terms.keys()])].sort((a, b) => b.length - a.length).map(rx).join("|");
   pattern = new RegExp(`\\b(${all})\\b`, "g");
 }

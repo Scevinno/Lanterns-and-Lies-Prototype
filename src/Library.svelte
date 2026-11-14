@@ -19,7 +19,7 @@
 
 <input type="search" bind:value={search} placeholder="Search by name or summary" aria-label="Search roles" />
 <!-- Filters (Nik, 13 Nov; Creative Coach Idea A): a tab per side, and the role type in a menu. -->
-<div class="segf" role="tablist" aria-label="Side">{#each ["All", "Lanternkeepers", "Syndicate", "Cartel", "Unbound"] as f}<button role="tab" aria-selected={factionFilter === f} class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
+<div class="segf" role="tablist" aria-label="Side">{#each ["All", "Lanternkeepers", "Mafia", "Syndicate", "Unbound"] as f}<button role="tab" aria-selected={factionFilter === f} class:on={factionFilter === f} class={f === "All" ? "" : FACTION_CLASS[f]} on:click={() => (factionFilter = f)}>{f === "Lanternkeepers" ? "Keepers" : f}</button>{/each}</div>
 <label class="selwrap"><span>Type</span><select bind:value={typeFilter} class:set={typeFilter !== "All"}>{#each ["All", ...(typeFilter === "Random" ? ["Random"] : []), ...types] as t}<option value={t}>{t === "All" ? "All types" : t === "Random" ? "Random slot" : t}</option>{/each}</select></label>
 <p class="dim small">{filtered.length} of {roles.length} roles</p>
 <ul class="plain grid">{#each filtered as r (r.id)}<li><button class="tile" on:click={() => onOpen(r)}><img src={import.meta.env.BASE_URL + r.image} alt="" width="272" height="264" loading="lazy" decoding="async" /><b class={FACTION_CLASS[r.faction]}>{r.name}</b><span class="small dim">{r.faction === "Lanternkeepers" ? "Keeper" : r.faction} · {r.type}</span></button></li>{/each}</ul>
