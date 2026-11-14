@@ -15,6 +15,7 @@
   import Settings from "./Settings.svelte";
   import Friends from "./Friends.svelte";
   import Guide from "./Guide.svelte";
+  import GuideSide from "./GuideSide.svelte";
   import { desk } from "./desk";
   const TOP: [string, string][] = [["play", "Play"], ["guide", "Guide"], ["friends", "Friends"], ["games", "My games"], ["settings", "Settings"]];
   const topOn = (r: string, at: string) => at === r || (r === "guide" && ["rules", "combat", "glossary", "term", "roles"].includes(at)) || (r === "play" && (at === "create" || at === "party"));
@@ -249,7 +250,10 @@
 {:else if route === "guide" || route === "rules" || route === "combat" || route === "glossary" || route === "term"}
   <Guide page={route} {roles} {termId} />
 {:else if route === "roles"}
-  <main class="narrow roles" class:withcard={$desk && openRole && guideTab === "roles"}>
+  <!-- Desktop (Nik, 14 Nov): the Guide's side menu stays, the library sits in the middle column, the card opens on the right. -->
+  <main class="narrow roles" class:gshell={$desk}>
+    {#if $desk}<GuideSide at="roles" />{/if}
+    <div class="gbody">
     <button class="link back" on:click={() => (openRole && !$desk ? closeRole() : go("guide"))}>Back</button>
     {#if openRole && !$desk}<RoleCard role={openRole} onOpenTerm={(id) => { cardScroll = scrollY; go("term/" + id); }} />
     {:else}
@@ -264,7 +268,8 @@
         <Roster size={rSize} mode={rMode} onPick={(f, t) => { factionFilter = f; typeFilter = t; search = ""; guideTab = "roles"; scrollTo(0, 0); }} />
       {/if}
     {/if}
-    {#if $desk && openRole && guideTab === "roles"}<aside class="roleside"><button class="link close" on:click={() => (openRole = null)}>Close</button><RoleCard role={openRole} onOpenTerm={(id) => go("term/" + id)} /></aside>{/if}
+    </div>
+    {#if $desk}<aside class="gright">{#if openRole && guideTab === "roles"}<button class="link close" on:click={() => (openRole = null)}>Close</button><RoleCard role={openRole} onOpenTerm={(id) => go("term/" + id)} />{:else}<p class="dim">Pick a role to read its card here.</p>{/if}</aside>{/if}
   </main>
 {:else if route === "settings"}
   <Settings onBack={() => go("home")} onSignOut={() => go("home")} />

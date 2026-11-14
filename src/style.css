@@ -325,7 +325,7 @@ html.desk main.home, html.desk main.signin { max-width:440px; margin:0 0 0 8vw; 
 html.desk .home .mark, html.desk .signin .mark { text-align:left; font-size:84px; }
 html.desk .home > .dim, html.desk .signin > .dim { text-align:left; }
 html.desk .home .stack { margin-top:28px; padding-bottom:0; }
-html.desk .home .stack button { text-align:left; padding:12px 18px; font-size:17px; }
+html.desk .home .stack button { padding:12px 18px; font-size:17px; }
 html.desk .home .stack button.go { text-align:center; font-size:19px; min-height:54px; }
 html.desk .home > p.small { position:fixed; right:32px; bottom:24px; }
 /* Play: the choices side by side */
@@ -350,23 +350,19 @@ html.desk .seat.empty { color:var(--dim); }
 html.desk .seat.empty .dot { background:#333a4a; box-shadow:none; }
 html.desk .ringmid { position:absolute; inset:28%; border:1px dashed rgba(160,180,215,.25); border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-family:"Almendra",Georgia,serif; font-size:22px; }
 /* Guide: a sidebar for the four sections */
-html.desk main.guide { display:grid; grid-template-columns:260px minmax(0,1fr); gap:24px; max-width:1180px; align-items:start; }
-html.desk .gside { position:sticky; top:96px; display:flex; flex-direction:column; gap:4px; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:14px; }
+/* Guide shell (Nik, 14 Nov): side menu hugging a middle column of one fixed width on every Guide page (Roles included),
+   with role cards and game words opening in a panel on the right. */
+html.desk main.gshell { display:grid; grid-template-columns:minmax(200px,1fr) minmax(0,640px) minmax(320px,1fr); gap:24px; max-width:none; margin:0; padding:96px 32px 48px; align-items:start; min-height:100dvh; background:none; border:none; }
+html.desk .gside { grid-column:1; justify-self:end; width:230px; position:sticky; top:96px; display:flex; flex-direction:column; gap:4px; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:14px; }
 html.desk .gside button { text-align:left; background:transparent; border-color:transparent; }
 html.desk .gside button.on { color:var(--lamp); background:rgba(217,164,65,.12); }
-html.desk .gbody { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:28px 36px; min-width:0; }
-html.desk .gbody > * { max-width:760px; }
-/* Roles: filters in a rail, a wide grid, and the card opens alongside */
-html.desk main.roles { max-width:1500px; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; margin:88px auto 40px; padding:24px 28px; min-height:0; }
-html.desk main.roles.withcard { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:0 24px; align-items:start; }
-html.desk main.roles.withcard > :not(.roleside) { grid-column:1; }
-html.desk .roleside { grid-column:2; grid-row:1 / span 4; position:sticky; top:96px; max-height:calc(100dvh - 130px); overflow-y:auto; background:rgba(8,11,18,.7); border:1px solid rgba(160,180,215,.16); border-radius:12px; padding:14px 18px; }
-html.desk .roleside .close { margin:0 0 6px auto; }
-html.desk .libwrap { display:grid; grid-template-columns:220px minmax(0,1fr); gap:0 24px; align-items:start; }
-html.desk .libwrap > :not(.grid) { grid-column:1; }
-html.desk .libwrap > .grid { grid-column:2; grid-row:1 / span 6; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); margin-top:0; }
-html.desk .libwrap .segf { display:flex; flex-direction:column; gap:4px; margin:10px 0; }
-html.desk .libwrap .segf button { text-align:left; }
+html.desk .gbody { grid-column:2; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:28px 32px; min-width:0; }
+html.desk .gright { grid-column:3; justify-self:start; width:100%; max-width:440px; position:sticky; top:96px; max-height:calc(100dvh - 130px); overflow-y:auto; background:rgba(8,11,18,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:16px 20px; }
+html.desk .gright > p.dim { margin:4px 0; }
+html.desk .gright .close { margin:0 0 6px auto; }
+html.desk .gright .term-title { margin-top:4px; }
+html.desk .gshell .grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
+html.desk .gbox.on { border-color:var(--lamp); }
 /* Game: players on the left, the action in the middle, chat always open on the right */
 html.desk main.game { display:grid; grid-template-columns:270px minmax(0,1fr) 380px; grid-template-rows:auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title chat" "list panel chat" "list foot chat"; max-width:1560px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
 html.desk .game .bar { grid-area:bar; border:none; justify-content:center; gap:18px; }

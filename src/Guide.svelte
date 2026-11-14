@@ -1,7 +1,9 @@
 <script lang="ts">
   // The Guide (Nik, 12 Nov; Creative Coach's Idea 1): one menu under Home for Roles, How to play,
   // Attack & Defence and the Glossary. Roles keeps its own screen (library and rosters).
-  import { HOW_TO_PLAY, COMBAT_RULE, GLOSSARY, TERM_GROUPS, termById, wordRx, relatedTerms, type Term } from "./guide";
+  import { HOW_TO_PLAY, COMBAT_RULE, GLOSSARY, TERM_GROUPS, termById, type Term } from "./guide";
+  import GuideSide, { GUIDE_ROWS as ROWS } from "./GuideSide.svelte";
+  import TermView from "./TermView.svelte";
   import { FACTION_CLASS } from "./api";
   import { paintHtml, type Role } from "./richtext";
   import { desk } from "./desk";
@@ -29,25 +31,19 @@
   const roleBadge = (r: Role, k: "a" | "d") => { const v = k === "a" ? r.attack : r.defence; return badge(k, lv(v), (v ?? "").includes("given"), k === "d" && FOG_ONLY.has(r.name) ? "☾" : ""); };
   const SIDES = ["Lanternkeepers", "Mafia", "Syndicate", "Unbound"];
 
-  // Term page: the cards a word links from (ability bullets only, as on the cards), or every role of a type.
-  const bullets = (r: Role) => r.ability.split("\n").filter((l) => l.trim().startsWith("•")).join(" ");
-  const onCards = (t: Term) => (t.type ? roles.filter((r) => r.type === t.type) : t.match.length ? roles.filter((r) => wordRx(t.match).test(bullets(r))) : []);
+  // A game word: its own page on phones; on desktop the Glossary stays in the middle and the word opens on the right
+  // without jumping the list back to the top (Nik, 14 Nov).
+  const openTerm = (id: string) => { if ($desk) location.hash = "#/term/" + id; else go("term/" + id); };
 
   // Glossary search, and the one-line hint under each word (its own short line in guide.ts).
   let q = "";
   const matches = (t: Term, s: string) => { const x = s.trim().toLowerCase(); return !x || t.title.toLowerCase().includes(x) || t.text.toLowerCase().includes(x); };
   const hint = (t: Term) => t.hint ?? t.text;
 
-  const ROWS = [
-    { to: "roles", title: "Roles", sub: "Every role, and the roster for each player count" },
-    { to: "rules", title: "How to play", sub: "A game from start to end" },
-    { to: "combat", title: "Attack & Defence", sub: "Light, Heavy, Absolute, and who has what" },
-    { to: "glossary", title: "Glossary", sub: "Every game word explained" },
-  ];
 </script>
 
-<main class="narrow guide">
-  {#if $desk}<nav class="gside" aria-label="Guide">{#each ROWS as r}<button class:on={page === r.to || (r.to === "glossary" && page === "term")} on:click={() => go(r.to)}>{r.title}</button>{/each}</nav>{/if}
+<main class="narrow guide" class:gshell={$desk}>
+  {#if $desk}<GuideSide at={page} />{/if}
   <div class="gbody">
   <button class="link back" on:click={back}>Back</button>
   {#if page === "guide"}
@@ -97,15 +93,8 @@
       <div class="fh {FACTION_CLASS[f]}">{f}<em>{fl.length}</em></div>
       {#each fl as r (r.id)}<div class="trow"><span class="nm {FACTION_CLASS[f]}">{r.name}</span><span>{@html roleBadge(r, "a")}</span><span>{@html roleBadge(r, "d")}</span></div>{/each}
     {/each}
-  {:else if page === "term"}
-    {#if term}
-      {@const rel = relatedTerms(term)}
-      {@const cards = onCards(term)}
-      <h1 class="ptitle term-title">{term.title}</h1>
-      <p class="term-text">{term.text}</p>
-      {#if rel.length}<div class="glabel">Mentioned here</div><div class="rel">{#each rel as x (x.id)}<button on:click={() => go("term/" + x.id)}>{x.title}</button>{/each}</div>{/if}
-      {#if cards.length}<div class="glabel">{term.type ? "Roles of this type" : "On these cards"}</div><div class="rel">{#each cards as r (r.id)}<span class={FACTION_CLASS[r.faction]}>{r.name}</span>{/each}</div>{/if}
-      <a class="link term-all" href="#/glossary">All game words</a>
+  {:else if page === "term" && !$desk}
+    {#if term}<TermView {term} {roles} onGo={openTerm} />
     {:else}<p class="dim tc">That game word isn't in the Glossary.</p>{/if}
   {:else}
     <!-- Glossary (Nik, 13 Nov): Variant A's search and one box per row with a one-line hint, under Variant B's group headings. -->
@@ -115,10 +104,13 @@
       {@const ts = GLOSSARY.filter((t) => t.group === g && matches(t, q))}
       {#if ts.length}
         <div class="ghead">{g}</div>
-        {#each ts as t (t.id)}<button class="gbox" on:click={() => go("term/" + t.id)}><span class="gt"><b>{t.title}</b><span class="hint">{hint(t)}</span></span><span class="arr" aria-hidden="true">›</span></button>{/each}
+        {#each ts as t (t.id)}<button class="gbox" class:on={$desk && page === "term" && t.id === termId} on:click={() => openTerm(t.id)}><span class="gt"><b>{t.title}</b><span class="hint">{hint(t)}</span></span><span class="arr" aria-hidden="true">›</span></button>{/each}
       {/if}
     {/each}
     {#if !GLOSSARY.some((t) => matches(t, q))}<p class="dim tc">No words match.</p>{/if}
   {/if}
   </div>
+  {#if $desk && (page === "glossary" || page === "term")}
+    <aside class="gright">{#if term}<TermView {term} {roles} onGo={openTerm} showAll={false} />{:else}<p class="dim">Pick a word to read it here.</p>{/if}</aside>
+  {/if}
 </main>
