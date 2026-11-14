@@ -15,6 +15,9 @@
   import Settings from "./Settings.svelte";
   import Friends from "./Friends.svelte";
   import Guide from "./Guide.svelte";
+  import { desk } from "./desk";
+  const TOP: [string, string][] = [["play", "Play"], ["guide", "Guide"], ["friends", "Friends"], ["games", "My games"], ["settings", "Settings"]];
+  const topOn = (r: string, at: string) => at === r || (r === "guide" && ["rules", "combat", "glossary", "term", "roles"].includes(at)) || (r === "play" && (at === "create" || at === "party"));
 
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
@@ -132,7 +135,10 @@
   onDestroy(() => { window.removeEventListener("hashchange", onHash); authSub?.unsubscribe(); leaveChannel(); });
 </script>
 
-{#if !inGame}<div class="backdrop {bg}" style="background-image:url({import.meta.env.BASE_URL}bg/{bg}.webp)" aria-hidden="true"></div>{/if}
+{#if !inGame}<div class="backdrop {bg}" style="background-image:url({import.meta.env.BASE_URL}bg/{bg}{$desk ? "-wide" : ""}.webp)" aria-hidden="true"></div>{/if}
+{#if $desk && ready && session && route !== "home" && !inGame}
+  <nav class="topbar" aria-label="Main"><button class="brand" on:click={() => go("home")}>Lanterns <span class="amp">&amp;</span> Lies</button><span class="grow"></span>{#each TOP as [r, l]}<button class="tb" class:on={topOn(r, route)} on:click={() => go(r)}>{l}</button>{/each}<span class="me dim">{session.user.user_metadata?.display_name ?? ""}</span></nav>
+{/if}
 {#if !ready}
   <Loading />
 {:else if !session}
@@ -150,7 +156,8 @@
 {:else if route === "party" && party && party.status !== "lobby" && party.status !== "starting"}
   {#key party.id}<Game party={party} onHome={() => go("home")} />{/key}
 {:else if route === "party" && party}
-  <main class="narrow">
+  <main class="narrow lobby">
+    <div class="lob-share">
     <h1 class="ptitle">Private party</h1>
     <p class="code" aria-label="Party code">{party.code}</p>
     {#if qr}<img class="qr" src={qr} alt="QR code to join this party" width="180" height="180" />{/if}
@@ -162,8 +169,16 @@
         <ul class="plain picker">{#each friendList.filter((f) => !players.some((p) => p.name === f.name && p.user_id)) as f (f.username)}<li class="invite"><span>{f.name} <span class="dim small">@{f.username}</span></span><button class="go" disabled={invited.includes(f.username)} on:click={() => inviteFriend(f.username)}>{invited.includes(f.username) ? "Invited" : "Invite"}</button></li>{/each}</ul>
       {/if}
     {/if}
+    </div>
+    <div class="lob-seats">
+    {#if $desk}
+      <div class="ring" style="--n:{party.size}">{#each Array(party.size) as _, i}<div class="seat" class:empty={!players[i]} style="--i:{i}"><span class="dot"></span><span>{players[i]?.name ?? "empty"}</span></div>{/each}<div class="ringmid"><b>Lantern Square</b><span class="dim small">{players.length} of {party.size} here</span></div></div>
+    {:else}
     <p class="row"><b>Players</b><span>{players.length} of {party.size}</span></p>
     <ul class="plain roster">{#each players as p}<li><span>{p.name}</span></li>{/each}</ul>
+    {/if}
+    </div>
+    <div class="lob-ctrl">
     <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: only the evil side's night chat, roles hidden, pause on." : "Online: town chat on."}</p>
     {#if party.status === "starting"}
       <p class="big tc">Starting in {fmt(remaining)}</p>
@@ -173,12 +188,13 @@
       <button class="go wide" disabled={busy || !full} on:click={() => partyAct("startGame")}>{full ? "Start" : `Start (needs ${party.size})`}</button>
     {/if}
     <button class="link" on:click={async () => { await partyAct("leaveParty"); go("home"); }}>Leave party</button>
+    </div>
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
 {:else if route === "party"}
   <Loading />
 {:else if route === "play"}
-  <main class="narrow">
+  <main class="narrow play">
     <button class="link back" on:click={() => go("home")}>Back</button>
     <h1 class="ptitle">Play</h1>
     <div class="stack">
@@ -191,7 +207,8 @@
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
 {:else if route === "create"}
-  <main class="narrow">
+  <main class="narrow create">
+    <div class="cform">
     <button class="link back" on:click={() => go("play")}>Back</button>
     <h1 class="ptitle">Create private party</h1>
     <h3>Where are you playing?</h3>
@@ -215,8 +232,8 @@
     <NumberStrip bind:value={size} valid={SIZES} />
     <h3>Evil side</h3>
     <div class="seg">{#each ["Mafia", "Syndicate", "Random"] as m}<button class:on={evil === m} on:click={() => (evil = m)}>{m}</button>{/each}</div>
-    <button type="button" class="link" on:click={() => (showCreateRoster = !showCreateRoster)}>{showCreateRoster ? "Hide roster" : `See the roster for ${size} players`}</button>
-    {#if showCreateRoster}
+    {#if !$desk}<button type="button" class="link" on:click={() => (showCreateRoster = !showCreateRoster)}>{showCreateRoster ? "Hide roster" : `See the roster for ${size} players`}</button>{/if}
+    {#if showCreateRoster && !$desk}
       <Roster size={size} mode={evil === "Syndicate" ? "Syndicate" : evil === "Mafia" ? "Mafia" : "Random"} />
     {/if}
     <!-- Both private-party settings choose their timers; Online starts from 4 min, 30 s, 30 s, 15 s, 1 min (Nik, 12 Nov). -->
@@ -225,18 +242,20 @@
       <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
     {/each}
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
+    </div>
+    {#if $desk}<aside class="cside"><h2>Roster for {size}</h2><p class="dim small">Which kinds of role get dealt.</p><Roster size={size} mode={evil === "Syndicate" ? "Syndicate" : evil === "Mafia" ? "Mafia" : "Random"} /></aside>{/if}
     {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
 {:else if route === "guide" || route === "rules" || route === "combat" || route === "glossary" || route === "term"}
   <Guide page={route} {roles} {termId} />
 {:else if route === "roles"}
-  <main class="narrow">
-    <button class="link back" on:click={() => (openRole ? closeRole() : go("guide"))}>Back</button>
-    {#if openRole}<RoleCard role={openRole} onOpenTerm={(id) => { cardScroll = scrollY; go("term/" + id); }} />
+  <main class="narrow roles" class:withcard={$desk && openRole && guideTab === "roles"}>
+    <button class="link back" on:click={() => (openRole && !$desk ? closeRole() : go("guide"))}>Back</button>
+    {#if openRole && !$desk}<RoleCard role={openRole} onOpenTerm={(id) => { cardScroll = scrollY; go("term/" + id); }} />
     {:else}
       <div class="tabs top"><button class:on={guideTab === "roles"} on:click={() => (guideTab = "roles")}>Roles</button><button class:on={guideTab === "rosters"} on:click={() => (guideTab = "rosters")}>Rosters</button></div>
       {#if guideTab === "roles"}
-        <Library {roles} bind:factionFilter bind:typeFilter bind:search onOpen={(r) => { libScroll = scrollY; openRole = r; scrollTo(0, 0); }} />
+        <div class="libwrap"><Library {roles} bind:factionFilter bind:typeFilter bind:search onOpen={(r) => { if ($desk) { openRole = r; return; } libScroll = scrollY; openRole = r; scrollTo(0, 0); }} /></div>
       {:else}
         <h3>Players</h3>
         <NumberStrip bind:value={rSize} valid={SIZES} />
@@ -245,13 +264,14 @@
         <Roster size={rSize} mode={rMode} onPick={(f, t) => { factionFilter = f; typeFilter = t; search = ""; guideTab = "roles"; scrollTo(0, 0); }} />
       {/if}
     {/if}
+    {#if $desk && openRole && guideTab === "roles"}<aside class="roleside"><button class="link close" on:click={() => (openRole = null)}>Close</button><RoleCard role={openRole} onOpenTerm={(id) => go("term/" + id)} /></aside>{/if}
   </main>
 {:else if route === "settings"}
   <Settings onBack={() => go("home")} onSignOut={() => go("home")} />
 {:else if route === "friends"}
   <Friends onBack={() => go("home")} onJoin={(c) => join(c)} />
 {:else if route === "games"}
-  <main class="narrow">
+  <main class="narrow games">
     <button class="link back" on:click={() => go("home")}>Back</button>
     <h1 class="ptitle">My games</h1>
     {#if !games.length}<p class="dim">No games yet.</p>{/if}

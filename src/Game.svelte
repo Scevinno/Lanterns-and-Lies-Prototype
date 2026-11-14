@@ -7,6 +7,7 @@
   import Loading from "./Loading.svelte";
   import Library from "./Library.svelte";
   import { buzz, prefs } from "./prefs";
+  import { desk } from "./desk";
 
   export let party: any;
   export let onHome: () => void;
@@ -108,8 +109,14 @@
 {#if !pub || !view}
   <Loading />
 {:else}
-<div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}.webp)" aria-hidden="true"></div>
-<main class="game l-{layout}">
+<div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
+<main class="game l-{$desk ? 'desk' : layout}">
+  {#if $desk}
+    <aside class="plist" aria-label="Players">
+      <h3>Town · {living.length} alive</h3>
+      <ul class="plain">{#each pub.players as p, i}<li class:gone={!p.alive}><span class="dot" class:out={!p.alive}></span><span class="nm">{i + 1}. {p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}</span>{#if phase === "over"}<span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span>{:else if p.revealedRole || p.finalRole}<span class="dim small">{p.revealedRole ?? p.finalRole}</span>{:else if phase === "vote" && pub.tally[p.id]}<span class="votes">{pub.tally[p.id]}</span>{/if}</li>{/each}</ul>
+    </aside>
+  {/if}
   <header class="bar">
     <span class="dim">{period}</span>
     <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>

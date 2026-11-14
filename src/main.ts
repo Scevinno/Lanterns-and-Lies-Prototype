@@ -1,4 +1,5 @@
 import "./style.css";
+import "./desk"; // sets the desktop class before the first paint
 import App from "./App.svelte";
 new App({ target: document.getElementById("app")! });
 // Service worker: caches the app for fast reopening and receives push notifications.

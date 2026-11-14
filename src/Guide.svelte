@@ -4,6 +4,7 @@
   import { HOW_TO_PLAY, COMBAT_RULE, GLOSSARY, TERM_GROUPS, termById, wordRx, relatedTerms, type Term } from "./guide";
   import { FACTION_CLASS } from "./api";
   import { paintHtml, type Role } from "./richtext";
+  import { desk } from "./desk";
   export let page: "guide" | "rules" | "combat" | "glossary" | "term";
   /** The term shown on its own page (#/term/<id>): from the Glossary, or by dragging up a term sheet on a role card. */
   export let termId = "";
@@ -46,6 +47,8 @@
 </script>
 
 <main class="narrow guide">
+  {#if $desk}<nav class="gside" aria-label="Guide">{#each ROWS as r}<button class:on={page === r.to || (r.to === "glossary" && page === "term")} on:click={() => go(r.to)}>{r.title}</button>{/each}</nav>{/if}
+  <div class="gbody">
   <button class="link back" on:click={back}>Back</button>
   {#if page === "guide"}
     <h1 class="ptitle">Guide</h1>
@@ -117,4 +120,5 @@
     {/each}
     {#if !GLOSSARY.some((t) => matches(t, q))}<p class="dim tc">No words match.</p>{/if}
   {/if}
+  </div>
 </main>

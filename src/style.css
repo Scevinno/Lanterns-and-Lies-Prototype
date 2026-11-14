@@ -299,3 +299,95 @@ a.stats-link { color:var(--dim); font-size:14px; margin-top:8px; }
 .tips { margin:20px 0 6px; padding:12px 14px; border:1px solid rgba(217,164,65,.3); border-radius:10px; background:rgba(217,164,65,.06); }
 .tips h3 { margin:0 0 6px; color:var(--lamp); font-family:"Almendra",Georgia,serif; font-size:18px; }
 .tips ul { margin:0; padding-left:18px; } .tips li { margin:5px 0; }
+
+/* ===== Desktop layout (Nik, 14 Nov): only on wide screens with a mouse (html.desk, set in desk.ts).
+   Phones and tablets never get this class, so nothing below changes them. ===== */
+html.desk main { max-width:1180px; padding:96px 32px 48px; }
+html.desk .backdrop::after { background:linear-gradient(rgba(7,10,18,.55),rgba(7,10,18,.7)); }
+html.desk .backdrop.menu::after { background:linear-gradient(90deg,rgba(7,10,18,.92) 0%,rgba(7,10,18,.72) 30%,rgba(7,10,18,0) 58%); }
+html.desk .backdrop.day::after { background:rgba(7,10,18,.55); }
+/* Top bar on every screen except Home and the game */
+html.desk .topbar { position:fixed; top:0; left:0; right:0; z-index:4; display:flex; align-items:center; gap:6px; padding:12px 36px; background:linear-gradient(rgba(7,10,18,.94),rgba(7,10,18,0)); }
+html.desk .topbar .brand { font:700 26px "Almendra",Georgia,serif; background:none; border:none; padding:0 16px 0 0; }
+html.desk .topbar .brand .amp { color:#E8B553; }
+html.desk .topbar .grow { flex:1; }
+html.desk .topbar .tb { background:transparent; border-color:transparent; color:var(--text); opacity:.8; min-height:38px; }
+html.desk .topbar .tb:hover { opacity:1; }
+html.desk .topbar .tb.on { opacity:1; color:var(--lamp); border-color:rgba(217,164,65,.5); }
+html.desk .topbar .me { margin-left:14px; font-size:15px; }
+html.desk main:not(.settings) button.back { display:none; }
+html.desk button:hover:not(:disabled) { border-color:rgba(217,164,65,.55); }
+/* Panels: list and form screens sit on a dark glass card */
+html.desk main.narrow:not(.home):not(.signin):not(.guide):not(.lobby):not(.create):not(.roles) { max-width:880px; margin:88px auto 40px; padding:28px 36px; background:rgba(14,18,28,.82); border:1px solid rgba(160,180,215,.16); border-radius:14px; backdrop-filter:blur(6px); min-height:0; }
+html.desk .ptitle { font-size:32px; text-align:left; margin:0 0 16px; }
+/* Home and sign-in: a menu down the left, the town on the right */
+html.desk main.home, html.desk main.signin { max-width:440px; margin:0 0 0 8vw; padding:0; min-height:100dvh; justify-content:center; }
+html.desk .home .mark, html.desk .signin .mark { text-align:left; font-size:84px; }
+html.desk .home > .dim, html.desk .signin > .dim { text-align:left; }
+html.desk .home .stack { margin-top:28px; padding-bottom:0; }
+html.desk .home .stack button { text-align:left; padding:12px 18px; font-size:17px; }
+html.desk .home .stack button.go { text-align:center; font-size:19px; min-height:54px; }
+html.desk .home > p.small { position:fixed; right:32px; bottom:24px; }
+/* Play: the choices side by side */
+html.desk main.play .stack { flex-direction:row; }
+html.desk main.play .stack button { flex:1; min-height:110px; font-size:18px; }
+html.desk main.play .send { max-width:520px; }
+/* Create party: settings on the left, the roster live on the right */
+html.desk main.create { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:start; }
+html.desk main.create > .cform, html.desk main.create > .cside { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:26px 30px; }
+html.desk main.create > .cside { position:sticky; top:96px; max-height:calc(100dvh - 130px); overflow-y:auto; }
+html.desk .cside h2 { margin-top:0; }
+/* Lobby: code and QR, the ring of lanterns, the host's controls */
+html.desk main.lobby { display:grid; grid-template-columns:320px minmax(0,1fr) 320px; gap:28px; align-items:stretch; max-width:1440px; }
+html.desk .lob-share, html.desk .lob-ctrl { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:24px; }
+html.desk .lob-share .ptitle { text-align:left; }
+html.desk .lob-share .code { text-align:left; font-size:44px; color:var(--lamp); }
+html.desk .lob-share .qr { margin:10px 0; }
+html.desk .ring { position:relative; aspect-ratio:1; max-height:calc(100dvh - 150px); margin:0 auto; }
+html.desk .seat { --a:calc(var(--i) / var(--n) * 360deg - 90deg); position:absolute; left:calc(50% + 40% * cos(var(--a))); top:calc(50% + 40% * sin(var(--a))); transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; text-align:center; text-shadow:0 1px 3px #000; }
+html.desk .seat .dot { width:18px; height:18px; border-radius:50%; background:var(--lamp); box-shadow:0 0 16px var(--lamp); }
+html.desk .seat.empty { color:var(--dim); }
+html.desk .seat.empty .dot { background:#333a4a; box-shadow:none; }
+html.desk .ringmid { position:absolute; inset:28%; border:1px dashed rgba(160,180,215,.25); border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-family:"Almendra",Georgia,serif; font-size:22px; }
+/* Guide: a sidebar for the four sections */
+html.desk main.guide { display:grid; grid-template-columns:260px minmax(0,1fr); gap:24px; max-width:1180px; align-items:start; }
+html.desk .gside { position:sticky; top:96px; display:flex; flex-direction:column; gap:4px; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:14px; }
+html.desk .gside button { text-align:left; background:transparent; border-color:transparent; }
+html.desk .gside button.on { color:var(--lamp); background:rgba(217,164,65,.12); }
+html.desk .gbody { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:28px 36px; min-width:0; }
+html.desk .gbody > * { max-width:760px; }
+/* Roles: filters in a rail, a wide grid, and the card opens alongside */
+html.desk main.roles { max-width:1500px; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; margin:88px auto 40px; padding:24px 28px; min-height:0; }
+html.desk main.roles.withcard { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:0 24px; align-items:start; }
+html.desk main.roles.withcard > :not(.roleside) { grid-column:1; }
+html.desk .roleside { grid-column:2; grid-row:1 / span 4; position:sticky; top:96px; max-height:calc(100dvh - 130px); overflow-y:auto; background:rgba(8,11,18,.7); border:1px solid rgba(160,180,215,.16); border-radius:12px; padding:14px 18px; }
+html.desk .roleside .close { margin:0 0 6px auto; }
+html.desk .libwrap { display:grid; grid-template-columns:220px minmax(0,1fr); gap:0 24px; align-items:start; }
+html.desk .libwrap > :not(.grid) { grid-column:1; }
+html.desk .libwrap > .grid { grid-column:2; grid-row:1 / span 6; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); margin-top:0; }
+html.desk .libwrap .segf { display:flex; flex-direction:column; gap:4px; margin:10px 0; }
+html.desk .libwrap .segf button { text-align:left; }
+/* Game: players on the left, the action in the middle, chat always open on the right */
+html.desk main.game { display:grid; grid-template-columns:270px minmax(0,1fr) 380px; grid-template-rows:auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title chat" "list panel chat" "list foot chat"; max-width:1560px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
+html.desk .game .bar { grid-area:bar; border:none; justify-content:center; gap:18px; }
+html.desk .game .bar > span:first-child { flex:none; font-family:"Almendra",Georgia,serif; font-size:26px; color:var(--text); }
+html.desk .game .timer { flex:none; font-family:"Almendra",Georgia,serif; font-size:30px; color:var(--lamp); }
+html.desk .game .ptitle { grid-area:title; margin:0; }
+html.desk .plist { grid-area:list; overflow-y:auto; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:12px; }
+html.desk .plist h3 { margin:4px 6px 8px; color:var(--dim); }
+html.desk .plist li { display:flex; align-items:center; gap:10px; padding:9px 6px; border-bottom:1px solid rgba(160,180,215,.12); }
+html.desk .plist li:last-child { border-bottom:none; }
+html.desk .plist .nm { flex:1; min-width:0; }
+html.desk .plist .dot { width:11px; height:11px; border-radius:50%; background:var(--lamp); box-shadow:0 0 10px var(--lamp); flex:none; }
+html.desk .plist .dot.out { background:#333a4a; box-shadow:none; }
+html.desk .plist li.gone .nm { color:var(--dim); text-decoration:line-through; }
+html.desk .plist .votes { color:var(--lamp); border:1px solid var(--lamp); border-radius:12px; padding:0 8px; font-size:13px; }
+html.desk .game .panel { grid-area:panel; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:20px 24px; }
+html.desk .game .picker { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; }
+html.desk .game .picker li { margin:0; }
+html.desk .game .chat { grid-area:chat; display:flex !important; border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:12px; background:rgba(14,18,28,.84); }
+html.desk .game .chatpeek { display:none; }
+html.desk .game .overbar, html.desk .game .skip { grid-area:foot; }
+html.desk .game .banner { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:6; }
+html.desk .game .rolecard img { max-width:240px; }
+html.desk .signin button.link { margin-left:0; }
