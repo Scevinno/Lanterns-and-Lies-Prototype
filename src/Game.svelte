@@ -3,6 +3,7 @@
   import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
   import { allRoles, roleByName, summaryHtml, type Role } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
+  import RoleExtras from "./RoleExtras.svelte";
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
   import Library from "./Library.svelte";
@@ -13,7 +14,7 @@
   export let onHome: () => void;
 
   let view: any = null, messages: any[] = [], remaining = 0, draft = "", tab = "town", showRole = false, err = "", busy = false, online = true;
-  let picks: string[] = [], second = "", lastPhase = 0, chatEl: HTMLElement, wake: any = null;
+  let picks: string[] = [], touched = false, lastPhase = 0, chatEl: HTMLElement, wake: any = null;
   let rosterView: "roster" | "roles" = "roster", libF = "All", libT = "All", libSearch = "", libRole: Role | null = null;
   // Back from a role card returns to where the library was scrolled to (Nik, 12 Nov).
   let sheetEl: HTMLDivElement | null = null, sheetScroll = 0;
@@ -29,8 +30,16 @@
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
-  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase) buzz(); lastPhase = pub.phaseNo; picks = []; second = ""; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
-  $: if (view?.action && phase === "night" && !picks.length) { picks = [...(view.action.targets ?? [])]; second = view.action.second?.[0] ?? ""; }
+  $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase) buzz(); lastPhase = pub.phaseNo; picks = []; touched = false; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
+  $: if (view?.action && phase === "night" && !touched && !picks.length) picks = [...(view.action.targets ?? []), ...(view.action.second ?? [])];
+  // Night choices (Nik, 14 Nov): one list for every ability. Each pick fills the first open slot that accepts that player;
+  // two picks show in two colours with the slot's name. Tap a pick to clear it, then tap someone else.
+  // The Kingpin's commanded second target is just one more slot.
+  $: nPrimary = view?.prompt && !view.prompt.toggle ? view.prompt.slots.length : 0;
+  $: slots = nPrimary ? [...view.prompt.slots, ...(view.commanded && nPrimary === 1 ? [{ label: "Kingpin's second target", options: view.prompt.slots[0].options }] : [])] : [];
+  $: pool = slots.flatMap((sl: any) => sl.options).filter((o: any, i: number, a: any[]) => a.findIndex((x) => x.id === o.id) === i);
+  $: slotOf = (id: string) => picks.indexOf(id);
+  $: canTake = (id: string) => slotOf(id) >= 0 || slots.length === 1 || slots.some((sl: any, k: number) => !picks[k] && sl.options.some((o: any) => o.id === id));
   $: visible = messages.filter((m) => (tab === "town" ? m.channel === "town" || m.channel === "private" : tab === "dead" ? m.channel === "dead" : m.channel === view?.faction));
   $: chatChannel = tab === "town" ? "town" : tab === "dead" ? "dead" : "faction";
   $: canType = view?.channels?.[chatChannel] || (phase === "over" && tab === "town");
@@ -40,7 +49,7 @@
   $: paused = !!pub?.paused;
   // In person, your role hides itself again after a few seconds, so nobody reads it over your shoulder.
   // Chat fills the screen; it steps aside while you vote or judge, and shares the screen at night if you have a night chat.
-  $: layout = showRole ? "role" : phase === "over" ? (overTab === "chat" ? "chat" : "select") : chatOpen || isDead ? "chat" : phase === "vote" || phase === "verdict" ? "select" : phase === "night" ? (view?.channels?.faction || (isEvil && view?.role === "Kingpin") ? "split" : "select") : "chat";
+  $: layout = showRole ? "role" : phase === "over" ? (overTab === "chat" ? "chat" : "select") : chatOpen || isDead ? "chat" : phase === "vote" ? "select" : phase === "night" ? (view?.channels?.faction || (isEvil && view?.role === "Kingpin") ? "split" : "select") : "chat";
   $: if (layout !== "select") seen = visible.length;
   $: unread = Math.max(0, visible.length - seen);
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
@@ -96,12 +105,18 @@
   afterUpdate(() => { if (chatEl && visible.length !== lastLen) { lastLen = visible.length; chatEl.scrollTop = chatEl.scrollHeight; } });
 
   async function send() { const body = draft.trim(); if (!body) return; draft = ""; try { await call("chat", { party: party.id, channel: chatChannel, body }); } catch (e) { say(e); draft = body; } }
-  function choose(slot: number, id: string) {
-    const next = [...picks]; next[slot] = id; picks = next;
-    const need = view.prompt.slots.length;
-    if (picks.filter(Boolean).length === need && (need < 2 || picks[0] !== picks[1])) act("night", { targets: picks, second: second ? [second] : undefined });
+  function tap(id: string) {
+    touched = true;
+    const next = [...picks], at = next.indexOf(id);
+    if (at >= 0) next[at] = "";
+    else if (slots.length === 1) next[0] = id;
+    else { const k = slots.findIndex((sl: any, i: number) => !next[i] && sl.options.some((o: any) => o.id === id)); if (k < 0) return; next[k] = id; }
+    picks = next;
+    const prim = picks.slice(0, nPrimary);
+    if (prim.length === nPrimary && prim.every(Boolean)) act("night", { targets: prim, second: slots.length > nPrimary && picks[nPrimary] ? [picks[nPrimary]] : undefined });
+    else if (view.action) act("night", { targets: [] });
   }
-  function chooseSecond(id: string) { second = id; if (picks[0]) act("night", { targets: picks, second: [id] }); }
+  const clearPicks = () => { touched = true; picks = []; act("night", { targets: [] }); };
   const title = (ph: string) => ({ reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dusk: "Dusk", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
   $: period = phase === "night" ? `Night ${pub?.night}` : phase === "over" ? "Game over" : phase === "reveal" ? "Night 1 is coming" : phase === "dawn" ? `Dawn ${pub?.night}` : `Day ${pub?.day}`;
 </script>
@@ -112,9 +127,25 @@
 <div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
 <main class="game l-{$desk ? 'desk' : layout}">
   {#if $desk}
+    <!-- Desktop (Nik, 14 Nov): the town list is also where you act. Vote, Condemn and night picks sit next to each name. -->
     <aside class="plist" aria-label="Players">
       <h3>Town · {living.length} alive</h3>
-      <ul class="plain">{#each pub.players as p, i}<li class:gone={!p.alive}><span class="dot" class:out={!p.alive}></span><span class="nm">{i + 1}. {p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}</span>{#if phase === "over"}<span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span>{:else if p.revealedRole || p.finalRole}<span class="dim small">{p.revealedRole ?? p.finalRole}</span>{:else if phase === "vote" && pub.tally[p.id]}<span class="votes">{pub.tally[p.id]}</span>{/if}</li>{/each}</ul>
+      <ul class="plain">{#each pub.players as p, i}
+        {@const at = phase === "night" ? slotOf(p.id) : -1}
+        <li class:gone={!p.alive} class:s0={at === 0 || (phase === "vote" && view.myVote === p.id)} class:s1={at === 1}>
+          <span class="dot" class:out={!p.alive}></span>
+          <span class="nm">{i + 1}. {p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if phase !== "over" && (p.revealedRole || p.finalRole)}<span class="dim small rr">{p.revealedRole ?? p.finalRole}</span>{/if}{#if p.shipped}<span class="dim small rr">sent away</span>{/if}</span>
+          {#if phase === "over"}<span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span>
+          {:else if phase === "vote" && p.alive}
+            {#if pub.tally?.[p.id]}<span class="votes">{pub.tally[p.id]}</span>{/if}
+            {#if view.canCondemn && p.id !== view.player_id}<button class="pick cond" disabled={busy} on:click={() => act("condemn", { target: p.id })}>Condemn</button>{/if}
+            {#if view.canVote && !isDead && p.id !== view.player_id && !p.shipped}<button class="pick" class:s0={view.myVote === p.id} disabled={busy} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}>{view.myVote === p.id ? "Voted" : "Vote"}</button>{/if}
+          {:else if phase === "night" && !isDead && pool.some((o) => o.id === p.id)}
+            <button class="pick" class:s0={at === 0} class:s1={at === 1} disabled={busy || !canTake(p.id)} on:click={() => tap(p.id)}>{at >= 0 ? (slots.length > 1 ? slots[at].label : "Chosen") : "Choose"}</button>
+          {:else if phase === "night" && !isDead && inPerson && !view.prompt && p.alive && p.id !== view.player_id}
+            <button class="pick" class:s0={decoy === p.id} on:click={() => (decoy = p.id)}>{decoy === p.id ? "Chosen" : "Choose"}</button>
+          {/if}
+        </li>{/each}</ul>
     </aside>
   {/if}
   <header class="bar">
@@ -128,14 +159,26 @@
   <h1 class="ptitle">{title(phase)}</h1>
 
   <section class="panel">
-    {#if chatOpen}
+    {#if $desk}
+      {#if phase === "over"}<p class="dim">Every role is shown on the left.</p>
+      {:else if isDead}<p class="dim">Your lantern is out. {inPerson ? "Stay quiet and watch the town." : "You can read the town and talk with the dead."}</p>
+      {:else if phase === "reveal"}<p class="dim">Read your role on the right. Night 1 is coming.</p>
+      {:else if phase === "vote"}<p class="dim">{#if view.canVote}Trial {pub.trial} of {pub.maxTrials}. {pub.needed} votes needed. Vote with the buttons on the left.{:else}You cannot vote today.{/if}</p>
+      {:else if phase === "defence"}<p><b>{nameOf(pub.accused)}</b> {pub.accused === view.player_id ? "(you)" : ""} is on trial. <span class="dim">{pub.accused === view.player_id ? "Only you can type. Make your case." : "Only the accused can type."}</span></p>
+      {:else if phase === "verdict"}<p><b>{nameOf(pub.accused)}</b> is on trial. <span class="dim">{view.canVerdict ? "Give your verdict." : "The town decides."}</span></p>
+      {:else if phase === "night"}
+        {#if slots.length}
+          <div class="nightbar"><span>{view.prompt.label}{#if view.commanded && nPrimary === 1}. The Kingpin commands a second target{/if}. Choose on the left.</span>{#if slots.length > 1}<span class="legend">{#each slots as sl, k}<span class="lg s{k}">{sl.label}</span>{/each}</span>{/if}{#if view.action}<button class="ghost" disabled={busy} on:click={clearPicks}>Clear</button>{/if}</div>
+        {:else if view.prompt}<p class="dim">Your power for tonight is on the right.</p>
+        {:else if inPerson}<p class="dim small">You have no action tonight. Choose a name on the left anyway, so nobody in the room can tell. Nothing is sent.</p>
+        {:else}<p class="dim">You have nothing to do tonight.</p>{/if}
+      {:else if phase === "dawn"}<p class="dim">The sun comes up over the river.</p>
+      {:else}<p class="dim">Talk it through. {living.length} lanterns still burn.</p>{/if}
+    {:else if chatOpen}
       <button class="ghost wide" on:click={() => (chatOpen = false)}>Back to {phase === "night" ? "your choice" : phase === "verdict" ? "the verdict" : "voting"}</button>
     {:else if showRole && myRole}
       <RoleCard role={myRole} guideLinks={false} />
-      {#if view.ability !== view.role}<p class="dim">You now have the ability of the {view.ability}.</p>{/if}
-      {#if view.target}<div class="side"><h3 class="f-ub">Your target</h3><ul class="plain"><li><b>{view.target.name}</b><span class="dim">{view.target.alive ? "Get them voted out" : "Dead"}</span></li></ul></div>{/if}
-      {#if view.contract}<div class="side"><h3 class="f-ub">Your contract</h3><ul class="plain">{#each view.contract as c}<li><b class={FACTION_CLASS[roleByName(c)?.faction ?? ""]}>{c}</b><span class="dim">{roleByName(c)?.faction ?? ""}</span></li>{/each}</ul><p class="dim small">Visit both on the same Night to win.</p></div>{/if}
-      {#if view.allies.length}<div class="side"><h3 class={FACTION_CLASS[view.faction]}>Your side</h3><ul class="plain">{#each view.allies as a}<li><b>{a.name}</b>{#if a.role}<span class={FACTION_CLASS[view.faction]}>{a.role}</span>{/if}</li>{/each}</ul></div>{/if}
+      <RoleExtras {view} />
       {#if phase !== "reveal"}<button class="ghost backgame" on:click={() => (showRole = false)}>Back to the game</button>{/if}
     {:else if phase === "over"}
       {#if overTab === "players"}
@@ -152,24 +195,18 @@
     {:else if phase === "defence"}
       <p class="big">{nameOf(pub.accused)} {pub.accused === view.player_id ? "(you)" : ""} is on trial.</p><p class="dim">{pub.accused === view.player_id ? "Only you can type. Make your case." : "Only the accused can type."}</p>
     {:else if phase === "verdict"}
-      <p class="big">{nameOf(pub.accused)}</p>
-      {#if view.canVerdict}<div class="pair"><button class:sel={view.myVerdict === "guilty"} disabled={busy} on:click={() => act("verdict", { choice: "guilty" })}>Guilty</button><button class:sel={view.myVerdict === "innocent"} disabled={busy} on:click={() => act("verdict", { choice: "innocent" })}>Innocent</button></div>
-      {:else}<p class="dim">The town decides.</p>{/if}
+      <p class="big">{nameOf(pub.accused)} is on trial.</p>
+      {#if !view.canVerdict}<p class="dim">The town decides.</p>{/if}
     {:else if phase === "night"}
       {#if view.prompt}
         <p>{view.prompt.label}</p>
         {#if view.prompt.toggle}
           <button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? (view.prompt.toggleOn ?? "Chosen") : view.prompt.toggle}</button>
         {:else}
-          {#each view.prompt.slots as slot, i}
-            {#if view.prompt.slots.length > 1}<h3>{slot.label}</h3>{/if}
-            <ul class="plain picker">{#each slot.options as o}<li><button class:sel={picks[i] === o.id} disabled={busy} on:click={() => choose(i, o.id)}>{o.name}</button></li>{/each}</ul>
-          {/each}
-          {#if view.commanded && view.prompt.slots.length === 1}
-            <h3>The Kingpin commands a second target</h3>
-            <ul class="plain picker">{#each view.prompt.slots[0].options as o}{#if o.id !== picks[0]}<li><button class:sel={second === o.id} disabled={busy} on:click={() => chooseSecond(o.id)}>{o.name}</button></li>{/if}{/each}</ul>
-          {/if}
-          {#if view.action}<button class="ghost" disabled={busy} on:click={() => { picks = []; second = ""; act("night", { targets: [] }); }}>Clear my choice</button>{/if}
+          {#if slots.length > 1}<div class="legend">{#each slots as sl, k}<span class="lg s{k}">{sl.label}</span>{/each}</div>{/if}
+          {#if view.commanded && nPrimary === 1}<p class="dim small">The Kingpin commands a second target: choose two names.</p>{/if}
+          <ul class="plain picker">{#each pool as o}{@const at = slotOf(o.id)}<li><button class:sel={at === 0} class:s1={at === 1} disabled={busy || !canTake(o.id)} on:click={() => tap(o.id)}><span>{o.name}</span>{#if at >= 0 && slots.length > 1}<span class="lg s{at}">{slots[at].label}</span>{/if}</button></li>{/each}</ul>
+          {#if view.action}<button class="ghost" disabled={busy} on:click={clearPicks}>Clear my choice</button>{/if}
         {/if}
       {:else if inPerson}
         <p class="dim small">You have no action tonight. Tap a name anyway, so nobody in the room can tell. Nothing is sent.</p>
@@ -202,10 +239,32 @@
     {:else if tab === "faction" && view.role === "Kingpin"}<p class="dim small pad">You can read your side's chat, but you cannot write in it.</p>
     {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
   </section>
+  {#if $desk}
+    <!-- Desktop (Nik, 14 Nov): your role stays on the right for the whole game, with night powers like Reveal or Alert under it. -->
+    <aside class="rcol" aria-label="Your role">
+      {#if inPerson && !showRole && phase !== "over"}
+        <p class="dim">Your role is hidden, so nobody can read it over your shoulder.</p><button class="wide" on:click={() => (showRole = true)}>Show my role</button>
+      {:else if myRole}
+        <RoleCard role={myRole} guideLinks={false} />
+        <RoleExtras {view} />
+        {#if inPerson && phase !== "over"}<button class="ghost wide" on:click={() => (showRole = false)}>Hide my role</button>{/if}
+      {/if}
+      {#if phase === "night" && !isDead && view.prompt?.toggle}
+        <div class="side power"><p>{view.prompt.label}</p><button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? (view.prompt.toggleOn ?? "Chosen") : view.prompt.toggle}</button></div>
+      {/if}
+    </aside>
+  {/if}
+  <!-- Verdict (Nik, 14 Nov): a small see-through card in the middle of the screen instead of two big buttons; the chat stays readable behind it. -->
+  {#if phase === "verdict" && view.canVerdict && !isDead && !paused && !(showRole && !$desk)}
+    <div class="vpop" role="dialog" aria-label="Verdict">
+      <p><b>{nameOf(pub.accused)}</b><br /><span class="dim small">Guilty or innocent?</span></p>
+      <div class="pair"><button class:sel={view.myVerdict === "guilty"} disabled={busy} on:click={() => act("verdict", { choice: "guilty" })}>Guilty</button><button class:sel={view.myVerdict === "innocent"} disabled={busy} on:click={() => act("verdict", { choice: "innocent" })}>Innocent</button></div>
+    </div>
+  {/if}
   <!-- Game over (Nik, 10 Nov): Chat/Players and Home sit in their own bar at the bottom, spaced away from the list. -->
   {#if phase === "over" && !showRole}
     <div class="pair overbar">
-      {#if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
+      {#if $desk}<span></span>{:else if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
       <button class="go" on:click={onHome}>Home</button>
     </div>
   {/if}

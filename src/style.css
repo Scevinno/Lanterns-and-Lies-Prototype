@@ -340,9 +340,9 @@ html.desk .cside h2 { margin-top:0; }
 /* Lobby: code and QR, the ring of lanterns, the host's controls */
 html.desk main.lobby { display:grid; grid-template-columns:320px minmax(0,1fr) 320px; gap:28px; align-items:stretch; max-width:1440px; }
 html.desk .lob-share, html.desk .lob-ctrl { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:24px; }
-html.desk .lob-share .ptitle { text-align:left; }
-html.desk .lob-share .code { text-align:left; font-size:44px; color:var(--lamp); }
-html.desk .lob-share .qr { margin:10px 0; }
+html.desk .lob-share .ptitle { text-align:center; }
+html.desk .lob-share .code { text-align:center; font-size:44px; color:var(--lamp); }
+html.desk .lob-share .qr { display:block; margin:10px auto; }
 html.desk .ring { position:relative; aspect-ratio:1; max-height:calc(100dvh - 150px); margin:0 auto; }
 html.desk .seat { --a:calc(var(--i) / var(--n) * 360deg - 90deg); position:absolute; left:calc(50% + 40% * cos(var(--a))); top:calc(50% + 40% * sin(var(--a))); transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; text-align:center; text-shadow:0 1px 3px #000; }
 html.desk .seat .dot { width:18px; height:18px; border-radius:50%; background:var(--lamp); box-shadow:0 0 16px var(--lamp); }
@@ -364,7 +364,7 @@ html.desk .gright .term-title { margin-top:4px; }
 html.desk .gshell .grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
 html.desk .gbox.on { border-color:var(--lamp); }
 /* Game: players on the left, the action in the middle, chat always open on the right */
-html.desk main.game { display:grid; grid-template-columns:270px minmax(0,1fr) 380px; grid-template-rows:auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title chat" "list panel chat" "list foot chat"; max-width:1560px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
+html.desk main.game { display:grid; grid-template-columns:300px minmax(0,1fr) 400px; grid-template-rows:auto auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title role" "list panel role" "list chat role" "list foot role"; max-width:1600px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
 html.desk .game .bar { grid-area:bar; border:none; justify-content:center; gap:18px; }
 html.desk .game .bar > span:first-child { flex:none; font-family:"Almendra",Georgia,serif; font-size:26px; color:var(--text); }
 html.desk .game .timer { flex:none; font-family:"Almendra",Georgia,serif; font-size:30px; color:var(--lamp); }
@@ -386,4 +386,30 @@ html.desk .game .chatpeek { display:none; }
 html.desk .game .overbar, html.desk .game .skip { grid-area:foot; }
 html.desk .game .banner { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:6; }
 html.desk .game .rolecard img { max-width:240px; }
+/* Game screen v2 (Nik, 14 Nov): act from the list on the left, chat in the middle, your role on the right. */
+html.desk .game .rcol { grid-area:role; overflow-y:auto; background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:16px 18px; min-height:0; }
+html.desk .game .panel { padding:12px 18px; }
+html.desk .game .panel p { margin:0; }
+html.desk .plist .nm .rr { margin-left:6px; }
+html.desk .plist .pick { margin-left:auto; flex:none; min-height:30px; padding:2px 12px; font-size:13px; }
+html.desk .plist .pick.cond { margin-left:6px; color:var(--dim); }
+html.desk .plist .votes + .pick, html.desk .plist .votes + .pick.cond { margin-left:6px; }
+html.desk .plist .votes { margin-left:auto; }
+html.desk .plist li.s0 { background:rgba(217,164,65,.12); border-radius:8px; }
+html.desk .plist li.s1 { background:rgba(140,170,230,.14); border-radius:8px; }
+.nightbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.nightbar > span:first-child { flex:1; min-width:200px; }
+.nightbar button { min-height:32px; padding:2px 14px; }
 html.desk .signin button.link { margin-left:0; }
+
+/* Two-pick abilities (Nik, 14 Nov): one list, the first pick gold and the second blue, each tagged with its slot. */
+button.pick.s0, .picker button.sel { border-color:var(--lamp); background:#3a2f15; }
+button.pick.s1, .picker button.s1 { border-color:#8fb0ea; background:#1d2a45; color:#dbe6ff; }
+.legend { display:flex; gap:6px; flex-wrap:wrap; margin:4px 0 8px; }
+.lg { font-size:12px; border-radius:10px; padding:1px 9px; border:1px solid; white-space:nowrap; }
+.lg.s0 { color:var(--lamp); border-color:rgba(217,164,65,.6); }
+.lg.s1 { color:#b9cdf3; border-color:rgba(143,176,234,.6); }
+.picker button .lg { margin-left:auto; }
+/* Verdict pop-up (Nik, 14 Nov): small, see-through, in the middle of the screen. */
+.vpop { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(340px, calc(100vw - 48px)); background:rgba(14,18,28,.8); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(217,164,65,.45); border-radius:14px; padding:16px; z-index:8; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+.vpop p { margin:0 0 12px; font-size:20px; }
