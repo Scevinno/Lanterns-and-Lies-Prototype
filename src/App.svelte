@@ -280,7 +280,7 @@
     <button class="link back" on:click={() => go("home")}>Back</button>
     <h1 class="ptitle">My games</h1>
     {#if !games.length}<p class="dim">No games yet.</p>{/if}
-    <ul class="plain picker">{#each games as g}<li><button on:click={() => go("party/" + g.id)}><span>{g.public_state?.winner ? `${g.public_state.winner} won` : g.status === "lobby" ? "In the lobby" : "In progress"}</span><span class="dim small">{new Date(g.created_at).toLocaleDateString()} · {g.size} players</span></button></li>{/each}</ul>
+    <ul class="plain picker">{#each games as g}<li><button class:live={!g.public_state?.winner && g.status !== "lobby"} on:click={() => go("party/" + g.id)}><span>{g.public_state?.winner ? `${g.public_state.winner} won` : g.status === "lobby" ? "In the lobby" : "In progress"}</span><span class="dim small">{new Date(g.created_at).toLocaleDateString()} · {g.size} players</span></button></li>{/each}</ul>
   </main>
 {:else}
   <main class="center narrow home">

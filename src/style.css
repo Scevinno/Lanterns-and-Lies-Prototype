@@ -418,3 +418,6 @@ button.pick.s1, .picker button.s1 { border-color:#8fb0ea; background:#1d2a45; co
 
 /* Verdict (Nik, 15 Nov): a chosen Guilty is red; Innocent keeps the gold highlight. */
 .vpop .pair button.guilty.sel { border-color:var(--syn); background:#4a1820; }
+/* My games (Nik, 15 Nov): a game in progress is highlighted in lantern yellow on phones and desktop. */
+.picker button.live { border-color:var(--lamp); background:#3a2f15; }
+.picker button.live > span:first-child { color:var(--lamp); font-weight:600; }
