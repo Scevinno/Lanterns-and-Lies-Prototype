@@ -421,3 +421,5 @@ button.pick.s1, .picker button.s1 { border-color:#8fb0ea; background:#1d2a45; co
 /* My games (Nik, 15 Nov): a game in progress is highlighted in lantern yellow on phones and desktop. */
 .picker button.live { border-color:var(--lamp); background:#3a2f15; }
 .picker button.live > span:first-child { color:var(--lamp); font-weight:600; }
+/* After the game (Nik, 15 Nov): the role chip is a fixed label, styled like the button it replaces. */
+span.chip { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:8px; }

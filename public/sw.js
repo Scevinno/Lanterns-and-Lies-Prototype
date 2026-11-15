@@ -1,7 +1,7 @@
 // Lanterns & Lies service worker (12 Nov): fast reopening and push notifications.
 // Built files have hashed names, so they never change: cache first. Pictures and fonts keep their names, so they
 // are served from the cache at once and refreshed in the background. The page itself always tries the network first.
-const CACHE = "lnl-v12"; // v12: Protective roles repeat, Day 7 Unbound killer rule, desktop home logo in game, wider town list, red Guilty, in-progress games yellow (15 Nov)
+const CACHE = "lnl-v13"; // v13: role stays shown after the game (15 Nov)
 const SCOPE = self.registration.scope;
 
 self.addEventListener("install", () => self.skipWaiting());

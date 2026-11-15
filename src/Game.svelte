@@ -152,7 +152,9 @@
   {#if $desk}<button class="brand gbrand" aria-label="Home" on:click={() => (phase === "over" ? onHome() : (leaving = true))}>Lanterns <span class="amp">&amp;</span> Lies</button>{/if}
   <header class="bar">
     <span class="dim">{period}</span>
-    <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>
+    <!-- After the game (Nik, 15 Nov): your role stays shown and can no longer be hidden. -->
+    {#if phase === "over"}<span class="chip {FACTION_CLASS[view.faction]}">{view.role}</span>
+    {:else}<button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>{/if}
     {#if pub.setup}<button class="icon" aria-label="Roster for this game" on:click={() => (showRoster = true)}>Roster</button>{/if}
     {#if inPerson && phase !== "over"}<button class="icon" aria-label={paused ? "Resume the game" : "Pause the game"} disabled={busy} on:click={() => act(paused ? "resume" : "pause")}>{paused ? "▶" : "❚❚"}</button>{/if}
     <span class="timer" class:low={remaining <= 10 && phase !== 'over' && !paused} role="timer">{phase === "over" ? "" : paused ? fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000)) : fmt(remaining)}</span>
