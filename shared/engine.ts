@@ -173,7 +173,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     // Evil roles are never offered their known allies (Nik, 8 Nov). The Kingpin is unknown to them, so he stays on the list.
     case "Loan Shark": return one("Put a player in Debt", others.filter((x) => x.faction !== "Syndicate" || x.role === "Kingpin"));
     // Swindler (Nik, 7 Nov): any two players outside the Syndicate. Known Syndicate members are not offered; the Kingpin, whom he does not know, is.
-    case "Swindler": { if (p.swindled) return null; const c = all.filter((x) => !x.revealed && !(x.faction === "Syndicate" && x.role !== "Kingpin")); return { label: "Deal Roles to two players (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
+    case "Swindler": { if (p.swindled || s.night < 2) return null; /* not on Night 1 (Nik, 15 Nov) */ const c = all.filter((x) => !x.revealed && !(x.faction === "Syndicate" && x.role !== "Kingpin")); return { label: "Deal Roles to two players (once per game)", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
     case "Pawnbroker": return one("Draw a visitor to your counter", outsiders(p, others));
     // Innkeeper (Nik, 12 Nov): the Pawnbroker's draw on the good side; any player but himself.
     case "Innkeeper": return one("Invite a guest to your inn", others);

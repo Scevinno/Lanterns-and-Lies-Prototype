@@ -253,7 +253,7 @@ describe("Syndicate", () => {
     const f = game(["Paymaster", "Mayor"], 1, "Syndicate"); act(f, 0, 1); run(f); expect(f.players[1].bribed).toBeFalsy();
   });
   it("Swindler swaps roles, faction goes with the role, statuses stay", () => {
-    const s = game(["Swindler", "Spy", "Outcast", "Doctor"], 1, "Syndicate"); s.players[1].debt = true; act(s, 0, 1, 2); run(s);
+    const s = game(["Swindler", "Spy", "Outcast", "Doctor"], 2, "Syndicate"); s.players[1].debt = true; act(s, 0, 1, 2); run(s);
     expect(s.players[1].role).toBe("Outcast"); expect(s.players[1].faction).toBe("Unbound"); expect(s.players[2].role).toBe("Spy"); expect(s.players[2].faction).toBe("Lanternkeepers"); expect(s.players[1].debt).toBe(true);
   });
   it("Coroner learns the dead role and uses its ability; the Priest raising them stops it", () => {
@@ -429,8 +429,12 @@ describe("win conditions and chat", () => {
     expect(s.endsAt).toBe(T0 + 30_000); forceAdvance(s, s.endsAt, seeded(2)); expect(s.phase).toBe("night"); expect(s.night).toBe(1);
     forceAdvance(s, s.endsAt, seeded(2)); forceAdvance(s, s.endsAt, seeded(2)); expect(s.phase).toBe("discussion"); expect(s.day).toBe(1);
   });
+  it("the Swindler cannot Deal Roles on Night 1 (Nik, 15 Nov)", () => {
+    const s = game(["Swindler", "Doctor", "Spy", "Kingpin"], 1, "Syndicate"); expect(nightPrompt(s, s.players[0])).toBeNull();
+    const n = game(["Swindler", "Doctor", "Spy", "Kingpin"], 2, "Syndicate"); expect(nightPrompt(n, n.players[0])).not.toBeNull();
+  });
   it("the Swindler moves the Town Crier's target and the Assassin's contract with the role", () => {
-    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Syndicate"); s.players[1].crierTarget = "p3"; act(s, 0, 1, 2);
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 2, "Syndicate"); s.players[1].crierTarget = "p3"; act(s, 0, 1, 2);
     run(s); expect(s.players[2].role).toBe("Town Crier"); expect(s.players[2].crierTarget).toBe("p3");
   });
   it("killing the last evil player on Night 7 still wins it for the Lanternkeepers", () => {
@@ -475,11 +479,11 @@ describe("night Reveal and Hold-immune swappers", () => {
 
 describe("Town Crier and the Swindler", () => {
   it("the target handed the Town Crier role becomes the Martyr at once", () => {
-    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Syndicate"); s.players[1].crierTarget = "p2"; act(s, 0, 1, 2);
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 2, "Syndicate"); s.players[1].crierTarget = "p2"; act(s, 0, 1, 2);
     run(s); expect(s.players[2].role).toBe("Martyr"); expect(s.players[1].role).toBe("Spy");
   });
   it("swapping the target's role keeps the same person as the target", () => {
-    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 1, "Syndicate"); s.players[0].crierTarget = undefined; s.players[1].crierTarget = "p2"; act(s, 0, 2, 3);
+    const s = game(["Swindler", "Town Crier", "Spy", "Doctor"], 2, "Syndicate"); s.players[0].crierTarget = undefined; s.players[1].crierTarget = "p2"; act(s, 0, 2, 3);
     run(s); expect(s.players[1].crierTarget).toBe("p2"); expect(s.players[2].role).toBe("Doctor");
   });
 });
@@ -574,7 +578,7 @@ describe("Kingpin chat", () => {
 
 describe("Swindler reach", () => {
   it("offers anyone outside the Syndicate, plus the unknown Kingpin; a swap touching the Kingpin fails", () => {
-    const s = game(["Swindler", "Kingpin", "Foreman", "Spy", "Doctor"], 1, "Syndicate"); const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);
+    const s = game(["Swindler", "Kingpin", "Foreman", "Spy", "Doctor"], 2, "Syndicate"); const ids = nightPrompt(s, s.players[0])!.slots[0].options.map((o) => o.id);
     expect(ids).toEqual(["p1", "p3", "p4"]);
     act(s, 0, 1, 3); const m = run(s); expect(said(m, 0)).toContain("failed"); expect(s.players[1].role).toBe("Kingpin"); expect(s.players[3].role).toBe("Spy");
   });
@@ -634,7 +638,7 @@ describe("7 Nov rulings", () => {
     run(s); expect(s.players[0].revealed).toBeFalsy(); expect(s.players[0].role).toBe("Spy");
   });
   it("the Swindler fails on a player who dies tonight", () => {
-    const s = game(["Swindler", "Mobster", "Spy", "Doctor", "Detective"], 1, "Syndicate"); act(s, 0, 2, 3); act(s, 1, 2);
+    const s = game(["Swindler", "Mobster", "Spy", "Doctor", "Detective"], 2, "Syndicate"); act(s, 0, 2, 3); act(s, 1, 2);
     const m = run(s); expect(said(m, 0)).toContain("failed"); expect(s.players[3].role).toBe("Doctor");
   });
 });
@@ -742,7 +746,7 @@ describe("evil roles and their own side (Nik, 11 Nov)", () => {
 describe("failed once-per-game uses are kept (Nik, 11 Nov)", () => {
   it("Kingpin, Swindler and Medium keep a use that failed; the Rogue's bullet is spent", () => {
     const k = game(["Kingpin", "Mayor", "Spy"], 2, "Syndicate"); act(k, 0, 1); run(k); expect(k.players[0].recruited).toBeFalsy(); expect(k.players[1].role).toBe("Mayor");
-    const w = game(["Swindler", "Spy", "Mayor", "Doctor"], 1, "Syndicate"); w.players[2].revealed = true; act(w, 0, 1, 2); run(w); expect(w.players[0].swindled).toBeFalsy();
+    const w = game(["Swindler", "Spy", "Mayor", "Doctor"], 2, "Syndicate"); w.players[2].revealed = true; act(w, 0, 1, 2); run(w); expect(w.players[0].swindled).toBeFalsy();
     const m = game(["Medium", "Godfather", "Spy"], 2); m.players[1].alive = false; act(m, 0, 1); run(m); expect(m.players[0].mediumUsed).toBeFalsy(); expect(m.players[0].role).toBe("Medium");
     const r = game(["Rogue", "Godfather", "Spy"], 2); act(r, 0, 1); run(r); expect(r.players[1].alive).toBe(true); expect(r.players[0].bullets).toBe(0);
   });
