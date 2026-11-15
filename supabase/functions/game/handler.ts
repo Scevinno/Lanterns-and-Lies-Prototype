@@ -22,7 +22,7 @@ async function userOf(req: Request) {
 const codeChars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from({ length: 6 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
 const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : null);
-const SITE = "https://scevinno.github.io/Lanterns-and-Lies-Prototype/";
+const SITE = "https://lanternsandlies.com/";
 
 // Push notifications (Nik, 12 Nov). The server makes its own key pair on first use and keeps it in app_secrets,
 // a table only the server can read, so the private key never leaves the database.
