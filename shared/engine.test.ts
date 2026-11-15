@@ -286,9 +286,31 @@ describe("Mafia succession and others", () => {
     const s = game(["Medium", "Doctor", "Spy"], 2); s.players[1].alive = false; act(s, 0, 1); run(s); expect(s.players[0].ability).toBe("Doctor"); expect(s.players[0].role).toBe("Doctor"); expect(s.players[0].selfHeal).toBe(1);
     const f = game(["Medium", "Mayor", "Spy"], 2); f.players[1].alive = false; act(f, 0, 1); run(f); expect(f.players[0].ability).toBe("Medium");
   });
-  it("Assassin wins by naming both contract targets", () => {
-    const s = game(["Assassin", "Spy", "Mobster", "Doctor"]); s.players[0].contract = ["Spy", "Mobster"]; act(s, 0, 1, 2); run(s); expect(dead(s, 1)).toBe(true); expect(dead(s, 2)).toBe(true); expect(s.players[0].won).toBe(true);
-    const w = game(["Assassin", "Spy", "Mobster", "Doctor"]); w.players[0].contract = ["Spy", "Mobster"]; act(w, 0, 3, 2); run(w); expect(dead(w, 3)).toBe(false);
+  it("Assassin (Nik, 15 Nov): a right guess kills the first mark; a wrong one hears 'not your mark'", () => {
+    const s = game(["Assassin", "Spy", "Mobster", "Doctor"]); Object.assign(s.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+    act(s, 0, 1); act(s, 3, 1); run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].won).toBeFalsy();
+    const w = game(["Assassin", "Spy", "Mobster", "Doctor"]); Object.assign(w.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+    act(w, 0, 3); const m = run(w); expect(dead(w, 3)).toBe(false); expect(said(m, 0)).toContain("N3: not your mark.");
+  });
+  it("Assassin: the second mark is a living evil player, chosen at nightfall after the first dies by any hand", () => {
+    const s = game(["Assassin", "Spy", "Mobster", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+    s.players[1].alive = false; s.phase = "dusk"; s.day = 2; forceAdvance(s, s.endsAt, seeded(3));
+    expect(s.players[0].markStage).toBe(2); expect(s.players[0].mark).toBe("p2"); expect(s.players[0].markRole).toBe("Mobster");
+  });
+  it("Assassin: no evil player left at nightfall completes the contract", () => {
+    const s = game(["Assassin", "Spy", "Ripper", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+    s.players[1].alive = false; s.phase = "dusk"; s.day = 2; forceAdvance(s, s.endsAt, seeded(3)); expect(s.players[0].won).toBe(true);
+  });
+  it("Assassin: the second mark dying to someone else wins, at night or by vote", () => {
+    const s = game(["Assassin", "Mobster", "Rogue", "Doctor"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Mobster", markStage: 2 });
+    act(s, 2, 1); run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].won).toBe(true);
+    const v = game(["Assassin", "Mobster", "Doctor", "Spy", "Rogue"], 2); Object.assign(v.players[0], { mark: "p1", markRole: "Mobster", markStage: 2 });
+    v.phase = "verdict"; v.accused = "p1"; v.trial = 1; v.verdicts = { p0: "guilty", p2: "guilty", p3: "guilty" }; forceAdvance(v, v.endsAt, seeded(1)); expect(v.players[0].won).toBe(true);
+  });
+  it("Assassin: the mark is the player, even after their role changes", () => {
+    const s = game(["Assassin", "Mobster", "Godfather", "Doctor"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Mobster", markStage: 2 });
+    s.players[2].alive = false; act(s, 3, 3); run(s); expect(s.players[1].role).toBe("Godfather");
+    act(s, 0, 1); run(s); expect(dead(s, 1)).toBe(true); expect(s.players[0].won).toBe(true);
   });
   it("Tinkerer: Planted visitors, learns visitors, Trigger", () => {
     const s = game(["Tinkerer", "Detective", "Spy"]); act(s, 1, 0); act(s, 0, 2); const m = run(s); expect(s.players[1].planted).toBe(true); expect(s.players[2].planted).toBe(true); expect(said(m, 0)).toContain("N1");
@@ -480,9 +502,8 @@ describe("Narrator feedback, round 2 (8 Nov)", () => {
     const s = game(["Harbour Master", "Spy", "Doctor"], 1, "Syndicate"); act(s, 0, 1); expect(said(run(s), 1)).toContain("sent away on a ship");
   });
   it("the Town Crier and Assassin hear at dawn while their targets live", () => {
-    const s = game(["Town Crier", "Assassin", "Spy", "Mobster", "Doctor"], 2); s.players[0].crierTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
-    const m = run(s); expect(said(m, 0)).toContain("Your target still lives."); expect(said(m, 1)).toContain("Your targets still live.");
-    const k = game(["Assassin", "Spy", "Mobster", "Doctor"], 2); k.players[0].contract = ["Spy", "Mobster"]; act(k, 2, 1); expect(said(run(k), 0)).toContain("One of your targets still lives.");
+    const s = game(["Town Crier", "Assassin", "Spy", "Mobster", "Doctor"], 2); s.players[0].crierTarget = "p2"; Object.assign(s.players[1], { mark: "p2", markRole: "Spy", markStage: 1 });
+    const m = run(s); expect(said(m, 0)).toContain("Your target still lives."); expect(said(m, 1)).toContain("Your mark still lives.");
   });
   it("the Hunter hears the trap is ready on the night it can be set", () => {
     const s = game(["Hunter", "Spy", "Mobster", "Doctor"], 1); s.phase = "dusk"; s.day = 1; s.endsAt = T0; s.players[0].hasTrap = true;
@@ -561,8 +582,8 @@ describe("Swindler reach", () => {
 
 describe("role view extras", () => {
   it("shows the Town Crier's target and the Assassin's contract to them only", () => {
-    const s = game(["Town Crier", "Assassin", "Spy", "Mobster"], 1); s.players[0].crierTarget = "p2"; s.players[1].contract = ["Spy", "Mobster"];
-    expect(privateView(s, "p0").target).toEqual({ name: "N2", alive: true }); expect(privateView(s, "p1").contract).toEqual(["Spy", "Mobster"]);
+    const s = game(["Town Crier", "Assassin", "Spy", "Mobster"], 1); s.players[0].crierTarget = "p2"; Object.assign(s.players[1], { mark: "p2", markRole: "Spy", markStage: 1 });
+    expect(privateView(s, "p0").target).toEqual({ name: "N2", alive: true }); expect(privateView(s, "p1").contract).toEqual(["Spy"]);
     expect(privateView(s, "p2").target).toBeNull(); expect(privateView(s, "p2").contract).toBeNull();
   });
 });
@@ -726,8 +747,8 @@ describe("failed once-per-game uses are kept (Nik, 11 Nov)", () => {
     const r = game(["Rogue", "Godfather", "Spy"], 2); act(r, 0, 1); run(r); expect(r.players[1].alive).toBe(true); expect(r.players[0].bullets).toBe(0);
   });
   it("the Hollowman has Absolute Defence on Fog Nights and Light Defence on clear Nights (Nik, 12 Nov)", () => {
-    const f = game(["Hollowman", "Assassin", "Spy"], 2); f.players[1].contract = ["Hollowman", "Spy"]; act(f, 1, 0, 2); run(f); expect(f.players[0].alive).toBe(true);
-    const c = game(["Hollowman", "Assassin", "Spy"], 1); c.players[1].contract = ["Hollowman", "Spy"]; act(c, 1, 0, 2); run(c); expect(c.players[0].alive).toBe(false);
+    const f = game(["Hollowman", "Assassin", "Spy"], 2); Object.assign(f.players[1], { mark: "p0", markRole: "Hollowman", markStage: 1 }); act(f, 1, 0); run(f); expect(f.players[0].alive).toBe(true);
+    const c = game(["Hollowman", "Assassin", "Spy"], 1); Object.assign(c.players[1], { mark: "p0", markRole: "Hollowman", markStage: 1 }); act(c, 1, 0); run(c); expect(c.players[0].alive).toBe(false);
     const l = game(["Hollowman", "Mobster", "Spy"], 1); act(l, 1, 0); run(l); expect(l.players[0].alive).toBe(true); // Light stops a Light Attack
   });
 });

@@ -20,7 +20,7 @@ export interface Player {
   framed?: boolean; planted?: boolean; disguisedAs?: string; debt?: boolean; collection?: boolean; debtNotified?: boolean;
   bribed?: boolean; bribedBy?: string; shipped?: boolean; revealed?: boolean; bullets?: number; selfHeal?: number; alerts?: number;
   priestUsed?: boolean; mediumUsed?: boolean; swindled?: boolean; recruited?: boolean; hasTrap?: boolean;
-  guilt?: boolean; streak?: number; contract?: string[]; crierTarget?: string; patrol?: string[]; learned?: string[];
+  guilt?: boolean; streak?: number; mark?: string; markRole?: string; markStage?: number; crierTarget?: string; patrol?: string[]; learned?: string[];
   won?: boolean; wasStartFaction?: Faction; wasRaisedRogue?: boolean; diedDay?: number;
 }
 export interface Action { targets: string[]; alert?: boolean; second?: string[] }
@@ -110,10 +110,11 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Town Crier") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.crierTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
+    // Assassin (Nik, 15 Nov): two marks, one at a time. The first is a Lanternkeeper who is not a Power role; the mark is
+    // the player, so it holds even if their role changes later. The second is given at nightfall after the first dies.
     if (p.role === "Assassin") {
-      const others = players.filter((x) => x.id !== p.id);
-      const a = pick(others.filter((x) => x.faction === "Lanternkeepers"), r), b = pick(others.filter((x) => x.faction === input.mode), r);
-      p.contract = [a.role, b.role]; msgs.push({ channel: "private", to: p.id, text: `Your contract names two roles: ${a.role} and ${b.role}.` });
+      const c = players.filter((x) => x.id !== p.id && x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const m = pick(c, r);
+      p.mark = m.id; p.markRole = m.role; p.markStage = 1; msgs.push({ channel: "private", to: p.id, text: `Your first mark is the ${m.role}. Find who holds it.` });
     }
   }
   msgs.push({ channel: "town", text: "A new game begins in Emberhollow. Read your role." });
@@ -214,7 +215,7 @@ function abilityPrompt(s: GameState, p: Player, ab: string, others: Player[], al
     case "Hollowman": return fogNight(s.night) ? null : one("Hollow a house");
     case "Tinkerer": return { label: "Plant an explosive, or choose yourself to Trigger", slots: [{ label: "Target", options: opts(all) }] };
     case "Ripper": return s.night > 1 ? one("Murder a player") : null;
-    case "Assassin": { const c = s.players.filter((x) => x.id !== p.id); return { label: "Name the two contract targets", slots: [{ label: "First", options: opts(c) }, { label: "Second", options: opts(c) }] }; }
+    case "Assassin": return p.mark && !p.won ? one(`Find your mark, the ${p.markRole}`) : null;
     default: return null; // Archivist, Spy, Town Crier, Martyr, Outcast
   }
 }
@@ -241,7 +242,7 @@ function seerGroup(s: GameState, p: Player): string {
 
 // ---- Night resolution ----
 interface Act { actor: string; ab: string; targets: string[]; alert?: boolean; borrowed?: boolean; dead?: boolean; chosen?: string[] }
-interface Result { to: string; kind: "text" | "role" | "evil" | "type" | "names" | "count" | "friends"; value?: string | number | boolean | string[]; pre?: string; info: boolean; targetName?: string }
+interface Result { to: string; kind: "text" | "role" | "evil" | "type" | "names" | "count" | "friends" | "mark"; value?: string | number | boolean | string[]; pre?: string; info: boolean; targetName?: string }
 
 export function resolveNight(s: GameState, r: Rng): Msg[] {
   const msgs: Msg[] = [], say = (to: string, text: string) => msgs.push({ channel: "private", to, text });
@@ -419,10 +420,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   // The Ripper has no Rampage (Nik, 11 Nov): one Light Attack a Night.
   for (const a of has("Ripper")) attack(a.targets[0], 1, a.actor, "the Ripper", true, true);
   for (const a of has("Hollowman")) { const t = a.targets[0]; attack(t, 2, a.actor, "the Hollowman", true, true); for (const u of allVisitorsOf(t)) if (u !== a.actor) attack(u, 2, a.actor, "the Hollowman"); }
-  for (const a of has("Assassin")) {
-    const me = P(a.actor), roles = a.targets.map((t) => P(t).role).sort(), want = [...(me.contract ?? [])].sort();
-    if (me.contract && roles[0] === want[0] && roles[1] === want[1]) { for (const t of a.targets) if (P(t).alive) attack(t, 3, a.actor, "the Assassin", false); me.won = true; say(a.actor, "You found both targets. Your contract is complete."); }
-  }
+  // A right guess is an Absolute Attack on the mark; the contract moves on when the mark dies, by any hand.
+  for (const a of has("Assassin")) { const me = P(a.actor); if (me.mark && !me.won && a.targets[0] === me.mark) attack(me.mark, 3, a.actor, "the Assassin", false); }
   for (const a of has("Tinkerer")) if (a.targets[0] === a.actor) for (const p of living) if (p.planted) attack(p.id, 3, a.actor, "the Trigger", false);
   for (const id of debtDue) if (!paid.has(id)) attack(id, 3, id, "an unpaid Debt", false);
   for (const id of debtDue) { const p = P(id); p.collection = false; if (paid.has(id)) p.debt = false; p.debtNotified = false; }
@@ -485,6 +484,8 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
         res(a.actor, "names", names(shuffle(trio.map((p) => (p.id === t.id ? ch : p.id)), r)), "Your Vision shows"); results[results.length - 1].targetName = tn; break;
       }
       case "Loan Shark": res(a.actor, "role", t.role, tn); break;
+      // "Not your mark" is a result like any other: a Fog Night or the Forger can change it (Nik, 15 Nov).
+      case "Assassin": { const me = P(a.actor); if (me.mark && !me.won) res(a.actor, "mark", t.id !== me.mark, tn); break; }
       case "Fence": case "Pawnbroker": case "Innkeeper": break;
       default: break;
     }
@@ -508,7 +509,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const others = s.players.map((p) => p.name);
     switch (x.kind) {
       case "evil": return { ...x, value: !x.value };
-      case "friends": return { ...x, value: !x.value };
+      case "friends": case "mark": return { ...x, value: !x.value };
       case "type": return { ...x, value: pick(TYPES.filter((t) => t !== x.value), r) };
       case "role": return { ...x, value: pick((gameRoles.length > 1 ? gameRoles : allRoles).filter((t) => t !== x.value), r) };
       case "count": return { ...x, value: Number(x.value) + 1 + Math.floor(r.next() * 2) };
@@ -522,7 +523,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const randomise = (x: Result): Result => {
     const pool = living.filter((p) => p.id !== x.to).map((p) => p.name);
     switch (x.kind) {
-      case "evil": case "friends": return { ...x, value: r.next() < 0.5 };
+      case "evil": case "friends": case "mark": return { ...x, value: r.next() < 0.5 };
       case "type": return { ...x, value: pick(TYPES, r) };
       case "role": return { ...x, value: pick(gameRoles, r) };
       case "count": return { ...x, value: Math.floor(r.next() * (evilAlive + 1)) };
@@ -542,6 +543,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
       case "names": return (x.value as string[]).length ? `${x.pre}: ${(x.value as string[]).join(", ")}.` : `${x.pre}: nobody.`;
       case "count": return `${x.pre} ${x.value}.`;
       case "friends": return `${x.pre} are ${x.value ? "friends" : "enemies"}.`;
+      case "mark": return x.value ? `${x.pre}: not your mark.` : "";
       default: return String(x.value);
     }
   };
@@ -550,10 +552,10 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   // Power roles resolve last, once kills are settled, so one who dies tonight learns nothing.
   const silenced = (id: string) => { const p = P(id); const t = roleDef(p.ability).type; return dying.has(id) && p.faction === "Lanternkeepers" && (t === "Investigative" || t === "Power"); };
   const delivered = finalResults.filter((x) => !silenced(x.to));
-  for (const x of delivered) say(x.to, render(x));
+  for (const x of delivered) { const t = render(x); if (t) say(x.to, t); }
   for (const a of has("Warden")) {
     const t = a.targets[0]; if (silenced(a.actor)) continue;
-    for (const x of delivered) if (x.to === t) say(a.actor, `Your target's result: ${render(x)}`);
+    for (const x of delivered) if (x.to === t && render(x)) say(a.actor, `Your target's result: ${render(x)}`);
     if (dying.has(t)) say(a.actor, `Your target was killed by ${(killers.get(t) ?? []).map((k) => P(k).name).join(", ")}.`);
   }
   for (const id of heldNotes) say(id, "You were Held tonight and could not act.");
@@ -604,7 +606,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     const [x, y] = a.targets.map(P);
     if (x.revealed || y.revealed || !x.alive || !y.alive || recruitedTonight.has(x.id) || recruitedTonight.has(y.id) || x.faction === "Syndicate" || y.faction === "Syndicate") { say(a.actor, FAILED); continue; }
     P(a.actor).swindled = true; swindledTonight.add(x.id); swindledTonight.add(y.id);
-    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.crierTarget, ct = p.contract, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.crierTarget = q.crierTarget; p.contract = q.contract; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.crierTarget = et; q.contract = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was Dealt away. You are now the ${ry}.`); say(y.id, `Your role was Dealt away. You are now the ${rx}.`);
+    { const rx = x.role, ry = y.role; const carry = (p: Player, q: Player) => { const b = p.bullets, h = p.selfHeal, al = p.alerts, pu = p.priestUsed, mu = p.mediumUsed, et = p.crierTarget, ct = [p.mark, p.markRole, p.markStage] as const, st = p.streak; p.bullets = q.bullets; p.selfHeal = q.selfHeal; p.alerts = q.alerts; p.priestUsed = q.priestUsed; p.mediumUsed = q.mediumUsed; p.crierTarget = q.crierTarget; p.mark = q.mark; p.markRole = q.markRole; p.markStage = q.markStage; p.streak = q.streak; q.bullets = b; q.selfHeal = h; q.alerts = al; q.priestUsed = pu; q.mediumUsed = mu; q.crierTarget = et; [q.mark, q.markRole, q.markStage] = ct; q.streak = st; }; carry(x, y); setRole(x, ry); setRole(y, rx); say(x.id, `Your role was Dealt away. You are now the ${ry}.`); say(y.id, `Your role was Dealt away. You are now the ${rx}.`);
       // Handed the Town Crier role while being its target: become the Martyr at once (Nik, 7 Nov).
       for (const z of [x, y]) if (z.role === "Town Crier" && z.crierTarget === z.id) { setRole(z, "Martyr"); say(z.id, "You are your own target. You are now the Martyr: you win if you are voted out."); } }
   }
@@ -612,6 +614,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   const revealedTonight: string[] = [];
   for (const a of acts) if (!a.dead && a.alert && (a.ab === "Mayor" || a.ab === "Judge") && P(a.actor).alive && !P(a.actor).revealed && !swindledTonight.has(a.actor)) { P(a.actor).revealed = true; revealedTonight.push(a.actor); }
   succession(s, r, say);
+  contractDone(s, say, deadTonight);
   if (deadTonight.length) {
     for (const id of deadTonight.filter((x) => !P(x).alive)) msgs.push({ channel: "town", text: `${P(id).name}'s lantern went out in the night.` });
     s.quietDays = 0;
@@ -623,9 +626,27 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const p of alive(s)) {
     if (p.won) continue;
     if (p.role === "Town Crier" && p.crierTarget && P(p.crierTarget).alive) say(p.id, "Your target still lives.");
-    if (p.role === "Assassin" && p.contract) { const n = p.contract.filter((c) => alive(s).some((x) => x.role === c && x.id !== p.id)).length; if (n === 2) say(p.id, "Your targets still live."); else if (n === 1) say(p.id, "One of your targets still lives."); }
+    if (p.role === "Assassin" && p.mark && byId(s, p.mark).alive) say(p.id, "Your mark still lives.");
   }
   return msgs;
+}
+/** The Assassin's second mark dying, by any hand, completes the contract. `diedNow` lets an Assassin who dies the same Night still win. */
+function contractDone(s: GameState, say: (to: string, t: string) => void, diedNow: string[] = []) {
+  for (const p of s.players) if (p.role === "Assassin" && (p.alive || diedNow.includes(p.id)) && p.markStage === 2 && !p.won && p.mark && !byId(s, p.mark).alive) {
+    p.won = true; say(p.id, "Your second mark is dead. Your contract is complete: you win.");
+  }
+}
+/** At nightfall (Nik, 15 Nov): a dead first mark gives the Assassin a living member of the evil side as the second mark,
+ *  chosen now so it can't be someone already dead. With nobody on the evil side left, the contract is complete. */
+function nextMark(s: GameState, r: Rng, msgs: Msg[]) {
+  for (const p of alive(s)) {
+    if (p.role !== "Assassin" || p.markStage !== 1 || !p.mark || p.won) continue;
+    if (byId(s, p.mark).alive && p.mark !== p.id) continue;
+    const c = alive(s).filter(isEvil);
+    if (!c.length) { p.won = true; msgs.push({ channel: "private", to: p.id, text: "Your first mark is dead, and nobody on the evil side is left. Your contract is complete: you win." }); continue; }
+    const m = pick(c, r); p.mark = m.id; p.markRole = m.role; p.markStage = 2;
+    msgs.push({ channel: "private", to: p.id, text: `Your first mark is dead. Your second mark is the ${m.role}.` });
+  }
 }
 function setRole(p: Player, role: string) { const d = roleDef(role); p.role = role; p.ability = role; p.faction = d.faction; }
 /** `gone` lists roles that just left their side without dying (Pass on Guilt), so succession runs as if they were killed. */
@@ -697,6 +718,7 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   for (const p of alive(s)) if (p.ability === "Hunter" && p.hasTrap && fogNight(s.night)) msgs.push({ channel: "private", to: p.id, text: "Your trap is ready. You can set it tonight." });
   // A Debt is owed only to a living Loan Shark: with none alive, every Debt is void (Nik, 10 Nov).
   if (!alive(s).some((p) => p.role === "Loan Shark")) for (const p of s.players) { p.debt = false; p.collection = false; }
+  nextMark(s, r, msgs);
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
   setPhase(s, "night", s.timers.night, now);
@@ -713,7 +735,7 @@ function execute(s: GameState, p: Player, verb: string): Msg[] {
   if (p.role === "Martyr") { p.won = true; p.revealed = true; msgs.push({ channel: "town", text: `${p.name} was the Martyr, and got what they wanted.` }); }
   for (const q of alive(s)) if (q.role === "Town Crier" && q.crierTarget === p.id) { q.won = true; msgs.push({ channel: "private", to: q.id, text: "Your target has been voted out. You win." }); }
   if (p.role === "Loan Shark") for (const q of s.players) { q.debt = false; q.collection = false; }
-  const say = (to: string, text: string) => msgs.push({ channel: "private", to, text }); succession(s, mathRng, say);
+  const say = (to: string, text: string) => msgs.push({ channel: "private", to, text }); succession(s, mathRng, say); contractDone(s, say);
   return msgs;
 }
 // Pass on Guilt (Nik, 13 Nov): when the Martyr is voted out, one living player who voted Guilty, picked at random,
@@ -901,7 +923,7 @@ export function privateView(s: GameState, id: string) {
     role: p.role, faction: p.faction, ability: p.ability, alive: p.alive, allies, prompt, action: s.actions[id] ?? null,
     // Shown with the role, like an evil player's allies: the Town Crier's target and the Assassin's contract.
     target: p.role === "Town Crier" && p.crierTarget ? { name: byId(s, p.crierTarget).name, alive: byId(s, p.crierTarget).alive } : null,
-    contract: p.role === "Assassin" && p.contract ? p.contract : null,
+    contract: p.role === "Assassin" && p.markRole && !p.won ? [p.markRole] : null, markStage: p.role === "Assassin" ? p.markStage ?? null : null,
     commanded: s.commanded === id, myVote: s.votes[id] ?? null, myVerdict: s.verdicts[id] ?? null,
     canVote: s.phase === "vote" && p.alive && !p.shipped, canVerdict: s.phase === "verdict" && p.alive && !p.shipped && s.accused !== id,
     canReveal: false, // Reveal is a Night action now; see nightPrompt

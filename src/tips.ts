@@ -61,7 +61,7 @@ export const TIPS: Record<string, string[]> = {
     "Deceptive roles can change your results, and on a Fog Night, while the Hollowman lives, they are random.",
   ],
   Tracker: [
-    "A player who visits two others is the Assassin, Seer, Ferryman or Smuggler, or a Syndicate member Commanded by the Kingpin.",
+    "A player who visits two others is the Seer, Ferryman or Smuggler, or a Syndicate member Commanded by the Kingpin.",
     "A visit to a dead player means the Medium, Priest or Coroner.",
     "A visit to someone who died may be the killer, or a Doctor who came too late. Check what they claim.",
     "Visiting nobody fits a role that doesn't visit, a player who chose to do nothing, or one who was Held.",
@@ -308,11 +308,11 @@ export const TIPS: Record<string, string[]> = {
     "You have only Light Defence on Clear Nights, so don't draw attention before one.",
   ],
   Assassin: [
-    "Your two targets are on opposing sides. Find one, and you know which side the other is on.",
-    "Use the town's public results and claims to match roles to players.",
+    "Your first mark is a Lanternkeeper. They often claim their role in the day chat, so listen for it.",
+    "Every \"not your mark\" rules a player out. Keep a list.",
+    "Once your first mark dies, your second is on the evil side. The town wants them dead too, so you can work with it.",
+    "You don't have to land the kill yourself. If your mark dies to anyone, the contract moves on.",
     "You read Evil to the Constable and an enemy to the Seer, so avoid drawing checks.",
-    "A Tracker who follows you sees two visits, which narrows you to five roles. Have a claim ready.",
-    "You win the moment you name both correctly on the same Night, whatever happens to you afterwards.",
   ],
   "Town Crier": [
     "Build a case against your target slowly. A sudden push looks suspicious.",
