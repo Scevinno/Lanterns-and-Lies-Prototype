@@ -138,6 +138,7 @@ const NO_BORROW = new Set(["Swindler", "Smuggler", "Ferryman", "Seer", "Tailor",
 // Narrator feedback (Nik, 8 Nov). One failure line for every reason, so it never says why.
 // Doctor and Guardsman get the same protection line, so a Warden copying it cannot tell them apart.
 export const FAILED = "Your ability failed tonight.";
+const YT = "Your target";
 export const PROTECTED = "You protected your target from an attack tonight.";
 export const ATTACKED_SURVIVED = "You were attacked tonight, but you survived.";
 export const ATTACKED_DIED = "You were attacked tonight. Your lantern has gone out.";
@@ -242,7 +243,7 @@ function seerGroup(s: GameState, p: Player): string {
 
 // ---- Night resolution ----
 interface Act { actor: string; ab: string; targets: string[]; alert?: boolean; borrowed?: boolean; dead?: boolean; chosen?: string[] }
-interface Result { to: string; kind: "text" | "role" | "evil" | "type" | "names" | "count" | "friends" | "mark"; value?: string | number | boolean | string[]; pre?: string; info: boolean; targetName?: string }
+interface Result { to: string; kind: "text" | "role" | "evil" | "type" | "names" | "count" | "friends" | "mark"; value?: string | number | boolean | string[]; pre?: string; info: boolean; targetName?: string; is?: boolean }
 
 export function resolveNight(s: GameState, r: Rng): Msg[] {
   const msgs: Msg[] = [], say = (to: string, text: string) => msgs.push({ channel: "private", to, text });
@@ -261,7 +262,7 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     if (legal.slots.length === 2 && t[0] === t[1]) continue;
     if (p.ability === "Coroner") {
       const d = P(t[0]); const priestSame = d.faction === "Lanternkeepers" && living.some((q) => q.ability === "Priest" && s.actions[q.id]?.targets[0] === d.id);
-      say(p.id, `${d.name} was the ${d.role}.`);
+      say(p.id, `Your dead target was the ${d.role}.`);
       if (priestSame) { say(p.id, FAILED); continue; }
       // The Coroner gives one living target, so only abilities that take exactly that can be borrowed.
       if (NO_BORROW.has(d.ability)) { say(p.id, FAILED); continue; }
@@ -467,13 +468,14 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const a of acts) {
     if (a.dead || !a.targets.length) continue; const t = P(a.targets[0]); const tn = cn(a, 0);
     switch (a.ab) {
-      case "Constable": res(a.actor, "evil", constableEvil(s, t), tn); break;
-      case "Detective": res(a.actor, "type", detectiveType(s, t), tn); break;
-      case "Notary": res(a.actor, "role", exactRole(t, s, true), tn); break;
-      case "Informant": res(a.actor, "role", exactRole(t, s, false), tn); break;
-      case "Watchman": { const vs = allVisitorsOf(t.id).filter((v) => v !== a.actor).map((v) => P(v).disguisedAs ?? v); res(a.actor, "names", names(vs), `Visitors to ${tn}`); break; }
-      case "Tracker": { const o = acts.filter((x) => x.actor === t.id && isVisit(x)).flatMap(visitTargets); res(a.actor, "names", names(o), `${tn} visited`); break; }
-      case "Seer": { const [x, y] = a.targets.map(P); res(a.actor, "friends", seerGroup(s, x) === seerGroup(s, y), `${cn(a, 0)} and ${cn(a, 1)}`); break; }
+      // Results never name the player you chose (Nik, 15 Nov): "Your target ...". Names stay only where they are the information.
+      case "Constable": res(a.actor, "evil", constableEvil(s, t), YT); break;
+      case "Detective": res(a.actor, "type", detectiveType(s, t), YT); break;
+      case "Notary": res(a.actor, "role", exactRole(t, s, true), YT); results[results.length - 1].is = true; break;
+      case "Informant": res(a.actor, "role", exactRole(t, s, false), YT); results[results.length - 1].is = true; break;
+      case "Watchman": { const vs = allVisitorsOf(t.id).filter((v) => v !== a.actor).map((v) => P(v).disguisedAs ?? v); res(a.actor, "names", names(vs), "Your target's visitors"); break; }
+      case "Tracker": { const o = acts.filter((x) => x.actor === t.id && isVisit(x)).flatMap(visitTargets); res(a.actor, "names", names(o), "Your target visited"); break; }
+      case "Seer": { const [x, y] = a.targets.map(P); res(a.actor, "friends", seerGroup(s, x) === seerGroup(s, y), "Your two targets"); break; }
       case "Oracle": {
         const ch = a.chosen?.[0] ?? t.id;
         const good = (p: Player) => !constableEvil(s, p), pool2 = living.filter((p) => p.id !== a.actor && p.id !== t.id && p.id !== ch);
@@ -483,9 +485,9 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
         const trio = [t, ...(good(t) && bad[0] ? [bad[0]] : []), ...rest].slice(0, 3);
         res(a.actor, "names", names(shuffle(trio.map((p) => (p.id === t.id ? ch : p.id)), r)), "Your Vision shows"); results[results.length - 1].targetName = tn; break;
       }
-      case "Loan Shark": res(a.actor, "role", t.role, tn); break;
+      case "Loan Shark": res(a.actor, "role", t.role, YT); results[results.length - 1].is = true; break;
       // "Not your mark" is a result like any other: a Fog Night or the Forger can change it (Nik, 15 Nov).
-      case "Assassin": { const me = P(a.actor); if (me.mark && !me.won) res(a.actor, "mark", t.id !== me.mark, tn); break; }
+      case "Assassin": { const me = P(a.actor); if (me.mark && !me.won) res(a.actor, "mark", t.id !== me.mark, YT); break; }
       case "Fence": case "Pawnbroker": case "Innkeeper": break;
       default: break;
     }
@@ -539,11 +541,11 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
     switch (x.kind) {
       case "evil": return `${x.pre} is ${x.value ? "Evil" : "Innocent"}.`;
       case "type": return `${x.pre} is a ${x.value} role.`;
-      case "role": return `${x.pre}: ${x.value}.`.replace("::", ":");
+      case "role": return x.is ? `${x.pre} is the ${x.value}.` : `${x.pre}: ${x.value}.`.replace("::", ":");
       case "names": return (x.value as string[]).length ? `${x.pre}: ${(x.value as string[]).join(", ")}.` : `${x.pre}: nobody.`;
       case "count": return `${x.pre} ${x.value}.`;
       case "friends": return `${x.pre} are ${x.value ? "friends" : "enemies"}.`;
-      case "mark": return x.value ? `${x.pre}: not your mark.` : "";
+      case "mark": return x.value ? `${x.pre} is not your mark.` : "";
       default: return String(x.value);
     }
   };
@@ -555,7 +557,9 @@ export function resolveNight(s: GameState, r: Rng): Msg[] {
   for (const x of delivered) { const t = render(x); if (t) say(x.to, t); }
   for (const a of has("Warden")) {
     const t = a.targets[0]; if (silenced(a.actor)) continue;
-    for (const x of delivered) if (x.to === t && render(x)) say(a.actor, `Your target's result: ${render(x)}`);
+    // The Warden hears the patrolled player's result, reworded so "your target" means theirs.
+  const theirs = (txt: string) => txt.replace(/^Your two targets/, "Their two targets").replace(/^Your target/, "Their target").replace("your mark", "their mark");
+  for (const x of delivered) if (x.to === t && render(x)) say(a.actor, `Your target's result: ${theirs(render(x))}`);
     if (dying.has(t)) say(a.actor, `Your target was killed by ${(killers.get(t) ?? []).map((k) => P(k).name).join(", ")}.`);
   }
   for (const id of heldNotes) say(id, "You were Held tonight and could not act.");
