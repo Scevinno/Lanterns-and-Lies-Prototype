@@ -374,8 +374,15 @@ describe("win conditions and chat", () => {
     expect(w(["Ripper", "Spy"])).toBeNull(); expect(w(["Mobster", "Spy", "Doctor"])).toBeNull(); expect(w(["Ripper", "Spy", "Doctor"])).toBeNull();
   });
   const endDay = (roles: string[], d: number, mode: "Mafia" | "Syndicate" = "Mafia") => { const s = game(roles, d, mode); s.phase = "vote"; s.day = d; s.trial = 1; s.endsAt = T0; return s; };
-  it("day cap: evil and an Unbound killer both alive at the end of Day 7 means evil only", () => {
-    const s = endDay(["Mobster", "Ripper", "Spy", "Doctor"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.winner).toBe("The Mafia"); expect(s.winners).toEqual(["p0"]);
+  const cap = (roles: string[]) => { const s = endDay(roles, 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); return s; };
+  it("day cap (Nik, 15 Nov): a living Unbound killer wins when at most one other player of any side is alive", () => {
+    const s = cap(["Mobster", "Ripper"]); expect(s.winner).toBe("Ripper"); expect(s.winners).toEqual(["p1"]);
+    expect(cap(["Ripper", "Spy"]).winner).toBe("Ripper"); expect(cap(["Ripper", "Town Crier"]).winner).toBe("Ripper");
+  });
+  it("day cap (Nik, 15 Nov): with two or more others alive, a living Unbound killer stops the evil win and nobody wins", () => {
+    expect(cap(["Mobster", "Ripper", "Spy"]).winner).toBe("Nobody");
+    expect(cap(["Mobster", "Godfather", "Ripper"]).winner).toBe("Nobody");
+    expect(cap(["Mobster", "Ripper", "Spy", "Doctor"]).winner).toBe("Nobody");
   });
   it("quiet days alone no longer end the game", () => { const s = game(["Mobster", "Spy", "Doctor", "Seer"], 2); s.quietDays = 5; expect(checkWin(s)).toBe(false); });
   it("day cap: a living evil side wins at the end of Day 7, and not before", () => {

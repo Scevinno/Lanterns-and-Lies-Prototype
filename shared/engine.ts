@@ -67,7 +67,7 @@ export function rosterFor(size: number, mode: "Mafia" | "Syndicate"): RosterSlot
 }
 // Smuggler added (Nik, 12 Nov): two swappers of one kind make an ambiguous Night.
 const UNIQUE_EXTRA = new Set(["Veteran", "Ferryman", "Priest", "Swindler", "Smuggler"]);
-export const isUnique = (n: string) => { const r = roleDef(n); return r.type === "Power" || r.type === "Protective" || r.faction === "Unbound" || ((r.faction === "Mafia" || r.faction === "Syndicate") && r.type === "Killing") || UNIQUE_EXTRA.has(n); };
+export const isUnique = (n: string) => { const r = roleDef(n); return r.type === "Power" || r.faction === "Unbound" || ((r.faction === "Mafia" || r.faction === "Syndicate") && r.type === "Killing") || UNIQUE_EXTRA.has(n); };
 const pool = (f: Faction, types: string[]) => ROLES.filter((r) => r.faction === f && types.includes(r.type)).map((r) => r.name);
 const score = (deck: string[]) => deck.reduce((s, n) => s + roleDef(n).total + 2, 0);
 function fill(slots: [string, string[]][], r: Rng): string[] | null {
@@ -673,12 +673,20 @@ function finish(s: GameState, w: string) {
   const side = w === "The Lanternkeepers" ? "Lanternkeepers" : w === "The Mafia" ? "Mafia" : w === "The Syndicate" ? "Syndicate" : null;
   s.winners = s.players.filter((p) => (side && p.faction === side) || p.won || (p.role === w) || (p.role === "Outcast" && p.alive)).map((p) => p.id);
 }
-/** Night cap (Nik, 6 Nov): after the last Night, a living evil side wins. With no evil left, nobody does. */
-/** At the end of Day 7, after the usual win check: a living evil side wins; otherwise nobody does (a draw). */
+/** At the end of Day 7, after the usual win check (Nik, 15 Nov):
+ *  - a living Unbound killer wins if at most one other player is alive, of any side;
+ *  - otherwise the evil side wins if at least one member is alive and no Unbound killer is;
+ *  - otherwise nobody does (a draw). */
 function dayCap(s: GameState): Msg[] {
-  const evilAlive = alive(s).some(isEvil);
-  finish(s, evilAlive ? `The ${s.mode}` : "Nobody");
-  return [{ channel: "town", text: evilAlive ? `Seven days have passed, and the ${s.mode} still walks free.` : "Seven days have passed." }, overMsg(s)];
+  const lv = alive(s), uk = lv.filter(isUK);
+  const evCount = lv.filter(isEvil).length;
+  if (uk.length && lv.length - uk.length <= 1) {
+    finish(s, uk[0].role);
+    return [{ channel: "town", text: `Seven days have passed, and the ${uk[0].role} has the town at their mercy.` }, overMsg(s)];
+  }
+  const evilWins = evCount > 0 && !uk.length;
+  finish(s, evilWins ? `The ${s.mode}` : "Nobody");
+  return [{ channel: "town", text: evilWins ? `Seven days have passed, and the ${s.mode} still walks free.` : "Seven days have passed." }, overMsg(s)];
 }
 function startNight(s: GameState, now: number, r: Rng): Msg[] {
   s.night++; s.actions = {}; s.votes = {}; s.verdicts = {}; s.accused = null; s.trial = 0; s.commanded = null; s.condemned = false;
@@ -782,7 +790,7 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
     }
     case "dusk": return s.day >= MAX_DAYS ? dayCap(s) : startNight(s, now, r);
     case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now);
-      return [{ channel: "town", text: `Day ${s.day}.` }, ...(s.day === MAX_DAYS ? [{ channel: "town" as const, text: "This is the last day. If the evil side survives it, they win." }] : [])];
+      return [{ channel: "town", text: `Day ${s.day}.` }, ...(s.day === MAX_DAYS ? [{ channel: "town" as const, text: "This is the last day. If the evil side survives it and no Unbound killer is alive, they win." }] : [])];
     default: return [];
   }
 }

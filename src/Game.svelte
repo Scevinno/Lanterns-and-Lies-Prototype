@@ -20,7 +20,7 @@
   let sheetEl: HTMLDivElement | null = null, sheetScroll = 0;
   const closeLibRole = async () => { libRole = null; await svelteTick(); if (sheetEl) sheetEl.scrollTop = sheetScroll; };
   const closeRoster = () => { showRoster = false; rosterView = "roster"; libRole = null; };
-  let showRoster = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
+  let showRoster = false, leaving = false, decoy = "", hideTimer: any = null, chatOpen = false, seen = 0;
   // Game over (Nik, 8 Nov): the players or the chat fill the screen, one at a time, with Home on both.
   let overTab: "players" | "chat" = "players";
   $: pub = party.public_state;
@@ -148,6 +148,8 @@
         </li>{/each}</ul>
     </aside>
   {/if}
+  <!-- Desktop (Nik, 15 Nov): the logo in the top left always takes you home; while the game is running it asks first. -->
+  {#if $desk}<button class="brand gbrand" aria-label="Home" on:click={() => (phase === "over" ? onHome() : (leaving = true))}>Lanterns <span class="amp">&amp;</span> Lies</button>{/if}
   <header class="bar">
     <span class="dim">{period}</span>
     <button class="chip {inPerson && !showRole ? '' : FACTION_CLASS[view.faction]}" aria-label={inPerson && !showRole ? "Show my role" : "Hide my role"} on:click={() => (showRole = !showRole)}>{chipLabel}</button>
@@ -258,13 +260,13 @@
   {#if phase === "verdict" && view.canVerdict && !isDead && !paused && !(showRole && !$desk)}
     <div class="vpop" role="dialog" aria-label="Verdict">
       <p><b>{nameOf(pub.accused)}</b><br /><span class="dim small">Guilty or innocent?</span></p>
-      <div class="pair"><button class:sel={view.myVerdict === "guilty"} disabled={busy} on:click={() => act("verdict", { choice: "guilty" })}>Guilty</button><button class:sel={view.myVerdict === "innocent"} disabled={busy} on:click={() => act("verdict", { choice: "innocent" })}>Innocent</button></div>
+      <div class="pair"><button class="guilty" class:sel={view.myVerdict === "guilty"} disabled={busy} on:click={() => act("verdict", { choice: "guilty" })}>Guilty</button><button class:sel={view.myVerdict === "innocent"} disabled={busy} on:click={() => act("verdict", { choice: "innocent" })}>Innocent</button></div>
     </div>
   {/if}
   <!-- Game over (Nik, 10 Nov): Chat/Players and Home sit in their own bar at the bottom, spaced away from the list. -->
-  {#if phase === "over" && !showRole}
+  {#if phase === "over" && !showRole && !$desk}
     <div class="pair overbar">
-      {#if $desk}<span></span>{:else if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
+      {#if overTab === "players"}<button class="ghost" on:click={() => (overTab = "chat")}>Chat</button>{:else}<button class="ghost" on:click={() => (overTab = "players")}>Players</button>{/if}
       <button class="go" on:click={onHome}>Home</button>
     </div>
   {/if}
@@ -276,6 +278,15 @@
         <p class="dim">{pub.pausedBy ?? "Someone"} paused the game. {fmt(Math.ceil((pub.pausedLeft ?? 0) / 1000))} left in this phase.</p>
         <p class="dim small">Votes, night choices and the evil side's chat wait until the game resumes. Anyone can resume it.</p>
         <button class="go wide" disabled={busy} on:click={() => act("resume")}>Resume</button>
+      </div>
+    </div>
+  {/if}
+  {#if leaving}
+    <div class="overlay" role="dialog" aria-modal="true" aria-label="Leave the game">
+      <div class="sheet tc">
+        <h2>Leave the game?</h2>
+        <p class="dim">The game carries on without you.</p>
+        <div class="pair"><button class="ghost" on:click={() => (leaving = false)}>Stay</button><button class="go" on:click={() => { leaving = false; onHome(); }}>Leave</button></div>
       </div>
     </div>
   {/if}

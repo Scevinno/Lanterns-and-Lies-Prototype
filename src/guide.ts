@@ -28,8 +28,8 @@ export const HOW_TO_PLAY: Section[] = [
   ] },
   { title: "Winning", kind: "sides", body: [
     "Lanternkeepers win when the evil side and every Unbound killer are eliminated.",
-    "The evil side (Mafia or Syndicate) wins when every Lanternkeeper and every Unbound killer is gone, or if at least one member is alive at the end of Day 7.",
-    "An Unbound killer wins only by being the last one standing before Day 7 ends. If only an Unbound killer is left at the end of Day 7, they win.",
+    "The evil side (Mafia or Syndicate) wins when every Lanternkeeper and every Unbound killer is gone, or if at least one member is alive at the end of Day 7 and no Unbound killer is.",
+    "An Unbound killer wins by being the last one standing, or by being alive at the end of Day 7 with at most one other player left, of any side.",
     "Other Unbound roles chase their own goals, and can win alongside anyone.",
     "There is no win by numbers: the game runs until a side is actually gone.",
   ] },

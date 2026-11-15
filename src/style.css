@@ -364,7 +364,7 @@ html.desk .gright .term-title { margin-top:4px; }
 html.desk .gshell .grid { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
 html.desk .gbox.on { border-color:var(--lamp); }
 /* Game: players on the left, the action in the middle, chat always open on the right */
-html.desk main.game { display:grid; grid-template-columns:300px minmax(0,1fr) 400px; grid-template-rows:auto auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title role" "list panel role" "list chat role" "list foot role"; max-width:1600px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
+html.desk main.game { display:grid; grid-template-columns:400px minmax(0,1fr) 400px; grid-template-rows:auto auto auto minmax(0,1fr) auto; grid-template-areas:"bar bar bar" "list title role" "list panel role" "list chat role" "list foot role"; max-width:1600px; height:100dvh; margin:0 auto; padding:16px 24px; gap:12px 20px; }
 html.desk .game .bar { grid-area:bar; border:none; justify-content:center; gap:18px; }
 html.desk .game .bar > span:first-child { flex:none; font-family:"Almendra",Georgia,serif; font-size:26px; color:var(--text); }
 html.desk .game .timer { flex:none; font-family:"Almendra",Georgia,serif; font-size:30px; color:var(--lamp); }
@@ -373,7 +373,9 @@ html.desk .plist { grid-area:list; overflow-y:auto; background:rgba(14,18,28,.84
 html.desk .plist h3 { margin:4px 6px 8px; color:var(--dim); }
 html.desk .plist li { display:flex; align-items:center; gap:10px; padding:9px 6px; border-bottom:1px solid rgba(160,180,215,.12); }
 html.desk .plist li:last-child { border-bottom:none; }
-html.desk .plist .nm { flex:1; min-width:0; }
+html.desk .plist .nm { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+html.desk .game .gbrand { position:fixed; top:14px; left:28px; z-index:5; font:700 26px "Almendra",Georgia,serif; background:none; border:none; padding:0; min-height:0; }
+html.desk .game .gbrand .amp { color:#E8B553; }
 html.desk .plist .dot { width:11px; height:11px; border-radius:50%; background:var(--lamp); box-shadow:0 0 10px var(--lamp); flex:none; }
 html.desk .plist .dot.out { background:#333a4a; box-shadow:none; }
 html.desk .plist li.gone .nm { color:var(--dim); text-decoration:line-through; }
@@ -413,3 +415,6 @@ button.pick.s1, .picker button.s1 { border-color:#8fb0ea; background:#1d2a45; co
 /* Verdict pop-up (Nik, 14 Nov): small, see-through, in the middle of the screen. */
 .vpop { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(340px, calc(100vw - 48px)); background:rgba(14,18,28,.8); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border:1px solid rgba(217,164,65,.45); border-radius:14px; padding:16px; z-index:8; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.5); }
 .vpop p { margin:0 0 12px; font-size:20px; }
+
+/* Verdict (Nik, 15 Nov): a chosen Guilty is red; Innocent keeps the gold highlight. */
+.vpop .pair button.guilty.sel { border-color:var(--syn); background:#4a1820; }
