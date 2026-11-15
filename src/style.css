@@ -250,7 +250,7 @@ button.term:focus-visible { outline:2px solid var(--lamp); outline-offset:2px; b
 .mx th.rowh { text-align:left; padding-left:4px; }
 .mx td { text-align:center; height:42px; border-radius:6px; font-size:18px; font-weight:700; position:relative; }
 .mx td.die { background:rgba(239,68,68,.22); color:#ff9a9a; } .mx td.live { background:rgba(74,222,128,.16); color:#8af0b0; }
-.mx td.eq { outline:2px dashed var(--lamp); outline-offset:-3px; } .mx td.eq::after { content:"="; position:absolute; top:2px; right:5px; font-size:10px; color:var(--lamp); }
+.mx .ico { width:22px; height:22px; vertical-align:middle; } .mxkey .ico { width:16px; height:16px; vertical-align:-3px; margin-right:2px; }
 .mxkey { display:flex; gap:12px; justify-content:center; font-size:12px; color:var(--dim); margin:6px 0 2px; flex-wrap:wrap; } .k-die { color:#ff9a9a; } .k-live { color:#8af0b0; }
 .legend { display:flex; flex-wrap:wrap; gap:6px 12px; font-size:12px; color:var(--dim); align-items:center; padding:4px 0 8px; } .legend > span { display:flex; align-items:center; gap:5px; }
 .thead { display:grid; grid-template-columns:1fr 66px 66px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); padding:6px 2px 4px; border-bottom:1px solid var(--line); }

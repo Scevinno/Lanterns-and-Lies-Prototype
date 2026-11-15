@@ -1,4 +1,7 @@
 <script lang="ts">
+  // Attack and Defence table (Nik, 15 Nov): a crimson skull for "dies", a white outlined shield for "survives".
+  const SKULL = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="#dc143c" d="M12 3c-4.4 0-8 3.1-8 7.2 0 2.4 1.2 4.3 3 5.5V19a1 1 0 0 0 1 1h1.5v-2h1.2v2h2.6v-2h1.2v2H16a1 1 0 0 0 1-1v-3.3c1.8-1.2 3-3.1 3-5.5C20 6.1 16.4 3 12 3z"/><circle cx="9" cy="11" r="1.9" fill="#14161c"/><circle cx="15" cy="11" r="1.9" fill="#14161c"/><path d="M12 13.4l-1.1 2.1h2.2z" fill="#14161c"/></svg>';
+  const SHIELD = '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round" d="M12 3l7 3v5.5c0 4.3-3 7.9-7 9.5-4-1.6-7-5.2-7-9.5V6z"/></svg>';
   // The Guide (Nik, 12 Nov; Creative Coach's Idea 1): one menu under Home for Roles, How to play,
   // Attack & Defence and the Glossary. Roles keeps its own screen (library and rosters).
   import { HOW_TO_PLAY, COMBAT_RULE, GLOSSARY, TERM_GROUPS, termById, type Term } from "./guide";
@@ -76,9 +79,9 @@
     <p class="rule1">{COMBAT_RULE}</p>
     <table class="mx">
       <tr><th class="rowh"></th>{#each [0, 1, 2, 3] as d}<th>{@html badge("d", d)}<small>{d ? LNAME[d] : "No defence"}</small></th>{/each}</tr>
-      {#each [1, 2, 3] as a}<tr><th class="rowh">{@html badge("a", a)}<small>{LNAME[a]}</small></th>{#each [0, 1, 2, 3] as d}<td class:die={a > d} class:live={a <= d} class:eq={a === d}>{a > d ? "✕" : "✓"}</td>{/each}</tr>{/each}
+      {#each [1, 2, 3] as a}<tr><th class="rowh">{@html badge("a", a)}<small>{LNAME[a]}</small></th>{#each [0, 1, 2, 3] as d}<td class:die={a > d} class:live={a <= d} aria-label={a > d ? "dies" : "survives"}>{@html a > d ? SKULL : SHIELD}</td>{/each}</tr>{/each}
     </table>
-    <div class="mxkey"><span><b class="k-die">✕</b> dies</span><span><b class="k-live">✓</b> survives</span><span><b class="lamp">=</b> equal: survives</span></div>
+    <div class="mxkey"><span>{@html SKULL} dies</span><span>{@html SHIELD} survives</span></div>
     <h3>Who has what</h3>
     <div class="legend">
       <span>{@html badge("a", 1)}{@html badge("a", 2)}{@html badge("a", 3)} Attack</span>
