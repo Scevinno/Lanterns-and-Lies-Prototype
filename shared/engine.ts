@@ -634,7 +634,9 @@ function succession(s: GameState, r: Rng, say: (to: string, t: string) => void, 
   if (s.mode === "Mafia") {
     const gf = lv.find((p) => p.role === "Godfather"), mob = lv.find((p) => p.role === "Mobster");
     if (!gf && mob && s.hadGodfather) { setRole(mob, "Godfather"); say(mob.id, "The Godfather is dead. You are now the Godfather."); }
-    else if (!gf && !mob && died("Mobster")) { const c = lv.filter((p) => p.faction === "Mafia"); if (c.length) { const n = pick(c, r); setRole(n, "Mobster"); say(n.id, "You are now the Mobster."); } }
+    // A Mafia killer always exists (Nik, 15 Nov): with neither a Godfather nor a Mobster alive (a dead Mobster, or a lone
+    // Godfather at 8-9 players dying), a random living Mafia member becomes the Mobster. A dead Mobster under a living Godfather is not replaced.
+    else if (!gf && !mob && (died("Mobster") || died("Godfather"))) { const c = lv.filter((p) => p.faction === "Mafia"); if (c.length) { const n = pick(c, r); setRole(n, "Mobster"); say(n.id, "You are now the Mobster."); } }
   } else if (!lv.some((p) => p.role === "Foreman") && died("Foreman")) {
     const power = lv.find((p) => p.faction === "Syndicate" && roleDef(p.role).type === "Power");
     if (!power || power.role === "Kingpin") { const c = lv.filter((p) => p.faction === "Syndicate" && p.role !== "Kingpin"); if (c.length) { const n = pick(c, r); setRole(n, "Foreman"); say(n.id, "You are now the Foreman."); } }

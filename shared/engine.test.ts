@@ -270,6 +270,15 @@ describe("Mafia succession and others", () => {
   it("Mobster becomes Godfather when the Godfather dies", () => {
     const s = game(["Godfather", "Mobster", "Veteran"], 2); s.players[0].role = "Godfather"; act(s, 0, 2); s.actions.p2 = { targets: [], alert: true }; s.players[0].alive = false; run(s); expect(s.players[1].role).toBe("Godfather");
   });
+  it("A lone Godfather dies: a random Mafia member becomes the Mobster (Nik, 15 Nov)", () => {
+    const s = game(["Godfather", "Framer", "Veteran"], 2); s.players[0].alive = false; act(s, 1, 2); run(s); expect(s.players[1].role).toBe("Mobster");
+  });
+  it("Mobster dies under a living Godfather: nobody is promoted", () => {
+    const s = game(["Godfather", "Mobster", "Framer", "Veteran"], 2); s.players[1].alive = false; act(s, 2, 3); run(s); expect(s.players[2].role).toBe("Framer"); expect(s.players[0].role).toBe("Godfather");
+  });
+  it("Promoted Godfather dies: a random Mafia member becomes the Mobster", () => {
+    const s = game(["Godfather", "Mobster", "Framer", "Veteran"], 2); s.players[0].alive = false; s.players[1].role = "Godfather"; s.players[1].ability = "Godfather"; s.players[1].alive = false; act(s, 2, 3); run(s); expect(s.players[2].role).toBe("Mobster");
+  });
   it("Priest raises the dead; Rogue returns with one bullet", () => {
     const s = game(["Priest", "Rogue", "Spy"], 2); s.players[1].alive = false; s.players[1].bullets = 0; act(s, 0, 1); run(s); expect(dead(s, 1)).toBe(false); expect(s.players[1].bullets).toBe(1);
   });
