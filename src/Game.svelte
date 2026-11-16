@@ -141,7 +141,10 @@
             {#if view.canCondemn && p.id !== view.player_id}<button class="pick cond" disabled={busy} on:click={() => act("condemn", { target: p.id })}>Condemn</button>{/if}
             {#if view.canVote && !isDead && p.id !== view.player_id && !p.shipped}<button class="pick" class:s0={view.myVote === p.id} disabled={busy} on:click={() => act("vote", { target: view.myVote === p.id ? null : p.id })}>{view.myVote === p.id ? "Voted" : "Vote"}</button>{/if}
           {:else if phase === "night" && !isDead && pool.some((o) => o.id === p.id)}
-            <button class="pick" class:s0={at === 0} class:s1={at === 1} disabled={busy || !canTake(p.id)} on:click={() => tap(p.id)}>{at >= 0 ? (slots.length > 1 ? slots[at].label : "Chosen") : "Choose"}</button>
+            <!-- Self powers (Nik, 16 Nov): anything you do to yourself sits on your own name, like a visit. The Tinkerer's self-pick reads Trigger. -->
+            <button class="pick" class:s0={at === 0} class:s1={at === 1} disabled={busy || !canTake(p.id)} on:click={() => tap(p.id)}>{p.id === view.player_id && view.role === "Tinkerer" ? (at >= 0 ? "Triggering" : "Trigger") : at >= 0 ? (slots.length > 1 ? slots[at].label : "Chosen") : "Choose"}</button>
+          {:else if phase === "night" && !isDead && p.id === view.player_id && view.prompt?.toggle}
+            <button class="pick" class:s0={view.action?.alert} disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? (view.prompt.toggleOn ?? "Chosen") : view.prompt.toggle}</button>
           {:else if phase === "night" && !isDead && inPerson && !view.prompt && p.alive && p.id !== view.player_id}
             <button class="pick" class:s0={decoy === p.id} on:click={() => (decoy = p.id)}>{decoy === p.id ? "Chosen" : "Choose"}</button>
           {/if}
@@ -173,7 +176,7 @@
       {:else if phase === "night"}
         {#if slots.length}
           <div class="nightbar"><span>{view.prompt.label}{#if view.commanded && nPrimary === 1}. The Kingpin commands a second target{/if}. Choose on the left.</span>{#if slots.length > 1}<span class="legend">{#each slots as sl, k}<span class="lg s{k}">{sl.label}</span>{/each}</span>{/if}{#if view.action}<button class="ghost" disabled={busy} on:click={clearPicks}>Clear</button>{/if}</div>
-        {:else if view.prompt}<p class="dim">Your power for tonight is on the right.</p>
+        {:else if view.prompt}<p class="dim">{view.prompt.label.replace(/\.$/, "")}. Use the button on your own name on the left.</p>
         {:else if inPerson}<p class="dim small">You have no action tonight. Choose a name on the left anyway, so nobody in the room can tell. Nothing is sent.</p>
         {:else}<p class="dim">You have nothing to do tonight.</p>{/if}
       {:else if phase === "dawn"}<p class="dim">The sun comes up over the river.</p>
@@ -244,7 +247,7 @@
     {:else if !pub.townChat && tab === "town" && phase !== "night"}<p class="dim small pad">Town chat is off. Talk out loud.</p>{/if}
   </section>
   {#if $desk}
-    <!-- Desktop (Nik, 14 Nov): your role stays on the right for the whole game, with night powers like Reveal or Alert under it. -->
+    <!-- Desktop (Nik, 14 Nov): your role stays on the right for the whole game. Powers are never here: they sit on your own name on the left (16 Nov). -->
     <aside class="rcol" aria-label="Your role">
       {#if inPerson && !showRole && phase !== "over"}
         <p class="dim">Your role is hidden, so nobody can read it over your shoulder.</p><button class="wide" on:click={() => (showRole = true)}>Show my role</button>
@@ -252,9 +255,6 @@
         <RoleCard role={myRole} guideLinks={false} />
         <RoleExtras {view} />
         {#if inPerson && phase !== "over"}<button class="ghost wide" on:click={() => (showRole = false)}>Hide my role</button>{/if}
-      {/if}
-      {#if phase === "night" && !isDead && view.prompt?.toggle}
-        <div class="side power"><p>{view.prompt.label}</p><button class:sel={view.action?.alert} class="wide" disabled={busy} on:click={() => act("night", { targets: [], alert: !view.action?.alert })}>{view.action?.alert ? (view.prompt.toggleOn ?? "Chosen") : view.prompt.toggle}</button></div>
       {/if}
     </aside>
   {/if}
