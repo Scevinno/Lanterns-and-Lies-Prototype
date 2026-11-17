@@ -305,12 +305,12 @@ describe("Mafia succession and others", () => {
     act(w, 3, 2); run(w); expect(w.players[0].won).toBe(true);
   });
   it("Assassin: the deal names how many players hold a shared mark", () => {
-    for (let k = 1; k <= 60; k++) {
-      const players = Array.from({ length: 15 }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: false }));
-      const { state: s, msgs } = createGame({ players, mode: "Mafia", timers: PUBLIC_TIMERS, townChat: true }, seeded(k), T0);
+    for (const mode of ["Mafia", "Syndicate"] as const) for (let k = 1; k <= 60; k++) {
+      const players = Array.from({ length: 8 + (k % 8) }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: false }));
+      const { state: s, msgs } = createGame({ players, mode, timers: PUBLIC_TIMERS, townChat: true }, seeded(k), T0);
       const a = s.players.find((p) => p.role === "Assassin"); if (!a) continue;
       const holders = s.players.filter((p) => p.role === a.markRole).map((p) => p.id); expect(a.marks).toEqual(holders);
-      expect(roleDef(a.markRole!).faction).toMatch(/Mafia|Syndicate/);
+      expect(roleDef(a.markRole!).faction).toMatch(/Mafia|Syndicate/); expect(roleDef(a.markRole!).type).not.toBe("Power");
       if (holders.length > 1) expect(msgs.find((x) => x.to === a.id)!.text).toContain(`${holders.length} players hold it`);
     }
   });

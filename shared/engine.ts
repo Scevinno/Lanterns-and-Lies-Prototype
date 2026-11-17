@@ -110,14 +110,16 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Town Crier") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.crierTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
-    // Assassin (Nik, 15 Nov; order swapped 17 Nov): two marks, one at a time. The first is a member of the evil side; the mark
-    // is the player, so it holds even if their role changes later. The second, a Lanternkeeper who is not a Power role, is
-    // given at nightfall after the first dies.
+    // Assassin (Nik, 15 Nov; order swapped 17 Nov): two marks, one at a time, never a Power role (Nik, 17 Nov). The first is a
+    // member of the evil side; the mark is the player, so it holds even if their role changes later. The second, a
+    // Lanternkeeper, is given at nightfall after the first dies. With no eligible evil player, the contract starts at the second.
     if (p.role === "Assassin") {
-      const c = players.filter((x) => x.id !== p.id && isEvil(x)); const m = pick(c, r);
+      const c = players.filter((x) => x.id !== p.id && isEvil(x) && roleDef(x.role).type !== "Power");
+      const lk = players.filter((x) => x.id !== p.id && x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power");
+      const stage = c.length ? 1 : 2; const pool = c.length ? c : lk; const m = pick(pool, r);
       // Shared roles (Nik, 17 Nov): every player holding the mark's role is a mark; the first of them to die completes it.
-      const same = c.filter((x) => x.role === m.role).map((x) => x.id);
-      p.mark = m.id; p.marks = same; p.markRole = m.role; p.markStage = 1; msgs.push({ channel: "private", to: p.id, text: markText("Your first mark", m.role, same.length) });
+      const same = pool.filter((x) => x.role === m.role).map((x) => x.id);
+      p.mark = m.id; p.marks = same; p.markRole = m.role; p.markStage = stage; msgs.push({ channel: "private", to: p.id, text: markText(stage === 1 ? "Your first mark" : "Nobody on the evil side can be marked, so your contract starts at the second mark. Your mark", m.role, same.length) });
     }
   }
   msgs.push({ channel: "town", text: "A new game begins in Emberhollow. Read your role." });
