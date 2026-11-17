@@ -700,20 +700,26 @@ function finish(s: GameState, w: string) {
   const side = w === "The Lanternkeepers" ? "Lanternkeepers" : w === "The Mafia" ? "Mafia" : w === "The Syndicate" ? "Syndicate" : null;
   s.winners = s.players.filter((p) => (side && p.faction === side) || p.won || (p.role === w) || (p.role === "Outcast" && p.alive)).map((p) => p.id);
 }
-/** At the end of Day 7, after the usual win check (Nik, 15 Nov):
+/** At the end of Day 7, or as soon as only two players are left (Nik, 17 Nov), after the usual win check (Nik, 15 Nov):
  *  - a living Unbound killer wins if at most one other player is alive, of any side;
  *  - otherwise the evil side wins if at least one member is alive and no Unbound killer is;
  *  - otherwise nobody does (a draw). */
-function dayCap(s: GameState): Msg[] {
+function dayCap(s: GameState, opener = "Seven days have passed"): Msg[] {
   const lv = alive(s), uk = lv.filter(isUK);
   const evCount = lv.filter(isEvil).length;
   if (uk.length && lv.length - uk.length <= 1) {
     finish(s, uk[0].role);
-    return [{ channel: "town", text: `Seven days have passed, and the ${uk[0].role} has the town at their mercy.` }, overMsg(s)];
+    return [{ channel: "town", text: `${opener}, and the ${uk[0].role} has the town at their mercy.` }, overMsg(s)];
   }
   const evilWins = evCount > 0 && !uk.length;
   finish(s, evilWins ? `The ${s.mode}` : "Nobody");
-  return [{ channel: "town", text: evilWins ? `Seven days have passed, and the ${s.mode} still walks free.` : "Seven days have passed." }, overMsg(s)];
+  return [{ channel: "town", text: evilWins ? `${opener}, and the ${s.mode} still walks free.` : `${opener}.` }, overMsg(s)];
+}
+/** The usual win check, then the Day 7 rules early once only two players are left (Nik, 17 Nov). */
+function settle(s: GameState): Msg[] | null {
+  if (checkWin(s)) return [overMsg(s)];
+  if (alive(s).length === 2) return dayCap(s, "Only two players are left standing");
+  return null;
 }
 function startNight(s: GameState, now: number, r: Rng): Msg[] {
   s.night++; s.actions = {}; s.votes = {}; s.verdicts = {}; s.accused = null; s.trial = 0; s.commanded = null; s.condemned = false;
@@ -755,7 +761,7 @@ function passOnGuilt(s: GameState, r: Rng, martyr: Player, say: (to: string, t: 
   succession(s, r, say, [was]);
 }
 const afterExecutionOrDay = (s: GameState, now: number, _r: Rng, msgs: Msg[]): Msg[] => {
-  if (checkWin(s)) return [...msgs, overMsg(s)];
+  const end = settle(s); if (end) return [...msgs, ...end];
   setPhase(s, "dusk", DUSK_SECONDS, now);
   return [...msgs, { channel: "town", text: "Dusk falls over Emberhollow. Night comes soon." }];
 };
@@ -813,7 +819,7 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
     case "night": {
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
       const msgs = resolveNight(s, r); s.actions = {};
-      if (checkWin(s)) return [...msgs, overMsg(s)];
+      const end = settle(s); if (end) return [...msgs, ...end];
       setPhase(s, "dawn", DAWN_SECONDS, now); return msgs;
     }
     case "dusk": return s.day >= MAX_DAYS ? dayCap(s) : startNight(s, now, r);

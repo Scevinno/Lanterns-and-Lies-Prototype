@@ -440,6 +440,19 @@ describe("win conditions and chat", () => {
   it("killing the last evil player on Night 7 still wins it for the Lanternkeepers", () => {
     const s = game(["Mobster", "Rogue", "Doctor"], 7); act(s, 1, 0); forceAdvance(s, T0, seeded(1)); expect(s.winner).toBe("The Lanternkeepers");
   });
+  it("two left (Nik, 17 Nov): the Day 7 rules apply at once after the Night that leaves two players", () => {
+    const s = game(["Ripper", "Assassin", "Spy"], 4); act(s, 0, 2); const m = forceAdvance(s, T0, seeded(1));
+    expect(s.phase).toBe("over"); expect(s.winner).toBe("Ripper"); expect(m.some((x) => x.text.includes("Only two players are left standing"))).toBe(true);
+  });
+  it("two left (Nik, 17 Nov): the Day 7 rules apply at once after the execution that leaves two players", () => {
+    const s = endDay(["Mobster", "Spy", "Doctor"], 3); s.phase = "verdict"; s.accused = "p2"; s.verdicts = { p0: "guilty", p1: "guilty" }; forceAdvance(s, T0, seeded(1));
+    expect(s.phase).toBe("over"); expect(s.winner).toBe("The Mafia");
+    const k = endDay(["Ripper", "Mobster", "Spy"], 3); k.phase = "verdict"; k.accused = "p2"; k.verdicts = { p0: "guilty", p1: "guilty" }; forceAdvance(k, T0, seeded(1));
+    expect(k.winner).toBe("Ripper");
+  });
+  it("two left: three players alive keeps the game going", () => {
+    const s = game(["Mobster", "Spy", "Doctor", "Seer"], 3); act(s, 0, 3); forceAdvance(s, T0, seeded(1)); expect(s.phase).toBe("dawn");
+  });
   it("day cap: with no evil left, an Unbound killer still alive means nobody wins", () => {
     const s = endDay(["Ripper", "Spy", "Doctor", "Seer"], 7); forceAdvance(s, T0, seeded(1)); forceAdvance(s, s.endsAt, seeded(1)); expect(s.phase).toBe("over"); expect(s.winner).toBe("Nobody");
   });
