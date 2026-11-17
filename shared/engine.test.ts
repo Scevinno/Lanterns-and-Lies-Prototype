@@ -292,17 +292,17 @@ describe("Mafia succession and others", () => {
     const w = game(["Assassin", "Spy", "Mobster", "Doctor"]); Object.assign(w.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
     act(w, 0, 3); const m = run(w); expect(dead(w, 3)).toBe(false); expect(said(m, 0)).toContain("Your target is not your mark.");
   });
-  it("Assassin: the second mark is a living evil player, chosen at nightfall after the first dies by any hand", () => {
-    const s = game(["Assassin", "Spy", "Mobster", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+  it("Assassin (order swapped, Nik 17 Nov): the second mark is a living non-Power Lanternkeeper, chosen at nightfall after the first dies by any hand", () => {
+    const s = game(["Assassin", "Mobster", "Spy", "Mayor", "Godfather"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Mobster", markStage: 1 });
     s.players[1].alive = false; s.phase = "dusk"; s.day = 2; forceAdvance(s, s.endsAt, seeded(3));
-    expect(s.players[0].markStage).toBe(2); expect(s.players[0].mark).toBe("p2"); expect(s.players[0].markRole).toBe("Mobster");
+    expect(s.players[0].markStage).toBe(2); expect(s.players[0].mark).toBe("p2"); expect(s.players[0].markRole).toBe("Spy");
   });
   it("Assassin (Nik, 17 Nov): a role two players hold makes both marks; the first to die moves the contract on", () => {
-    const s = game(["Assassin", "Hunter", "Hunter", "Mobster", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", marks: ["p1", "p2"], markRole: "Hunter", markStage: 1 });
+    const s = game(["Assassin", "Mobster", "Mobster", "Godfather", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", marks: ["p1", "p2"], markRole: "Mobster", markStage: 1 });
     act(s, 0, 2); const m = run(s); expect(dead(s, 2)).toBe(true); expect(said(m, 0)).not.toContain("not your mark");
     s.phase = "dusk"; s.day = 2; const n = forceAdvance(s, s.endsAt, seeded(3)); expect(s.players[0].markStage).toBe(2); expect(said(n, 0)).toContain("second mark");
-    const w = game(["Assassin", "Mobster", "Mobster", "Doctor", "Rogue"], 2); Object.assign(w.players[0], { mark: "p1", marks: ["p1", "p2"], markRole: "Mobster", markStage: 2 });
-    act(w, 4, 2); run(w); expect(w.players[0].won).toBe(true);
+    const w = game(["Assassin", "Spy", "Spy", "Mobster", "Rogue"], 2); Object.assign(w.players[0], { mark: "p1", marks: ["p1", "p2"], markRole: "Spy", markStage: 2 });
+    act(w, 3, 2); run(w); expect(w.players[0].won).toBe(true);
   });
   it("Assassin: the deal names how many players hold a shared mark", () => {
     for (let k = 1; k <= 60; k++) {
@@ -310,11 +310,12 @@ describe("Mafia succession and others", () => {
       const { state: s, msgs } = createGame({ players, mode: "Mafia", timers: PUBLIC_TIMERS, townChat: true }, seeded(k), T0);
       const a = s.players.find((p) => p.role === "Assassin"); if (!a) continue;
       const holders = s.players.filter((p) => p.role === a.markRole).map((p) => p.id); expect(a.marks).toEqual(holders);
+      expect(roleDef(a.markRole!).faction).toMatch(/Mafia|Syndicate/);
       if (holders.length > 1) expect(msgs.find((x) => x.to === a.id)!.text).toContain(`${holders.length} players hold it`);
     }
   });
-  it("Assassin: no evil player left at nightfall completes the contract", () => {
-    const s = game(["Assassin", "Spy", "Ripper", "Doctor", "Rogue"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Spy", markStage: 1 });
+  it("Assassin: no non-Power Lanternkeeper left at nightfall completes the contract", () => {
+    const s = game(["Assassin", "Mobster", "Ripper", "Mayor", "Godfather"], 2); Object.assign(s.players[0], { mark: "p1", markRole: "Mobster", markStage: 1 });
     s.players[1].alive = false; s.phase = "dusk"; s.day = 2; forceAdvance(s, s.endsAt, seeded(3)); expect(s.players[0].won).toBe(true);
   });
   it("Assassin: the second mark dying to someone else wins, at night or by vote", () => {

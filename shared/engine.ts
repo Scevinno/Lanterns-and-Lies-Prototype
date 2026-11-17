@@ -110,10 +110,11 @@ export function createGame(input: { players: { id: string; name: string; bot: bo
   const msgs: Msg[] = [];
   for (const p of players) {
     if (p.role === "Town Crier") { const c = players.filter((x) => x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const t = pick(c, r); p.crierTarget = t.id; msgs.push({ channel: "private", to: p.id, text: `Your target is ${t.name}. You win if they are voted out during the Day.` }); }
-    // Assassin (Nik, 15 Nov): two marks, one at a time. The first is a Lanternkeeper who is not a Power role; the mark is
-    // the player, so it holds even if their role changes later. The second is given at nightfall after the first dies.
+    // Assassin (Nik, 15 Nov; order swapped 17 Nov): two marks, one at a time. The first is a member of the evil side; the mark
+    // is the player, so it holds even if their role changes later. The second, a Lanternkeeper who is not a Power role, is
+    // given at nightfall after the first dies.
     if (p.role === "Assassin") {
-      const c = players.filter((x) => x.id !== p.id && x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power"); const m = pick(c, r);
+      const c = players.filter((x) => x.id !== p.id && isEvil(x)); const m = pick(c, r);
       // Shared roles (Nik, 17 Nov): every player holding the mark's role is a mark; the first of them to die completes it.
       const same = c.filter((x) => x.role === m.role).map((x) => x.id);
       p.mark = m.id; p.marks = same; p.markRole = m.role; p.markStage = 1; msgs.push({ channel: "private", to: p.id, text: markText("Your first mark", m.role, same.length) });
@@ -645,14 +646,14 @@ function contractDone(s: GameState, say: (to: string, t: string) => void, diedNo
     p.won = true; say(p.id, "Your second mark is dead. Your contract is complete: you win.");
   }
 }
-/** At nightfall (Nik, 15 Nov): a dead first mark gives the Assassin a living member of the evil side as the second mark,
- *  chosen now so it can't be someone already dead. With nobody on the evil side left, the contract is complete. */
+/** At nightfall (Nik, 15 Nov; order swapped 17 Nov): a dead first mark gives the Assassin a living Lanternkeeper who is not a
+ *  Power role as the second mark, chosen now so it can't be someone already dead. With none left, the contract is complete. */
 function nextMark(s: GameState, r: Rng, msgs: Msg[]) {
   for (const p of alive(s)) {
     if (p.role !== "Assassin" || p.markStage !== 1 || !p.mark || p.won) continue;
     if (marksOf(p).every((id) => byId(s, id).alive && id !== p.id)) continue;
-    const c = alive(s).filter(isEvil);
-    if (!c.length) { p.won = true; msgs.push({ channel: "private", to: p.id, text: "Your first mark is dead, and nobody on the evil side is left. Your contract is complete: you win." }); continue; }
+    const c = alive(s).filter((x) => x.id !== p.id && x.faction === "Lanternkeepers" && roleDef(x.role).type !== "Power");
+    if (!c.length) { p.won = true; msgs.push({ channel: "private", to: p.id, text: "Your first mark is dead, and no Lanternkeeper is left to mark. Your contract is complete: you win." }); continue; }
     const m = pick(c, r); const same = c.filter((x) => x.role === m.role).map((x) => x.id); p.mark = m.id; p.marks = same; p.markRole = m.role; p.markStage = 2;
     msgs.push({ channel: "private", to: p.id, text: `Your first mark is dead. ${markText("Your second mark", m.role, same.length)}` });
   }

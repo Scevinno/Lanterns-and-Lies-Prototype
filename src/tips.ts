@@ -308,9 +308,9 @@ export const TIPS: Record<string, string[]> = {
     "You have only Light Defence on Clear Nights, so don't draw attention before one.",
   ],
   Assassin: [
-    "Your first mark is a Lanternkeeper. They often claim their role in the day chat, so listen for it.",
+    "Your first mark is on the evil side. The town wants them dead too, so you can work with it.",
     "Every \"not your mark\" rules a player out. Keep a list.",
-    "Once your first mark dies, your second is on the evil side. The town wants them dead too, so you can work with it.",
+    "Once your first mark dies, your second is a Lanternkeeper. They often claim their role in the day chat, so listen for it.",
     "You don't have to land the kill yourself. If your mark dies to anyone, the contract moves on.",
     "You read Evil to the Constable and an enemy to the Seer, so avoid drawing checks.",
   ],
