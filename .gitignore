@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 .env.*
+
+# Local email previews (built by supabase/templates/build.py --preview)
+supabase/templates/preview-*.html

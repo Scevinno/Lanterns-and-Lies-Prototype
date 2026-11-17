@@ -1,11 +1,33 @@
 <!-- Subject: Your Lanterns & Lies code -->
-<!-- Paste into Supabase: Authentication > Emails > Confirm signup. One home for this text: this file. -->
-<div style="background:#0e121c;padding:32px 16px;font-family:Georgia,'Times New Roman',serif;color:#e8e2d4">
-  <div style="max-width:440px;margin:0 auto;text-align:center">
-    <p style="font-size:22px;letter-spacing:.04em;margin:0 0 24px;color:#f2c46d">Lanterns &amp; Lies</p>
-    <p style="font-size:16px;line-height:1.5;margin:0 0 20px">Here is your code to confirm your email and finish your account.</p>
-    <p style="font-family:'Courier New',monospace;font-size:34px;letter-spacing:8px;margin:0 0 20px;color:#ffffff"><b>{{ .Token }}</b></p>
-    <p style="font-size:14px;line-height:1.5;color:#a9a394;margin:0 0 8px">The code works for one hour.</p>
-    <p style="font-size:14px;line-height:1.5;color:#a9a394;margin:0">If you didn't sign up, you can ignore this email.</p>
-  </div>
-</div>
+<!-- Paste into Supabase: Authentication > Emails > Confirm signup. Built by build.py; edit there. -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>Your Lanterns & Lies code</title></head>
+<body style="margin:0;padding:0;background:#14161C">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">Enter this code in the game to finish creating your account.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#14161C" style="background:#14161C">
+<tr><td align="center" style="padding:24px 12px">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px">
+  <tr><td style="padding:0"><img src="https://lanternsandlies.com/email/header.jpg" width="560" alt="Lanterns &amp; Lies" style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:12px 12px 0 0"></td></tr>
+  <tr><td bgcolor="#22252E" style="background:#22252E;border:1px solid #3A3E4A;border-top:0;border-radius:0 0 12px 12px;padding:32px 28px 28px;text-align:center">
+    <h1 style="margin:0 0 10px;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.25;font-weight:700;color:#EDE6D6">Confirm your email</h1>
+    <p style="margin:0 0 24px;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#EDE6D6">Enter this code in the game to finish creating your account.</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 22px">
+    <tr>
+      <td valign="middle" style="padding:0 14px 0 0"><img src="https://lanternsandlies.com/email/lantern.png" width="40" alt="" style="display:block;width:40px;height:auto;border:0"></td>
+      <td valign="middle" bgcolor="#14161C" style="background:#14161C;border:2px solid #D9A441;border-radius:10px;padding:14px 22px">
+        <span style="font-family:'Courier New',Courier,monospace;font-size:32px;line-height:1;letter-spacing:6px;font-weight:700;color:#D9A441">{{ .Token }}</span>
+      </td>
+    </tr>
+    </table>
+    <p style="margin:0 0 6px;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:#A9A497">The code works for one hour.</p>
+    <p style="margin:0;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:#A9A497">If you didn't sign up, you can ignore this email.</p>
+  </td></tr>
+  <tr><td style="padding:20px 8px 0;text-align:center;font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#A9A497">
+    <a href="https://lanternsandlies.com" style="color:#A9A497;text-decoration:none"><b style="color:#EDE6D6">Lanterns <span style="color:#D9A441">&amp;</span> Lies</b> &middot; lanternsandlies.com</a><br>
+    Questions? <a href="mailto:support@lanternsandlies.com" style="color:#A9A497">support@lanternsandlies.com</a>
+  </td></tr>
+  </table>
+</td></tr>
+</table>
+</body></html>
