@@ -122,11 +122,17 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     const { error } = await db.from("roles").upsert(ROLES.map(({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder, attack, defence }) => ({ id, name, faction, type, summary, ability, knowledge, killing, gameplay, drawback, total, image, placeholder, attack, defence })));
     if (error) throw error; return { roles: ROLES.length };
   },
-  // Prototype sign-up: creates a confirmed account, so trials don't depend on email delivery.
+  // Sign-up (Nik, 17 Nov): one account per email, and the owner proves it with a code sent there.
+  // The account is created unconfirmed; the phone then asks Supabase to send the code (resend, type "signup")
+  // and signs in by entering it. An email whose owner never confirmed is freed for the next sign-up.
   async signup(b) {
     const name = clean(b.name, 20), email = clean(b.email, 120).toLowerCase(), password = String(b.password ?? "");
-    if (name.length < 2) throw new Oops("Choose a name of at least 2 characters."); if (!email.includes("@")) throw new Oops("Enter a valid email."); if (password.length < 8) throw new Oops("Passwords need at least 8 characters.");
-    const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: name } });
+    if (name.length < 2) throw new Oops("Choose a name of at least 2 characters."); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Oops("Enter a valid email."); if (password.length < 8) throw new Oops("Passwords need at least 8 characters.");
+    const { data: found } = await db.rpc("lnl_email_status", { p_email: email });
+    const prior = (found ?? [])[0] as { id: string; confirmed: boolean } | undefined;
+    if (prior?.confirmed) throw new Oops("That email already has an account. Sign in instead.");
+    if (prior) await db.auth.admin.deleteUser(prior.id);
+    const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: false, user_metadata: { display_name: name } });
     if (error) throw new Oops(/already|registered|exists/i.test(error.message) ? "That email already has an account. Sign in instead." : error.message);
     await db.from("profiles").insert({ id: data.user.id, display_name: name, username: await freeUsername(name) }); return { ok: true };
   },
@@ -195,7 +201,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     if (!(await roster(b.party)).some((r) => r.is_bot)) throw new Oops("Skipping is only for test games.");
     await turn(b.party, (s) => (isPaused(s) ? [] : forceAdvance(s, Date.now(), mathRng))); return { ok: true };
   },
-  // Settings (Nik, 12 Nov). Email changes and password resets wait for the domain and an email service.
+  // Settings (Nik, 12 Nov). Email changes and password resets run on the phone through Supabase Auth's codes (17 Nov).
   async me(_b, req) {
     const u = await userOf(req); const { data: p } = await db.from("profiles").select("display_name, username").eq("id", u.id).maybeSingle();
     return { name: p?.display_name ?? "", username: p?.username ?? "", email: u.email, verified: !!u.email_confirmed_at };

@@ -23,7 +23,9 @@
   let session: any = null, ready = false, route = "home", err = "", busy = false;
   let roles: Role[] = [], pendingCode = "";
   // Sign-in
-  let mode: "in" | "up" = "in", email = "", password = "", name = "", showPw = false;
+  let mode: "in" | "up" | "code" | "forgot" | "newpw" = "in", email = "", password = "", name = "", showPw = false;
+  // Email codes (Nik, 17 Nov): a sign-up is confirmed, and a forgotten password reset, with a code sent to the email.
+  let codeFor: "signup" | "recovery" = "signup", otp = "", note = "", wait = 0, resetting = false, waitTimer: any;
   try { email = localStorage.getItem("lnl-email") ?? ""; } catch { /* storage blocked */ }
   // Create
   let size = 8, evil = "Random", inPerson = true, showCreateRoster = false;
@@ -59,20 +61,66 @@
     if (h === "games") loadGames();
     if (h === "home" && session) loadFriends();
   }
+  const remember = async () => {
+    try { localStorage.setItem("lnl-email", email); } catch { /* storage blocked */ }
+    // Ask the browser to save the login (Chrome and Android offer it here; Safari offers it from the form itself).
+    if (password) try { const PC = (window as any).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: name || email })); } catch { /* declined or unsupported */ }
+  };
+  const tooSoon = (m: string) => (/seconds|rate limit/i.test(m) ? "Wait a minute before asking for another code." : m);
+  function startWait() {
+    wait = 60; clearInterval(waitTimer);
+    waitTimer = setInterval(() => { wait -= 1; if (wait <= 0) clearInterval(waitTimer); }, 1000);
+  }
+  async function sendCode(kind: "signup" | "recovery") {
+    const { error } = kind === "signup" ? await sb.auth.resend({ type: "signup", email }) : await sb.auth.resetPasswordForEmail(email);
+    if (error) throw new Error(tooSoon(error.message));
+    codeFor = kind; otp = ""; mode = "code"; startWait();
+  }
   async function submitAuth() {
-    busy = true; err = "";
+    busy = true; err = ""; email = email.trim().toLowerCase();
     try {
-      if (mode === "up") await call("signup", { name, email, password });
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (!error) {
+      if (mode === "up") {
+        await call("signup", { name, email, password });
+        await sendCode("signup"); note = `We sent a code to ${email}. Enter it to confirm your email.`;
         try { localStorage.setItem("lnl-email", email); } catch { /* storage blocked */ }
-        // Ask the browser to save the login (Chrome and Android offer it here; Safari offers it from the form itself).
-        try { const PC = (window as any).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: name || email })); } catch { /* declined or unsupported */ }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error && /not confirmed/i.test(error.message)) { await sendCode("signup"); note = `Confirm your email first. We sent a code to ${email}.`; }
+        else if (error) throw new Error(error.message === "Invalid login credentials" ? "That email and password don't match." : error.message);
+        else await remember();
       }
-      if (error) throw new Error(error.message === "Invalid login credentials" ? "That email and password don't match." : error.message);
     } catch (e) { fail(e); }
     busy = false;
   }
+  async function submitCode() {
+    busy = true; err = "";
+    // A reset signs the player in, so the sign-in screen stays up until the new password is saved.
+    if (codeFor === "recovery") resetting = true;
+    const { error } = await sb.auth.verifyOtp({ email, token: otp.replace(/\s/g, ""), type: codeFor });
+    if (error) { resetting = false; fail(new Error("That code is wrong or has expired.")); }
+    else if (codeFor === "recovery") { password = ""; mode = "newpw"; }
+    else await remember();
+    busy = false;
+  }
+  async function resendCode() {
+    busy = true;
+    try { await sendCode(codeFor); note = `We sent a new code to ${email}.`; } catch (e) { fail(e); }
+    busy = false;
+  }
+  async function askReset() {
+    busy = true; email = email.trim().toLowerCase();
+    try { await sendCode("recovery"); note = `If ${email} has an account, a code is on its way. Enter it to choose a new password.`; } catch (e) { fail(e); }
+    busy = false;
+  }
+  async function saveNewPassword() {
+    if (password.length < 8) return fail(new Error("Passwords need at least 8 characters."));
+    busy = true;
+    const { error } = await sb.auth.updateUser({ password });
+    busy = false;
+    if (error) return fail(new Error(error.message));
+    await remember(); resetting = false; mode = "in"; await svelteTick(); route_();
+  }
+  const backToSignIn = () => { mode = "in"; otp = ""; note = ""; if (resetting) { resetting = false; sb.auth.signOut(); } };
   async function create() {
     busy = true;
     try { const r = await call("createParty", { size, mode: evil, timers, inPerson }); go("party/" + r.id); } catch (e) { fail(e); }
@@ -142,9 +190,34 @@
 {/if}
 {#if !ready}
   <Loading />
-{:else if !session}
+{:else if !session || resetting}
   <main class="center narrow signin">
     <h1 class="mark">Lanterns<br /><span class="amp">&amp;</span> Lies</h1>
+    {#if mode === "code"}
+    <p class="dim tc">{note}</p>
+    <form on:submit|preventDefault={submitCode} class="stack" autocomplete="on">
+      <label>Code<input class="otp" bind:value={otp} inputmode="numeric" autocomplete="one-time-code" pattern={"[0-9 ]{6,12}"} maxlength="12" required /></label>
+      <button class="go" disabled={busy}>{codeFor === "signup" ? "Confirm email" : "Continue"}</button>
+    </form>
+    <button class="link" disabled={busy || wait > 0} on:click={resendCode}>{wait > 0 ? `Send a new code in ${wait} s` : "Send a new code"}</button>
+    <p class="dim small tc">Can't see it? Check your spam folder.</p>
+    <button class="link" on:click={backToSignIn}>Back to sign in</button>
+    {:else if mode === "forgot"}
+    <p class="dim tc">Enter your email and we'll send you a code to choose a new password.</p>
+    <form on:submit|preventDefault={askReset} class="stack" autocomplete="on">
+      <label>Email<input type="email" bind:value={email} autocomplete="username" required /></label>
+      <button class="go" disabled={busy}>Send code</button>
+    </form>
+    <button class="link" on:click={backToSignIn}>Back to sign in</button>
+    {:else if mode === "newpw"}
+    <p class="dim tc">Choose a new password.</p>
+    <form on:submit|preventDefault={saveNewPassword} class="stack" autocomplete="on">
+      <input type="text" autocomplete="username" value={email} hidden readonly />
+      <label>New password<input type={showPw ? "text" : "password"} value={password} on:input={(e) => (password = e.currentTarget.value)} minlength="8" autocomplete="new-password" required /></label>
+      <label class="check"><input type="checkbox" bind:checked={showPw} /> Show password</label>
+      <button class="go" disabled={busy}>Save password</button>
+    </form>
+    {:else}
     <p class="dim tc">{pendingCode ? `Sign in to join party ${pendingCode}.` : "A town, a fog, and someone among you who isn't what they seem."}</p>
     <form on:submit|preventDefault={submitAuth} class="stack" method="post" action="#" autocomplete="on">
       {#if mode === "up"}<label>Your name<input bind:value={name} maxlength="20" autocomplete="nickname" required /></label>{/if}
@@ -153,6 +226,9 @@
       <button class="go" disabled={busy}>{mode === "up" ? "Create account" : "Sign in"}</button>
     </form>
     <button class="link" on:click={() => (mode = mode === "up" ? "in" : "up")}>{mode === "up" ? "I already have an account" : "Create an account"}</button>
+    {#if mode === "in"}<button class="link" on:click={() => { mode = "forgot"; note = ""; }}>Forgot password?</button>{/if}
+    {/if}
+    {#if err}<p class="toast" role="alert">{err}</p>{/if}
   </main>
 {:else if route === "party" && party && party.status !== "lobby" && party.status !== "starting"}
   {#key party.id}<Game party={party} onHome={() => go("home")} />{/key}

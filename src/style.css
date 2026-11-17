@@ -131,6 +131,7 @@ main.signin { max-width:360px; padding-left:20px; padding-right:20px; }
 .pw { position:relative; display:block; } .pw input { padding-right:48px; }
 .eye { position:absolute; right:2px; top:6px; min-height:40px; width:44px; padding:0; border:none; background:transparent; color:var(--dim); display:flex; align-items:center; justify-content:center; }
 .eye:hover { color:var(--text); }
+.otp { font-size:24px; letter-spacing:.3em; text-align:center; }
 
 /* Role view: allies stand out, Back sits centred below with space */
 .side { margin-top:18px; padding:12px 14px; background:rgba(20,22,28,.7); border:1px solid var(--line); border-radius:10px; }
