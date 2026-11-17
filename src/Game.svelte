@@ -134,7 +134,7 @@
         {@const at = phase === "night" ? slotOf(p.id) : -1}
         <li class:gone={!p.alive} class:s0={at === 0 || (phase === "vote" && view.myVote === p.id)} class:s1={at === 1}>
           <span class="dot" class:out={!p.alive}></span>
-          <span class="nm">{i + 1}. {p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if phase !== "over" && (p.revealedRole || p.finalRole)}<span class="dim small rr">{p.revealedRole ?? p.finalRole}</span>{/if}{#if p.shipped}<span class="dim small rr">sent away</span>{/if}</span>
+          <span class="nm">{i + 1}. {p.name}{#if p.id === view.player_id}<span class="dim tag">(you)</span>{/if}{#if phase === "over" && p.won}<b class="lamp won">won</b>{/if}{#if phase !== "over" && (p.revealedRole || p.finalRole)}<span class="dim small rr">{p.revealedRole ?? p.finalRole}</span>{/if}{#if p.shipped}<span class="dim small rr">sent away</span>{/if}</span>
           {#if phase === "over"}<span class={FACTION_CLASS[roleByName(p.finalRole)?.faction ?? ""]}>{p.finalRole}</span>
           {:else if phase === "vote" && p.alive}
             {#if pub.tally?.[p.id]}<span class="votes">{pub.tally[p.id]}</span>{/if}
