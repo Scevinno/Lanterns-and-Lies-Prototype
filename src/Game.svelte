@@ -300,7 +300,7 @@
           <button class="link back" on:click={closeLibRole}>Back</button><RoleCard role={libRole} guideLinks={false} />
         {:else if rosterView === "roles"}
           <button class="link back" on:click={() => (rosterView = "roster")}>Back to the roster</button>
-          <Library roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => { sheetScroll = sheetEl?.scrollTop ?? 0; libRole = r; if (sheetEl) sheetEl.scrollTop = 0; }} />
+          <Library oneLine roles={allRoles()} bind:factionFilter={libF} bind:typeFilter={libT} bind:search={libSearch} onOpen={(r) => { sheetScroll = sheetEl?.scrollTop ?? 0; libRole = r; if (sheetEl) sheetEl.scrollTop = 0; }} />
         {:else}
           <p class="dim small">{pub.size} players · evil side: {pub.setup}. Tap a line to see its roles.</p>
           <Roster size={pub.size} mode={pub.setup} onPick={(f, t) => { libF = f; libT = t; libSearch = ""; rosterView = "roles"; }} />
