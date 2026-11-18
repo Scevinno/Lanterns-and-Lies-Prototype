@@ -1,7 +1,7 @@
 // Lanterns & Lies service worker (12 Nov): fast reopening and push notifications.
 // Built files have hashed names, so they never change: cache first. Pictures and fonts keep their names, so they
 // are served from the cache at once and refreshed in the background. The page itself always tries the network first.
-const CACHE = "lnl-v17"; // v17: one-line role tiles (18 Nov)
+const CACHE = "lnl-v18"; // v18: one-line tiles in the in-game Roster only (18 Nov)
 const SCOPE = self.registration.scope;
 
 self.addEventListener("install", () => self.skipWaiting());
