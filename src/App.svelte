@@ -1,5 +1,6 @@
 <script lang="ts">
   import DealTable from "./DealTable.svelte";
+  import PhoneDeal from "./PhoneDeal.svelte";
   import { onDestroy, onMount, tick as svelteTick } from "svelte";
   import { call, fmt, sb, serverNow, shareLink, syncClock, timerLabel, FACTION_CLASS } from "./api";
   import { setRoles, type Role } from "./richtext";
@@ -254,6 +255,7 @@
     {:else}
     <p class="row"><b>Players</b><span>{players.length} of {party.size}</span></p>
     <ul class="plain roster">{#each players as p}<li><span>{p.name}</span></li>{/each}</ul>
+    {#if party.status === "starting"}<PhoneDeal size={party.size} partyId={party.id} remaining={fmt(remaining)} {busy} onCancel={() => partyAct("cancelStart")} />{/if}
     {/if}
     </div>
     <div class="lob-ctrl">
