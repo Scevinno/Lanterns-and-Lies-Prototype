@@ -3,6 +3,7 @@
   import { call, fmt, serverNow, sb, syncClock, FACTION_CLASS } from "./api";
   import { allRoles, roleByName, summaryHtml, type Role } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
+  import DealReveal from "./DealReveal.svelte";
   import RoleExtras from "./RoleExtras.svelte";
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
@@ -30,6 +31,10 @@
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
+  // The Deal (Nik, 26 Nov): if this tab watched the lobby shuffle, the first "Your role" screen opens with the top card turning over.
+  const dealKey = "lnl-deal:" + party.id;
+  let dealing = false;
+  $: if ($desk && phase === "reveal" && myRole && !dealing) { try { if (sessionStorage.getItem(dealKey) === "1") { sessionStorage.setItem(dealKey, "done"); dealing = true; } } catch { /* private mode */ } }
   $: if (pub && pub.phaseNo !== lastPhase) { if (lastPhase) buzz(); lastPhase = pub.phaseNo; picks = []; touched = false; decoy = ""; chatOpen = false; tab = phase === "night" && view?.channels?.faction ? "faction" : tab === "faction" ? "town" : tab; if (phase === "reveal") showRole = true; else if (showRole && phase !== "reveal") showRole = false; }
   $: if (view?.action && phase === "night" && !touched && !picks.length) picks = [...(view.action.targets ?? []), ...(view.action.second ?? [])];
   // Night choices (Nik, 14 Nov): one list for every ability. Each pick fills the first open slot that accepts that player;
@@ -125,6 +130,7 @@
   <Loading />
 {:else}
 <div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
+{#if dealing && myRole}<DealReveal role={myRole} onDone={() => (dealing = false)} />{/if}
 <main class="game l-{$desk ? 'desk' : layout}">
   {#if $desk}
     <!-- Desktop (Nik, 14 Nov): the town list is also where you act. Vote, Condemn and night picks sit next to each name. -->

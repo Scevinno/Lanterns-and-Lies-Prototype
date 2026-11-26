@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DealTable from "./DealTable.svelte";
   import { onDestroy, onMount, tick as svelteTick } from "svelte";
   import { call, fmt, sb, serverNow, shareLink, syncClock, timerLabel, FACTION_CLASS } from "./api";
   import { setRoles, type Role } from "./richtext";
@@ -249,7 +250,7 @@
     </div>
     <div class="lob-seats">
     {#if $desk}
-      <div class="ring" style="--n:{party.size}">{#each Array(party.size) as _, i}<div class="seat" class:empty={!players[i]} style="--i:{i}"><span class="dot"></span><span>{players[i]?.name ?? "empty"}</span></div>{/each}<div class="ringmid"><b>Lantern Square</b><span class="dim small">{players.length} of {party.size} here</span></div></div>
+      <DealTable size={party.size} names={players.map((p) => p.name)} starting={party.status === "starting"} partyId={party.id} />
     {:else}
     <p class="row"><b>Players</b><span>{players.length} of {party.size}</span></p>
     <ul class="plain roster">{#each players as p}<li><span>{p.name}</span></li>{/each}</ul>

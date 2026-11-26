@@ -340,18 +340,12 @@ html.desk main.create { display:grid; grid-template-columns:minmax(0,1fr) minmax
 html.desk main.create > .cform, html.desk main.create > .cside { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:26px 30px; }
 html.desk main.create > .cside { position:sticky; top:96px; max-height:calc(100dvh - 130px); overflow-y:auto; }
 html.desk .cside h2 { margin-top:0; }
-/* Lobby: code and QR, the ring of lanterns, the host's controls */
+/* Lobby: code and QR, the card table (DealTable.svelte), the host's controls */
 html.desk main.lobby { display:grid; grid-template-columns:320px minmax(0,1fr) 320px; gap:28px; align-items:stretch; max-width:1440px; }
 html.desk .lob-share, html.desk .lob-ctrl { background:rgba(14,18,28,.84); border:1px solid rgba(160,180,215,.16); border-radius:14px; padding:24px; }
 html.desk .lob-share .ptitle { text-align:center; }
 html.desk .lob-share .code { text-align:center; font-size:44px; color:var(--lamp); }
 html.desk .lob-share .qr { display:block; margin:10px auto; }
-html.desk .ring { position:relative; aspect-ratio:1; max-height:calc(100dvh - 150px); margin:0 auto; }
-html.desk .seat { --a:calc(var(--i) / var(--n) * 360deg - 90deg); position:absolute; left:calc(50% + 40% * cos(var(--a))); top:calc(50% + 40% * sin(var(--a))); transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; text-align:center; text-shadow:0 1px 3px #000; }
-html.desk .seat .dot { width:18px; height:18px; border-radius:50%; background:var(--lamp); box-shadow:0 0 16px var(--lamp); }
-html.desk .seat.empty { color:var(--dim); }
-html.desk .seat.empty .dot { background:#333a4a; box-shadow:none; }
-html.desk .ringmid { position:absolute; inset:28%; border:1px dashed rgba(160,180,215,.25); border-radius:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-family:"Almendra",Georgia,serif; font-size:22px; }
 /* Guide: a sidebar for the four sections */
 /* Guide shell (Nik, 14 Nov): side menu hugging a middle column of one fixed width on every Guide page (Roles included),
    with role cards and game words opening in a panel on the right. */
