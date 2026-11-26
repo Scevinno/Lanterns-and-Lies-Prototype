@@ -2,7 +2,7 @@
 // Rules: "Lanterns and Lies roles.xlsx" and "Lanterns and Lies roster.md". Time only ever comes from `now`.
 import { ROLES, type Faction, type RoleDef } from "./roles.ts";
 
-export type Phase = "reveal" | "discussion" | "vote" | "defence" | "verdict" | "dusk" | "night" | "dawn" | "over";
+export type Phase = "reveal" | "eyes" | "discussion" | "vote" | "defence" | "verdict" | "dusk" | "night" | "dawn" | "over";
 export interface Timers { discussion: number; vote: number; defence: number; verdict: number; night: number }
 export const PUBLIC_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, verdict: 15, night: 60 };
 export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
@@ -12,6 +12,9 @@ export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
 /** Testing only (Nik, 8 Nov): everyone sees every role during the game. Set to false before real play. */
 export const SHOW_ALL_ROLES = true;
 // Dusk (Nik, 8 Nov): a 15-second close to every Day before Night, with town chat open online.
+// In-person nights (Nik, 26 Nov): before each Night everyone taps "eyes closed" (60 seconds at most), then every living
+// player gets a 15-second turn in a random order, whether or not their role acts. Bots take 3 seconds, for test games.
+export const EYES_SECONDS = 60, TURN_SECONDS = 15, BOT_TURN_SECONDS = 3;
 export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, DUSK_SECONDS = 15, MAX_TRIALS = 3, MAX_DAYS = 7;
 
 export interface Player {
@@ -32,6 +35,8 @@ export interface GameState {
   commanded: string | null; quietDays: number; hadGodfather: boolean; winner: string | null; winners: string[]; condemned: boolean;
   // In person: everyone is in one room. Town chat is off, roles stay hidden until peeked, and anyone can pause.
   inPerson?: boolean; pausedLeft?: number | null; pausedBy?: string | null;
+  // In-person nights: who has closed their eyes before the Night, and the order of turns during it.
+  eyes?: { first: string; closed: string[]; ready: boolean } | null; turns?: { order: string[]; i: number } | null;
   // What the party chose. A Random party never learns which evil side was dealt from the roster.
   setup?: "Mafia" | "Syndicate" | "Random";
 }
@@ -740,9 +745,23 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   for (const p of alive(s)) if (p.debt && !p.debtNotified) { p.collection = true; p.debtNotified = true; msgs.push({ channel: "private", to: p.id, text: "You owe the Loan Shark. Tonight is your Collection Night: choose who to pay." }); }
   msgs.push({ channel: "town", text: fogNight(s.night) ? `Night ${s.night}: the Gloam rolls in. This is a Fog Night.` : `Night ${s.night}: a clear night falls.` });
   setPhase(s, "night", s.timers.night, now);
+  if (s.inPerson) {
+    const first = s.eyes?.first; const rest = shuffle(alive(s).map((p) => p.id).filter((id) => id !== first), r);
+    s.turns = { order: first && byId(s, first)?.alive ? [first, ...rest] : rest, i: 0 }; s.endsAt = now + turnLength(s, s.turns.order[0]) * 1000;
+  }
+  s.eyes = null;
   for (const p of alive(s).filter((x) => x.bot)) botNight(s, p, r);
   return msgs;
 }
+const turnLength = (s: GameState, id: string) => (byId(s, id)?.bot ? BOT_TURN_SECONDS : TURN_SECONDS);
+/** In person, before every Night (Nik, 26 Nov): everyone sees who goes first, then taps once their eyes are closed. */
+function startEyes(s: GameState, now: number, r: Rng): Msg[] {
+  const lv = alive(s); const humans = lv.filter((p) => !p.bot); const first = pick(humans.length ? humans : lv, r);
+  s.eyes = { first: first.id, closed: lv.filter((p) => p.bot && p.id !== first.id).map((p) => p.id), ready: first.bot };
+  setPhase(s, "eyes", EYES_SECONDS, now);
+  return [{ channel: "town", text: `Night ${s.night + 1} is coming. ${first.name} goes first. Everyone else, close your eyes.` }];
+}
+const currentTurn = (s: GameState) => (s.phase === "night" && s.turns ? s.turns.order[s.turns.i] : null);
 function startVote(s: GameState, now: number): Msg[] {
   s.trial++; s.votes = {}; s.verdicts = {}; s.accused = null;
   setPhase(s, "vote", s.timers.vote, now);
@@ -798,7 +817,8 @@ export function cmdResume(s: GameState, id: string, now: number): Msg[] {
 }
 export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
   switch (s.phase) {
-    case "reveal": return startNight(s, now, r);
+    case "reveal": return s.inPerson ? startEyes(s, now, r) : startNight(s, now, r);
+    case "eyes": return startNight(s, now, r); // the 60-second fallback: start even if someone never tapped
     case "discussion": return startVote(s, now);
     case "vote": {
       const lines: Msg[] = [];
@@ -825,12 +845,15 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
       return [...shown, m, ...startVote(s, now)];
     }
     case "night": {
+      // In person, the Night is a run of turns: the next player's turn starts, and only the last turn ends the Night.
+      if (s.turns && s.turns.i < s.turns.order.length - 1) { s.turns.i++; s.endsAt = now + turnLength(s, s.turns.order[s.turns.i]) * 1000; return []; }
+      s.turns = null;
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
       const msgs = resolveNight(s, r); s.actions = {};
       const end = settle(s); if (end) return [...msgs, ...end];
       setPhase(s, "dawn", DAWN_SECONDS, now); return msgs;
     }
-    case "dusk": return s.day >= MAX_DAYS ? dayCap(s) : startNight(s, now, r);
+    case "dusk": return s.day >= MAX_DAYS ? dayCap(s) : s.inPerson ? startEyes(s, now, r) : startNight(s, now, r);
     case "dawn": s.day++; setPhase(s, "discussion", s.timers.discussion, now);
       return [{ channel: "town", text: `Day ${s.day}.` }, ...(s.day === MAX_DAYS ? [{ channel: "town" as const, text: "This is the last day. If the evil side survives it and no Unbound killer is alive, they win." }] : [])];
     default: return [];
@@ -872,7 +895,9 @@ export function cmdVerdict(s: GameState, id: string, choice: "guilty" | "innocen
 }
 /** Returns any private lines it causes: the Kingpin's command is told to the member at once (Nik, 8 Nov), and so is its withdrawal. */
 export function cmdNight(s: GameState, id: string, a: Action, _now: number): Msg[] {
-  const p = byId(s, id); notPaused(s); const pr = nightPrompt(s, p); if (!pr) throw new Error("You have nothing to do tonight.");
+  const p = byId(s, id); notPaused(s);
+  if (s.turns && currentTurn(s) !== id) throw new Error("Wait for your turn.");
+  const pr = nightPrompt(s, p); if (!pr) throw new Error("You have nothing to do tonight.");
   if (pr.toggle) { s.actions[id] = { targets: [], alert: !!a.alert }; return []; }
   const was = s.commanded;
   const told = (): Msg[] => {
@@ -893,6 +918,16 @@ export function cmdNight(s: GameState, id: string, a: Action, _now: number): Msg
 /** Reveal moved to the Night (Nik, 7 Nov): the Mayor and Judge choose it in their night prompt. Kept so old clients get a clear answer. */
 export function cmdReveal(_s: GameState, _id: string): Msg[] {
   throw new Error("Reveal is chosen at Night now.");
+}
+
+/** In person: "my eyes are closed", or, from the player who goes first, "I'm ready". The Night starts once everyone has tapped. */
+export function cmdEyes(s: GameState, id: string, now: number, r: Rng): Msg[] {
+  const p = byId(s, id); notPaused(s);
+  if (s.phase !== "eyes" || !s.eyes) return [];
+  if (!p?.alive) throw new Error("Your lantern is out. Keep your eyes closed.");
+  if (id === s.eyes.first) s.eyes.ready = true; else if (!s.eyes.closed.includes(id)) s.eyes.closed.push(id);
+  const waiting = alive(s).filter((q) => q.id !== s.eyes!.first && !s.eyes!.closed.includes(q.id));
+  return !waiting.length && s.eyes.ready ? startNight(s, now, r) : [];
 }
 
 export function cmdCondemn(s: GameState, id: string, target: string, now: number, r: Rng): Msg[] {
@@ -916,7 +951,7 @@ export function canChat(s: GameState, id: string, channel: string): boolean {
     return s.phase === "discussion" || s.phase === "vote" || s.phase === "verdict" || s.phase === "dusk";
   }
   // The Kingpin reads his side's night chat but never writes in it (Nik, 11 Nov; he could not see it from 7 Nov).
-  if (channel === "faction") return s.phase === "night" && isEvil(p) && p.role !== "Kingpin";
+  if (channel === "faction") return s.phase === "night" && isEvil(p) && p.role !== "Kingpin" && (!s.turns || currentTurn(s) === id);
   return false;
 }
 
@@ -925,7 +960,9 @@ export function publicView(s: GameState) {
   return {
     phase: s.phase, phaseNo: s.phaseNo, day: s.day, night: s.night, endsAt: s.endsAt, accused: s.accused, trial: s.trial, maxTrials: MAX_TRIALS,
     needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
-    townChat: s.townChat, setup: s.setup ?? s.mode, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
+    townChat: s.townChat, setup: s.setup ?? s.mode,
+    eyes: s.phase === "eyes" && s.eyes ? { first: byId(s, s.eyes.first).name, closed: s.eyes.closed.length + (s.eyes.ready ? 1 : 0), of: alive(s).length } : null,
+    turn: s.phase === "night" && s.turns ? { i: s.turns.i + 1, n: s.turns.order.length } : null, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
     players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: SHOW_ALL_ROLES || s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };
 }
@@ -942,6 +979,10 @@ export function privateView(s: GameState, id: string) {
     // Shown with the role, like an evil player's allies: the Town Crier's target and the Assassin's contract.
     target: p.role === "Town Crier" && p.crierTarget ? { name: byId(s, p.crierTarget).name, alive: byId(s, p.crierTarget).alive } : null,
     contract: p.role === "Assassin" && p.markRole && !p.won ? [p.markRole] : null, markStage: p.role === "Assassin" ? p.markStage ?? null : null,
+    eyesClosed: s.phase === "eyes" && !!s.eyes && (s.eyes.closed.includes(id) || (s.eyes.first === id && s.eyes.ready)), goesFirst: s.phase === "eyes" && s.eyes?.first === id,
+    myTurn: currentTurn(s) === id,
+    // Only the player whose turn it is learns who to call next; nobody else ever sees the order.
+    nextName: currentTurn(s) === id && s.turns ? (s.turns.i < s.turns.order.length - 1 ? byId(s, s.turns.order[s.turns.i + 1]).name : null) : null,
     commanded: s.commanded === id, myVote: s.votes[id] ?? null, myVerdict: s.verdicts[id] ?? null,
     canVote: s.phase === "vote" && p.alive && !p.shipped, canVerdict: s.phase === "verdict" && p.alive && !p.shipped && s.accused !== id,
     canReveal: false, // Reveal is a Night action now; see nightPrompt

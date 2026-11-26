@@ -4,6 +4,8 @@
   import { allRoles, roleByName, summaryHtml, type Role } from "./richtext";
   import RoleCard from "./RoleCard.svelte";
   import DealReveal from "./DealReveal.svelte";
+  import NightRoom from "./NightRoom.svelte";
+  import { chime } from "./sound";
   import RoleExtras from "./RoleExtras.svelte";
   import Roster from "./Roster.svelte";
   import Loading from "./Loading.svelte";
@@ -31,6 +33,11 @@
   $: living = (pub?.players ?? []).filter((p: any) => p.alive);
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
+  // In-person nights (Nik, 26 Nov): everyone else's screen goes dark during a turn; yours buzzes and chimes when it starts.
+  let wasMyTurn = false;
+  $: myTurn = !!view?.myTurn;
+  $: if (myTurn !== wasMyTurn) { if (myTurn) { buzz([200, 100, 200]); chime(); } wasMyTurn = myTurn; }
+  $: roomDark = inPerson && !!view && (phase === "eyes" || (phase === "night" && !myTurn));
   // The Deal (Nik, 26 Nov): if this tab watched the lobby shuffle, the first "Your role" screen opens with the top card turning over.
   const dealKey = "lnl-deal:" + party.id;
   let dealing = false;
@@ -122,14 +129,22 @@
     else if (view.action) act("night", { targets: [] });
   }
   const clearPicks = () => { touched = true; picks = []; act("night", { targets: [] }); };
-  const title = (ph: string) => ({ reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dusk: "Dusk", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
-  $: period = phase === "night" ? `Night ${pub?.night}` : phase === "over" ? "Game over" : phase === "reveal" ? "Night 1 is coming" : phase === "dawn" ? `Dawn ${pub?.night}` : `Day ${pub?.day}`;
+  const title = (ph: string) => ({ eyes: "Close your eyes", reveal: "Your role", discussion: "Discussion", vote: "Vote", defence: "Defence", verdict: "Verdict", night: pub?.fog ? "Fog Night" : "Night", dusk: "Dusk", dawn: "Dawn", over: pub?.winner === "Nobody" ? "Nobody wins" : `${pub?.winner} ${pub?.winner?.startsWith("The ") ? "win" : "wins"}` }[ph] ?? "");
+  $: period = phase === "eyes" ? `Night ${(pub?.night ?? 0) + 1} is coming` : phase === "night" ? `Night ${pub?.night}` : phase === "over" ? "Game over" : phase === "reveal" ? "Night 1 is coming" : phase === "dawn" ? `Dawn ${pub?.night}` : `Day ${pub?.day}`;
 </script>
 
 {#if !pub || !view}
   <Loading />
 {:else}
-<div class="backdrop {phase === 'night' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
+<div class="backdrop {phase === 'night' || phase === 'eyes' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' || phase === 'eyes' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
+{#if roomDark}<NightRoom {phase} {pub} {view} {remaining} {busy} {paused} onEyes={() => act("eyes")} onResume={() => act("resume")} />{/if}
+{#if inPerson && phase === "night" && myTurn}
+  <div class="turnbar" class:call={remaining <= 5} role="status">
+    {#if remaining <= 5}<span class="who">{view.nextName ? `Call out: ${view.nextName}` : "Last turn. Say: open your eyes"}</span>
+    {:else}<span>Your turn{pub.turn ? ` · ${pub.turn.i} of ${pub.turn.n}` : ""}</span>{/if}
+    <b>{fmt(remaining)}</b>
+  </div>
+{/if}
 {#if dealing && myRole && phase === "reveal"}<DealReveal role={myRole} wide={$desk} onDone={() => (dealing = false)} />{/if}
 <main class="game l-{$desk ? 'desk' : layout}">
   {#if $desk}

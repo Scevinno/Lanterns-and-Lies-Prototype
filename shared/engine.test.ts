@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, BOT_TURN_SECONDS, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -712,6 +712,56 @@ describe("in-person pause", () => {
     const v = publicView(s); expect(v.setup).toBe("Random"); expect(JSON.stringify(v)).not.toContain("Syndicate");
   });
   it("is refused in online parties", () => { const s = game(["Mobster", "Doctor"], 1); expect(() => cmdPause(s, "p0", T0)).toThrow(); });
+});
+
+describe("in-person nights (Nik, 26 Nov)", () => {
+  const room = (n = 8, bots: number[] = []) => {
+    const players = Array.from({ length: n }, (_, i) => ({ id: "p" + i, name: "N" + i, bot: bots.includes(i) }));
+    return createGame({ players, mode: "Mafia", timers: PUBLIC_TIMERS, townChat: false, inPerson: true }, seeded(4), T0).state;
+  };
+  it("after the role reveal, waits for everyone's eyes instead of starting the Night", () => {
+    const s = room(); const m = forceAdvance(s, T0, seeded(1));
+    expect(s.phase).toBe("eyes"); expect(s.endsAt).toBe(T0 + EYES_SECONDS * 1000); expect(m[0].text).toContain("goes first");
+    const first = s.eyes!.first; expect(publicView(s).eyes!.first).toBe(s.players.find((p) => p.id === first)!.name);
+    expect(privateView(s, first).goesFirst).toBe(true);
+    for (const p of s.players.filter((x) => x.id !== first)) { cmdEyes(s, p.id, T0, seeded(1)); expect(s.phase).toBe("eyes"); }
+    expect(privateView(s, s.players.find((x) => x.id !== first)!.id).eyesClosed).toBe(true);
+    cmdEyes(s, first, T0 + 5000, seeded(1)); expect(s.phase).toBe("night");
+    expect(s.turns!.order[0]).toBe(first); expect(s.turns!.order.length).toBe(8); expect(s.endsAt).toBe(T0 + 5000 + TURN_SECONDS * 1000);
+  });
+  it("waits for the first player too, and starts anyway after 60 seconds", () => {
+    const s = room(); forceAdvance(s, T0, seeded(1)); const first = s.eyes!.first;
+    for (const p of s.players.filter((x) => x.id !== first)) cmdEyes(s, p.id, T0, seeded(1));
+    expect(s.phase).toBe("eyes");
+    expect(advance(s, T0 + EYES_SECONDS * 1000 - 1, seeded(1))).toEqual([]);
+    advance(s, T0 + EYES_SECONDS * 1000, seeded(1)); expect(s.phase).toBe("night");
+  });
+  it("gives every living player one turn, in order, and resolves only after the last", () => {
+    const s = room(); s.players[3].alive = false; forceAdvance(s, T0, seeded(2)); forceAdvance(s, T0, seeded(2));
+    const order = s.turns!.order; const n = order.length; expect(n).toBe(7); expect(order).not.toContain("p3"); expect(new Set(order).size).toBe(7);
+    let t = T0;
+    for (let k = 0; k < n - 1; k++) {
+      const who = order[k]; expect(privateView(s, who).myTurn).toBe(true); expect(privateView(s, who).nextName).toBe("N" + order[k + 1].slice(1));
+      for (const other of order.filter((x) => x !== who)) expect(privateView(s, other).myTurn).toBe(false);
+      t = s.endsAt; advance(s, t, seeded(2)); expect(s.phase).toBe("night"); expect(s.night).toBe(1);
+    }
+    expect(privateView(s, order[n - 1]).nextName).toBeNull(); expect(publicView(s).turn).toEqual({ i: n, n });
+    advance(s, s.endsAt, seeded(2)); expect(s.phase === "dawn" || s.phase === "over").toBe(true); expect(s.turns).toBeNull();
+  });
+  it("only the player whose turn it is can act or use the evil chat", () => {
+    const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.turns = { order: ["p1", "p0", "p2"], i: 0 };
+    expect(() => cmdNight(s, "p0", { targets: ["p1"] }, T0)).toThrow("turn"); expect(canChat(s, "p0", "faction")).toBe(false);
+    cmdNight(s, "p1", { targets: ["p2"] }, T0); expect(s.actions.p1.targets).toEqual(["p2"]);
+    s.turns.i = 1; expect(canChat(s, "p0", "faction")).toBe(true); cmdNight(s, "p0", { targets: ["p1"] }, T0);
+  });
+  it("test players take short turns, and online parties never see any of this", () => {
+    const s = room(8, [1, 2, 3, 4, 5, 6, 7]); forceAdvance(s, T0, seeded(3)); expect(s.eyes!.first).toBe("p0"); expect(s.eyes!.closed.length).toBe(7);
+    cmdEyes(s, "p0", T0, seeded(3)); expect(s.phase).toBe("night"); advance(s, s.endsAt, seeded(3)); expect(s.endsAt - T0 - TURN_SECONDS * 1000).toBe(BOT_TURN_SECONDS * 1000);
+    const o = room(); o.inPerson = false; forceAdvance(o, T0, seeded(1)); expect(o.phase).toBe("night"); expect(o.turns ?? null).toBeNull();
+  });
+  it("dusk leads to the eyes step too", () => {
+    const s = room(); s.phase = "dusk"; s.day = 1; forceAdvance(s, T0, seeded(5)); expect(s.phase).toBe("eyes");
+  });
 });
 
 describe("roster", () => {

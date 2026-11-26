@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
 import { ROLES } from "../../../shared/roles.ts";
 import {
-  advance, canChat, cmdCondemn, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, PRIVATE_OPTIONS, privateView, publicView,
+  advance, canChat, cmdCondemn, cmdEyes, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, PRIVATE_OPTIONS, privateView, publicView,
   type GameState, type Msg, type Timers,
 } from "../../../shared/engine.ts";
 
@@ -47,9 +47,15 @@ async function notify(userIds: (string | null)[], msg: { title: string; body: st
 function phaseNotice(s: GameState, rows: { id: string; user_id: string | null }[], partyId: string) {
   const url = `${SITE}#/party/${partyId}`; const alive = new Set(s.players.filter((p) => p.alive).map((p) => p.id));
   const users = rows.filter((r) => alive.has(r.id)).map((r) => r.user_id);
+  if (s.phase === "night" && s.inPerson) return; // in person, each player is told when their own turn starts (turnNotice)
   if (s.phase === "night") return notify(users, { title: `Night ${s.night}`, body: "Night falls on Emberhollow. Choose your action.", url, tag: "phase-" + partyId });
   if (s.phase === "vote") return notify(users, { title: `Day ${s.day}: the vote`, body: "Voting has started.", url, tag: "phase-" + partyId });
   if (s.phase === "over") return notify(rows.map((r) => r.user_id), { title: "The game is over", body: s.winner ? `${s.winner} won.` : "See how it ended.", url, tag: "phase-" + partyId });
+}
+// In-person nights (Nik, 26 Nov): a push to the player whose turn has just started, in case nobody calls their name.
+function turnNotice(s: GameState, rows: { id: string; user_id: string | null }[], partyId: string) {
+  const id = s.phase === "night" && s.turns ? s.turns.order[s.turns.i] : null; if (!id) return;
+  return notify(rows.filter((r) => r.id === id).map((r) => r.user_id), { title: "Your turn", body: "Open your eyes. You have 15 seconds.", url: `${SITE}#/party/${partyId}`, tag: "turn-" + partyId });
 }
 const USERNAME = /^[a-z0-9_]{3,20}$/;
 async function freeUsername(name: string) {
@@ -89,14 +95,14 @@ async function turn(partyId: string, step: (s: GameState) => Msg[]) {
     const party = await loadParty(partyId);
     const { data: gs } = await db.from("game_state").select("state").eq("party_id", partyId).single();
     if (!gs) throw new Oops("The game has not started.");
-    const s = gs.state as GameState; const before = s.phaseNo;
+    const s = gs.state as GameState; const before = s.phaseNo; const turnBefore = s.turns?.i ?? -1;
     const msgs = step(s); const rows = await roster(partyId);
     const events = s.phaseNo !== before ? [{ phase_no: s.phaseNo, kind: "phase", data: { phase: s.phase, day: s.day, night: s.night } }] : [];
     if (s.phase === "over" && party.status !== "finished") events.push({ phase_no: s.phaseNo, kind: "over", data: { winner: s.winner, winners: s.winners, players: s.players.map((p) => ({ name: p.name, role: p.role, alive: p.alive })) } as never });
     const patch = { phase: s.phase, phase_no: s.phaseNo, ends_at: isPaused(s) ? null : iso(s.endsAt), public_state: publicView(s), status: s.phase === "over" ? "finished" : "playing" };
     const { data: ok, error } = await db.rpc("apply_turn", { p_party: partyId, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
     if (error) throw error;
-    if (ok) { if (s.phaseNo !== before) await phaseNotice(s, rows, partyId); return; }
+    if (ok) { if (s.phaseNo !== before) await phaseNotice(s, rows, partyId); if (s.turns && (s.phaseNo !== before || s.turns.i !== turnBefore)) await turnNotice(s, rows, partyId); return; }
     await new Promise((r) => setTimeout(r, 40 + Math.random() * 120));
   }
   throw new Oops("The game is busy. Try again.");
@@ -193,6 +199,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   async verdict(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { cmdVerdict(s, me.id, b.choice === "guilty" ? "guilty" : "innocent"); return []; }); return { ok: true }; },
   async night(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => { return cmdNight(s, me.id, { targets: Array.isArray(b.targets) ? b.targets : [], alert: !!b.alert, second: Array.isArray(b.second) ? b.second : undefined }, Date.now()); }); return { ok: true }; },
   async reveal(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdReveal(s, me.id)); return { ok: true }; },
+  async eyes(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdEyes(s, me.id, Date.now(), mathRng)); return { ok: true }; },
   async pause(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdPause(s, me.id, Date.now())); return { ok: true }; },
   async resume(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdResume(s, me.id, Date.now())); return { ok: true }; },
   async condemn(b, req) { const u = await userOf(req); const me = await myPlayer(b.party, u.id); await turn(b.party, (s) => cmdCondemn(s, me.id, b.target, Date.now(), mathRng)); return { ok: true }; },
