@@ -145,9 +145,6 @@
 {:else}
 <div class="backdrop {phase === 'night' || phase === 'eyes' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' || phase === 'eyes' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
 {#if roomDark}<NightRoom {phase} {pub} {view} {remaining} {busy} {paused} {calling} {upNext} onEyes={() => act("eyes")} onResume={() => act("resume")} />{/if}
-{#if inPerson && phase === "night" && myTurn}
-  <div class="turnbar" role="status"><span>Your turn{pub.turn ? ` · ${pub.turn.i} of ${pub.turn.n}` : ""}</span><b>{fmt(remaining)}</b></div>
-{/if}
 {#if dealing && myRole && phase === "reveal"}<DealReveal role={myRole} wide={$desk} onDone={() => (dealing = false)} />{/if}
 <main class="game l-{$desk ? 'desk' : layout}" inert={roomDark}>
   {#if $desk}

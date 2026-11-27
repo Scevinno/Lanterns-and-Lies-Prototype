@@ -420,7 +420,3 @@ button.pick.s1, .picker button.s1 { border-color:#8fb0ea; background:#1d2a45; co
 .picker button.live > span:first-child { color:var(--lamp); font-weight:600; }
 /* After the game (Nik, 15 Nov): the role chip is a fixed label, styled like the button it replaces. */
 span.chip { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:8px; }
-/* In-person turns (Nik, 26 Nov): a slim bar across the top on your own turn; in the last 5 seconds it shows the next name to call out. */
-.turnbar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px calc(10px); padding-top:max(10px, env(safe-area-inset-top));
-  background:rgba(14,18,28,.94); border-bottom:1px solid rgba(217,164,65,.45); font-weight:700; }
-.turnbar b { font:700 22px "Almendra",Georgia,serif; color:var(--lamp); }
