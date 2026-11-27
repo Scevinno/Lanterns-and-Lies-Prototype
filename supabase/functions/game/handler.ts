@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
 import { ROLES } from "../../../shared/roles.ts";
 import {
-  advance, canChat, cmdCondemn, cmdEyes, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, turnAlert, timerOptions, actSeconds, privateView, publicView,
+  advance, canChat, cmdCondemn, cmdEyes, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, cmdSkip, mathRng, turnAlert, timerOptions, actSeconds, privateView, publicView,
   type GameState, type Msg, type Timers,
 } from "../../../shared/engine.ts";
 
@@ -206,7 +206,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
   async skip(b, req) {
     const u = await userOf(req); await myPlayer(b.party, u.id);
     if (!(await roster(b.party)).some((r) => r.is_bot)) throw new Oops("Skipping is only for test games.");
-    await turn(b.party, (s) => (isPaused(s) ? [] : forceAdvance(s, Date.now(), mathRng))); return { ok: true };
+    await turn(b.party, (s) => cmdSkip(s, Date.now(), mathRng)); return { ok: true };
   },
   // Settings (Nik, 12 Nov). Email changes and password resets run on the phone through Supabase Auth's codes (17 Nov).
   async me(_b, req) {

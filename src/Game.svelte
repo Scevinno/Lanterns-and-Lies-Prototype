@@ -330,7 +330,8 @@
       </div>
     </div>
   {/if}
-  {#if hasBots && phase !== "over"}<button class="skip" disabled={busy} on:click={() => act("skip")}>Skip this phase (test games only)</button>{/if}
+  <!-- Not during an in-person Night: on a phone it sits under the names, and a stray tap ended a turn (Nik, 27 Nov). -->
+  {#if hasBots && phase !== "over" && !(inPerson && phase === "night")}<button class="skip" disabled={busy} on:click={() => act("skip")}>Skip this phase (test games only)</button>{/if}
   {#if err}<p class="toast" role="alert">{err}</p>{/if}
 </main>
 {/if}

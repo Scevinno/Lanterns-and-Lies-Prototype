@@ -941,6 +941,13 @@ export function cmdReveal(_s: GameState, _id: string): Msg[] {
   throw new Error("Reveal is chosen at Night now.");
 }
 
+/** Test games' "Skip this phase". In person it never cuts a player's own turn or its call short (Nik, 27 Nov: on a phone,
+ *  a tap meant for a name landed on Skip and ended his turn as he chose). Bots' turns can still be skipped. */
+export function cmdSkip(s: GameState, now: number, r: Rng): Msg[] {
+  if (isPaused(s)) return [];
+  if (s.phase === "night" && s.turns && !byId(s, s.turns.order[s.turns.i])?.bot) return [];
+  return forceAdvance(s, now, r);
+}
 /** In person: "my eyes are closed", or, from the player who goes first, "I'm ready". The Night starts once everyone has tapped. */
 export function cmdEyes(s: GameState, id: string, now: number, r: Rng): Msg[] {
   const p = byId(s, id); notPaused(s);

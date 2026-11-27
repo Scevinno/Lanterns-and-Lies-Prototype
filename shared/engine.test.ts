@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, CALL_SECONDS, BOT_TURN_SECONDS, turnAlert, timerOptions, actSeconds, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, CALL_SECONDS, BOT_TURN_SECONDS, turnAlert, timerOptions, actSeconds, cmdSkip, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -766,6 +766,12 @@ describe("in-person nights (Nik, 26 Nov)", () => {
       expect(s.endsAt - T0).toBe(act * 1000); advance(s, s.endsAt, seeded(2)); expect(s.endsAt - T0).toBe(night * 1000);
     }
     const old = room(); old.timers = { ...old.timers, night: 120 }; expect(actSeconds(old)).toBe(25); // a party made before the setting
+  });
+  it("Skip never cuts a player's own turn or call short in person, but still skips a bot's turn", () => {
+    const s = room(8, [1, 2, 3, 4, 5, 6, 7]); forceAdvance(s, T0, seeded(3)); cmdEyes(s, "p0", T0, seeded(3));
+    const end = s.endsAt; cmdSkip(s, T0 + 1000, seeded(3)); expect(s.turns!.i).toBe(0); expect(s.turns!.call).toBeFalsy(); expect(s.endsAt).toBe(end);
+    advance(s, s.endsAt, seeded(3)); expect(s.turns!.call).toBe(true); cmdSkip(s, s.endsAt - 4000, seeded(3)); expect(s.turns!.call).toBe(true);
+    advance(s, s.endsAt, seeded(3)); expect(s.turns!.i).toBe(1); cmdSkip(s, s.endsAt - 2000, seeded(3)); expect(s.turns!.i).toBe(2);
   });
   it("nobody can act during the call, not even the player who just went", () => {
     const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.turns = { order: ["p0", "p1", "p2"], i: 0, call: true };
