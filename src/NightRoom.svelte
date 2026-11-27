@@ -1,7 +1,8 @@
 <script lang="ts">
   // In-person nights (Nik, 26 Nov). Before each Night everyone sees who goes first, then taps once their eyes are closed.
-  // During the Night every living player gets a 15-second turn in a random order. Whoever isn't taking their turn sees
-  // only this dark screen, so a peek at any phone gives nothing away.
+  // During the Night every living player gets a 25-second turn in a random order. Whoever isn't taking their turn sees
+  // only this dark screen, so a peek at any phone gives nothing away. Each turn ends with a 5-second call (Nik, 27 Nov):
+  // the player who just went sees only the name to call out, and the player called sees a big 5-4-3-2-1.
   import { fmt } from "./api";
   import { unlock } from "./sound";
   export let phase: string;
@@ -10,6 +11,8 @@
   export let remaining: number;
   export let busy = false;
   export let paused = false;
+  export let calling = false;
+  export let upNext = false;
   export let onEyes: () => void;
   export let onResume: () => void;
 
@@ -20,6 +23,14 @@
 <div class="nr" class:dark={phase === "night" || view.eyesClosed || dead} role="dialog" aria-label={phase === "eyes" ? "Close your eyes" : "Eyes closed"}>
   {#if paused}
     <div class="nr-card"><h2>Paused</h2><p>{pub.pausedBy ? `${pub.pausedBy} paused the game.` : "The game is paused."}</p><button class="go wide" disabled={busy} on:click={onResume}>Resume</button></div>
+  {:else if calling}
+    <div class="nr-call">
+      {#if view.nextName}<p class="nr-say">Call out</p><h2 class="nr-name">{view.nextName}</h2>
+      {:else}<p class="nr-say">Last turn. Say</p><h2 class="nr-name">Everyone, open your eyes</h2>{/if}
+      <p class="nr-then">Then close your eyes.</p>
+    </div>
+  {:else if upNext}
+    <div class="nr-call"><p class="nr-say">Your turn in</p><p class="nr-big" aria-live="assertive">{Math.max(1, remaining)}</p></div>
   {:else if phase === "eyes" && dead}
     <div class="nr-quiet"><h2>Your lantern is out</h2><p>Close your eyes with everyone else.</p></div>
   {:else if phase === "eyes" && view.goesFirst && !view.eyesClosed}
@@ -59,5 +70,10 @@
   .nr-card .big { width:100%; min-height:64px; font-size:20px; margin-top:10px; }
   .nr-quiet h2 { color:#5e5a50; } .nr-quiet p { color:#5e5a50; margin:0 0 6px; }
   .nr-count { font-size:14px; color:var(--dim); }
+  .nr-call { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .nr-say { margin:0; font-size:18px; color:var(--dim); text-transform:uppercase; letter-spacing:.12em; }
+  .nr-name { margin:0; font:700 clamp(44px, 11vw, 96px)/1.05 "Almendra",Georgia,serif; color:var(--lamp); overflow-wrap:anywhere; }
+  .nr-then { margin:14px 0 0; font-size:15px; color:#5e5a50; }
+  .nr-big { margin:0; font:700 clamp(140px, 40vw, 280px)/1 "Almendra",Georgia,serif; color:var(--lamp); font-variant-numeric:tabular-nums; }
   .nr-foot { position:absolute; bottom:max(20px, env(safe-area-inset-bottom)); margin:0; font-size:13px; color:#4d4a42; }
 </style>

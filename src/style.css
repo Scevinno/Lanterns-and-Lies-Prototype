@@ -424,7 +424,3 @@ span.chip { display:inline-flex; align-items:center; border:1px solid var(--line
 .turnbar { position:fixed; top:0; left:0; right:0; z-index:50; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px calc(10px); padding-top:max(10px, env(safe-area-inset-top));
   background:rgba(14,18,28,.94); border-bottom:1px solid rgba(217,164,65,.45); font-weight:700; }
 .turnbar b { font:700 22px "Almendra",Georgia,serif; color:var(--lamp); }
-.turnbar.call { background:#3a2f15; border-color:var(--lamp); }
-.turnbar.call .who { font:700 22px "Almendra",Georgia,serif; color:var(--lamp); animation:callpulse 1s ease-in-out infinite; }
-@keyframes callpulse { 50% { opacity:.65; } }
-@media (prefers-reduced-motion: reduce) { .turnbar.call .who { animation:none; } }

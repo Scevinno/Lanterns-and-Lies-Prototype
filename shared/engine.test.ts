@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, BOT_TURN_SECONDS, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, CALL_SECONDS, BOT_TURN_SECONDS, turnAlert, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -736,17 +736,33 @@ describe("in-person nights (Nik, 26 Nov)", () => {
     expect(advance(s, T0 + EYES_SECONDS * 1000 - 1, seeded(1))).toEqual([]);
     advance(s, T0 + EYES_SECONDS * 1000, seeded(1)); expect(s.phase).toBe("night");
   });
-  it("gives every living player one turn, in order, and resolves only after the last", () => {
+  it("gives every living player one 25-second turn, then a 5-second call, and resolves only after the last call", () => {
     const s = room(); s.players[3].alive = false; forceAdvance(s, T0, seeded(2)); forceAdvance(s, T0, seeded(2));
     const order = s.turns!.order; const n = order.length; expect(n).toBe(7); expect(order).not.toContain("p3"); expect(new Set(order).size).toBe(7);
-    let t = T0;
-    for (let k = 0; k < n - 1; k++) {
-      const who = order[k]; expect(privateView(s, who).myTurn).toBe(true); expect(privateView(s, who).nextName).toBe("N" + order[k + 1].slice(1));
+    expect(TURN_SECONDS).toBe(25); expect(CALL_SECONDS).toBe(5);
+    for (let k = 0; k < n; k++) {
+      const who = order[k]; const next = order[k + 1];
+      // Acting: 25 seconds, only this player
+      expect(privateView(s, who).myTurn).toBe(true); expect(privateView(s, who).turnNo).toBe(k + 1);
+      expect(publicView(s).turn).toEqual({ i: k + 1, n, call: false });
       for (const other of order.filter((x) => x !== who)) expect(privateView(s, other).myTurn).toBe(false);
-      t = s.endsAt; advance(s, t, seeded(2)); expect(s.phase).toBe("night"); expect(s.night).toBe(1);
+      const start = s.endsAt - TURN_SECONDS * 1000;
+      advance(s, s.endsAt, seeded(2)); expect(s.phase).toBe("night");
+      // The call: 5 seconds, nobody can act, the player sees the next name and the next player is woken
+      expect(s.endsAt - start).toBe((TURN_SECONDS + CALL_SECONDS) * 1000);
+      expect(publicView(s).turn).toEqual({ i: k + 1, n, call: true });
+      for (const x of order) expect(privateView(s, x).myTurn).toBe(false);
+      expect(privateView(s, who).nextName).toBe(next ? "N" + next.slice(1) : null);
+      expect(turnAlert(s)).toBe(next ?? null);
+      advance(s, s.endsAt, seeded(2));
+      if (next) { expect(s.phase).toBe("night"); expect(s.night).toBe(1); expect(turnAlert(s)).toBeNull(); }
     }
-    expect(privateView(s, order[n - 1]).nextName).toBeNull(); expect(publicView(s).turn).toEqual({ i: n, n });
-    advance(s, s.endsAt, seeded(2)); expect(s.phase === "dawn" || s.phase === "over").toBe(true); expect(s.turns).toBeNull();
+    expect(s.phase === "dawn" || s.phase === "over").toBe(true); expect(s.turns).toBeNull();
+  });
+  it("nobody can act during the call, not even the player who just went", () => {
+    const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.turns = { order: ["p0", "p1", "p2"], i: 0, call: true };
+    expect(() => cmdNight(s, "p0", { targets: ["p1"] }, T0)).toThrow("turn"); expect(canChat(s, "p0", "faction")).toBe(false);
+    expect(() => cmdNight(s, "p1", { targets: ["p0"] }, T0)).toThrow("turn");
   });
   it("only the player whose turn it is can act or use the evil chat", () => {
     const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.turns = { order: ["p1", "p0", "p2"], i: 0 };
@@ -756,7 +772,10 @@ describe("in-person nights (Nik, 26 Nov)", () => {
   });
   it("test players take short turns, and online parties never see any of this", () => {
     const s = room(8, [1, 2, 3, 4, 5, 6, 7]); forceAdvance(s, T0, seeded(3)); expect(s.eyes!.first).toBe("p0"); expect(s.eyes!.closed.length).toBe(7);
-    cmdEyes(s, "p0", T0, seeded(3)); expect(s.phase).toBe("night"); advance(s, s.endsAt, seeded(3)); expect(s.endsAt - T0 - TURN_SECONDS * 1000).toBe(BOT_TURN_SECONDS * 1000);
+    cmdEyes(s, "p0", T0, seeded(3)); expect(s.phase).toBe("night"); expect(turnAlert(s)).toBe("p0");
+    advance(s, s.endsAt, seeded(3)); expect(s.turns!.call).toBe(true); expect(s.endsAt - T0).toBe((TURN_SECONDS + CALL_SECONDS) * 1000);
+    advance(s, s.endsAt, seeded(3)); expect(s.turns!.i).toBe(1); expect(s.endsAt - T0).toBe((TURN_SECONDS + CALL_SECONDS + BOT_TURN_SECONDS) * 1000);
+    advance(s, s.endsAt, seeded(3)); expect(s.turns!.i).toBe(2); expect(s.turns!.call).toBeFalsy(); // a bot's turn has no call
     const o = room(); o.inPerson = false; forceAdvance(o, T0, seeded(1)); expect(o.phase).toBe("night"); expect(o.turns ?? null).toBeNull();
   });
   it("dusk leads to the eyes step too", () => {

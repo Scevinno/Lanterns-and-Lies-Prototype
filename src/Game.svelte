@@ -34,9 +34,16 @@
   $: hasBots = (pub?.players ?? []).some((p: any) => p.bot);
   $: myRole = view && roleByName(view.role);
   // In-person nights (Nik, 26 Nov): everyone else's screen goes dark during a turn; yours buzzes and chimes when it starts.
-  let wasMyTurn = false;
-  $: myTurn = !!view?.myTurn;
-  $: if (myTurn !== wasMyTurn) { if (myTurn) { buzz([200, 100, 200]); chime(); } wasMyTurn = myTurn; }
+  // Whose turn it is comes from the public turn number, which arrives with the timer, compared with your own place in the
+  // order. A screen that missed an update can't keep showing a turn that has passed (Nik, 27 Nov: a laptop did).
+  // Each turn ends with a 5-second call: you see only the name to call out, and the next player sees 5-4-3-2-1.
+  let wasMyTurn = false, wasUpNext = false;
+  $: turnNo = view?.turnNo ?? null;
+  $: myTurn = inPerson ? phase === "night" && !!pub?.turn && turnNo === pub.turn.i && !pub.turn.call : !!view?.myTurn;
+  $: calling = inPerson && phase === "night" && !!pub?.turn?.call && turnNo === pub.turn.i;
+  $: upNext = inPerson && phase === "night" && !!pub?.turn?.call && turnNo === pub.turn.i + 1;
+  $: if (upNext !== wasUpNext) { if (upNext) buzz([200, 100, 200]); wasUpNext = upNext; }
+  $: if (myTurn !== wasMyTurn) { if (myTurn) chime(); wasMyTurn = myTurn; }
   $: roomDark = inPerson && !!view && (phase === "eyes" || (phase === "night" && !myTurn));
   // The Deal (Nik, 26 Nov): if this tab watched the lobby shuffle, the first "Your role" screen opens with the top card turning over.
   const dealKey = "lnl-deal:" + party.id;
@@ -67,7 +74,7 @@
   $: chipLabel = inPerson && !showRole && phase !== "over" ? "Role" : view?.role;
 
   const say = (e: unknown) => { err = (e as Error).message; setTimeout(() => (err = ""), 3500); };
-  async function act(a: string, b: Record<string, unknown> = {}) { busy = true; try { await call(a, { party: party.id, ...b }); await refresh(); } catch (e) { say(e); } busy = false; }
+  async function act(a: string, b: Record<string, unknown> = {}) { busy = true; try { await call(a, { party: party.id, ...b }); await refresh(); } catch (e) { say(e); refresh().catch(() => {}); } busy = false; }
 
   async function refresh() {
     const [{ data: p }, { data: v }, { data: me2 }] = await Promise.all([
@@ -137,16 +144,12 @@
   <Loading />
 {:else}
 <div class="backdrop {phase === 'night' || phase === 'eyes' ? 'night' : 'day'}" style="background-image:url({import.meta.env.BASE_URL}bg/{phase === 'night' || phase === 'eyes' ? 'night' : 'day'}{$desk ? '-wide' : ''}.webp)" aria-hidden="true"></div>
-{#if roomDark}<NightRoom {phase} {pub} {view} {remaining} {busy} {paused} onEyes={() => act("eyes")} onResume={() => act("resume")} />{/if}
+{#if roomDark}<NightRoom {phase} {pub} {view} {remaining} {busy} {paused} {calling} {upNext} onEyes={() => act("eyes")} onResume={() => act("resume")} />{/if}
 {#if inPerson && phase === "night" && myTurn}
-  <div class="turnbar" class:call={remaining <= 5} role="status">
-    {#if remaining <= 5}<span class="who">{view.nextName ? `Call out: ${view.nextName}` : "Last turn. Say: open your eyes"}</span>
-    {:else}<span>Your turn{pub.turn ? ` · ${pub.turn.i} of ${pub.turn.n}` : ""}</span>{/if}
-    <b>{fmt(remaining)}</b>
-  </div>
+  <div class="turnbar" role="status"><span>Your turn{pub.turn ? ` · ${pub.turn.i} of ${pub.turn.n}` : ""}</span><b>{fmt(remaining)}</b></div>
 {/if}
 {#if dealing && myRole && phase === "reveal"}<DealReveal role={myRole} wide={$desk} onDone={() => (dealing = false)} />{/if}
-<main class="game l-{$desk ? 'desk' : layout}">
+<main class="game l-{$desk ? 'desk' : layout}" inert={roomDark}>
   {#if $desk}
     <!-- Desktop (Nik, 14 Nov): the town list is also where you act. Vote, Condemn and night picks sit next to each name. -->
     <aside class="plist" aria-label="Players">

@@ -13,8 +13,10 @@ export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
 export const SHOW_ALL_ROLES = true;
 // Dusk (Nik, 8 Nov): a 15-second close to every Day before Night, with town chat open online.
 // In-person nights (Nik, 26 Nov): before each Night everyone taps "eyes closed" (60 seconds at most), then every living
-// player gets a 15-second turn in a random order, whether or not their role acts. Bots take 3 seconds, for test games.
-export const EYES_SECONDS = 60, TURN_SECONDS = 15, BOT_TURN_SECONDS = 3;
+// player gets a turn in a random order, whether or not their role acts. Bots take 3 seconds, for test games.
+// Turns (Nik, 27 Nov): 25 seconds to act, then a 5-second call: the player sees only the next name to call out (nobody
+// can act), and the next player sees a 5-4-3-2-1 countdown. A bot's turn has no call.
+export const EYES_SECONDS = 60, TURN_SECONDS = 25, CALL_SECONDS = 5, BOT_TURN_SECONDS = 3;
 export const REVEAL_SECONDS = 30, DAWN_SECONDS = 10, DUSK_SECONDS = 15, MAX_TRIALS = 3, MAX_DAYS = 7;
 
 export interface Player {
@@ -36,7 +38,7 @@ export interface GameState {
   // In person: everyone is in one room. Town chat is off, roles stay hidden until peeked, and anyone can pause.
   inPerson?: boolean; pausedLeft?: number | null; pausedBy?: string | null;
   // In-person nights: who has closed their eyes before the Night, and the order of turns during it.
-  eyes?: { first: string; closed: string[]; ready: boolean } | null; turns?: { order: string[]; i: number } | null;
+  eyes?: { first: string; closed: string[]; ready: boolean } | null; turns?: { order: string[]; i: number; call?: boolean } | null;
   // What the party chose. A Random party never learns which evil side was dealt from the roster.
   setup?: "Mafia" | "Syndicate" | "Random";
 }
@@ -761,7 +763,15 @@ function startEyes(s: GameState, now: number, r: Rng): Msg[] {
   setPhase(s, "eyes", EYES_SECONDS, now);
   return [{ channel: "town", text: `Night ${s.night + 1} is coming. ${first.name} goes first. Everyone else, close your eyes.` }];
 }
-const currentTurn = (s: GameState) => (s.phase === "night" && s.turns ? s.turns.order[s.turns.i] : null);
+/** Whose turn it is to act. Nobody's during a call, so nothing can be chosen while a name is being called out. */
+const currentTurn = (s: GameState) => (s.phase === "night" && s.turns && !s.turns.call ? s.turns.order[s.turns.i] : null);
+/** Who to wake with a push now: the next player when a call starts, or a player whose turn began with no call before it. */
+export function turnAlert(s: GameState): string | null {
+  if (s.phase !== "night" || !s.turns) return null;
+  const { order, i, call } = s.turns;
+  if (call) return order[i + 1] ?? null;
+  return i === 0 || byId(s, order[i - 1])?.bot ? order[i] : null;
+}
 function startVote(s: GameState, now: number): Msg[] {
   s.trial++; s.votes = {}; s.verdicts = {}; s.accused = null;
   setPhase(s, "vote", s.timers.vote, now);
@@ -846,7 +856,11 @@ export function forceAdvance(s: GameState, now: number, r: Rng): Msg[] {
     }
     case "night": {
       // In person, the Night is a run of turns: the next player's turn starts, and only the last turn ends the Night.
-      if (s.turns && s.turns.i < s.turns.order.length - 1) { s.turns.i++; s.endsAt = now + turnLength(s, s.turns.order[s.turns.i]) * 1000; return []; }
+      if (s.turns) {
+        const t = s.turns;
+        if (!t.call && !byId(s, t.order[t.i])?.bot) { t.call = true; s.endsAt = now + CALL_SECONDS * 1000; return []; }
+        if (t.i < t.order.length - 1) { t.i++; t.call = false; s.endsAt = now + turnLength(s, t.order[t.i]) * 1000; return []; }
+      }
       s.turns = null;
       for (const p of alive(s).filter((x) => x.bot && !s.actions[x.id])) botNight(s, p, r);
       const msgs = resolveNight(s, r); s.actions = {};
@@ -962,7 +976,7 @@ export function publicView(s: GameState) {
     needed: s.phase === "vote" ? votesNeeded(s) : 0, tally: s.phase === "vote" ? voteTally(s) : {}, votes: s.phase === "vote" ? s.votes : {}, verdictsIn: Object.keys(s.verdicts).length,
     townChat: s.townChat, setup: s.setup ?? s.mode,
     eyes: s.phase === "eyes" && s.eyes ? { first: byId(s, s.eyes.first).name, closed: s.eyes.closed.length + (s.eyes.ready ? 1 : 0), of: alive(s).length } : null,
-    turn: s.phase === "night" && s.turns ? { i: s.turns.i + 1, n: s.turns.order.length } : null, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
+    turn: s.phase === "night" && s.turns ? { i: s.turns.i + 1, n: s.turns.order.length, call: !!s.turns.call } : null, size: s.players.length, inPerson: !!s.inPerson, paused: isPaused(s), pausedLeft: s.pausedLeft ?? null, pausedBy: s.pausedBy ?? null, winner: s.winner, fog: s.phase === "night" ? fogNight(s.night) : false,
     players: s.players.map((p) => ({ id: p.id, name: p.name, seat: p.seat, alive: p.alive, bot: p.bot, shipped: !!p.shipped, revealedRole: p.revealed ? p.role : null, finalRole: SHOW_ALL_ROLES || s.phase === "over" ? p.role : null, won: s.phase === "over" ? s.winners.includes(p.id) : null })),
   };
 }
@@ -981,8 +995,11 @@ export function privateView(s: GameState, id: string) {
     contract: p.role === "Assassin" && p.markRole && !p.won ? [p.markRole] : null, markStage: p.role === "Assassin" ? p.markStage ?? null : null,
     eyesClosed: s.phase === "eyes" && !!s.eyes && (s.eyes.closed.includes(id) || (s.eyes.first === id && s.eyes.ready)), goesFirst: s.phase === "eyes" && s.eyes?.first === id,
     myTurn: currentTurn(s) === id,
+    // Your own place in tonight's order (1-based). The screen compares it with the public turn number, which arrives with
+    // the timer, so a phone or laptop that missed an update can never show a turn that has already passed (Nik, 27 Nov).
+    turnNo: s.phase === "night" && s.turns && s.turns.order.includes(id) ? s.turns.order.indexOf(id) + 1 : null,
     // Only the player whose turn it is learns who to call next; nobody else ever sees the order.
-    nextName: currentTurn(s) === id && s.turns ? (s.turns.i < s.turns.order.length - 1 ? byId(s, s.turns.order[s.turns.i + 1]).name : null) : null,
+    nextName: s.phase === "night" && s.turns && s.turns.order[s.turns.i] === id ? (s.turns.i < s.turns.order.length - 1 ? byId(s, s.turns.order[s.turns.i + 1]).name : null) : null,
     commanded: s.commanded === id, myVote: s.votes[id] ?? null, myVerdict: s.verdicts[id] ?? null,
     canVote: s.phase === "vote" && p.alive && !p.shipped, canVerdict: s.phase === "verdict" && p.alive && !p.shipped && s.accused !== id,
     canReveal: false, // Reveal is a Night action now; see nightPrompt
