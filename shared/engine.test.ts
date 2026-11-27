@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ROLES } from "./roles.ts";
 import {
-  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, CALL_SECONDS, BOT_TURN_SECONDS, turnAlert, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
+  advance, checkWin, SHOW_ALL_ROLES, cmdCondemn, cmdEyes, EYES_SECONDS, TURN_SECONDS, CALL_SECONDS, BOT_TURN_SECONDS, turnAlert, timerOptions, actSeconds, cmdPause, cmdResume, rosterFor, cmdNight, cmdReveal, cmdVerdict, cmdVote, canChat, createGame, dealDeck, forceAdvance, isUnique, nightPrompt,
   privateView, publicView, PUBLIC_TIMERS, resolveNight, roleDef, seeded, voteTally, type GameState, type Player,
 } from "./engine.ts";
 
@@ -758,6 +758,14 @@ describe("in-person nights (Nik, 26 Nov)", () => {
       if (next) { expect(s.phase).toBe("night"); expect(s.night).toBe(1); expect(turnAlert(s)).toBeNull(); }
     }
     expect(s.phase === "dawn" || s.phase === "over").toBe(true); expect(s.turns).toBeNull();
+  });
+  it("the party's Night setting is each player's turn, call included: 15, 30 or 45 seconds", () => {
+    expect(timerOptions(true).night).toEqual([15, 30, 45]); expect(timerOptions(false).night).toEqual([60, 120, 300]);
+    for (const [night, act] of [[15, 10], [30, 25], [45, 40]]) {
+      const s = room(); s.timers = { ...s.timers, night }; forceAdvance(s, T0, seeded(2)); forceAdvance(s, T0, seeded(2));
+      expect(s.endsAt - T0).toBe(act * 1000); advance(s, s.endsAt, seeded(2)); expect(s.endsAt - T0).toBe(night * 1000);
+    }
+    const old = room(); old.timers = { ...old.timers, night: 120 }; expect(actSeconds(old)).toBe(25); // a party made before the setting
   });
   it("nobody can act during the call, not even the player who just went", () => {
     const s = game(["Mobster", "Doctor", "Spy"], 1); s.inPerson = true; s.turns = { order: ["p0", "p1", "p2"], i: 0, call: true };

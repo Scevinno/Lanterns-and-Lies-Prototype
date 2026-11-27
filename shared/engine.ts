@@ -8,6 +8,11 @@ export const PUBLIC_TIMERS: Timers = { discussion: 240, vote: 30, defence: 30, v
 export const PRIVATE_OPTIONS: Record<keyof Timers, number[]> = {
   discussion: [240, 420, 600, 900], vote: [30, 60], defence: [30, 60, 120], verdict: [15, 30], night: [60, 120, 300],
 };
+// In person the Night is a run of turns, so its setting is each player's turn, call included (Nik, 27 Nov):
+// 15, 30 or 45 seconds = 10, 25 or 40 seconds to act, then the 5-second call.
+export const IN_PERSON_NIGHT_OPTIONS = [15, 30, 45];
+export const timerOptions = (inPerson: boolean): Record<keyof Timers, number[]> =>
+  inPerson ? { ...PRIVATE_OPTIONS, night: IN_PERSON_NIGHT_OPTIONS } : PRIVATE_OPTIONS;
 // Night comes first (Nik, 7 Nov): reveal, Night 1, Day 1, Night 2, Day 2 ... Night 7, Day 7. The game is decided at the end of Day 7.
 /** Testing only (Nik, 8 Nov): everyone sees every role during the game. Set to false before real play. */
 export const SHOW_ALL_ROLES = true;
@@ -755,7 +760,9 @@ function startNight(s: GameState, now: number, r: Rng): Msg[] {
   for (const p of alive(s).filter((x) => x.bot)) botNight(s, p, r);
   return msgs;
 }
-const turnLength = (s: GameState, id: string) => (byId(s, id)?.bot ? BOT_TURN_SECONDS : TURN_SECONDS);
+/** Seconds to act in one turn: the party's Night setting less the call, or 25 for a party made before the setting existed. */
+export const actSeconds = (s: GameState) => (IN_PERSON_NIGHT_OPTIONS.includes(s.timers.night) ? s.timers.night - CALL_SECONDS : TURN_SECONDS);
+const turnLength = (s: GameState, id: string) => (byId(s, id)?.bot ? BOT_TURN_SECONDS : actSeconds(s));
 /** In person, before every Night (Nik, 26 Nov): everyone sees who goes first, then taps once their eyes are closed. */
 function startEyes(s: GameState, now: number, r: Rng): Msg[] {
   const lv = alive(s); const humans = lv.filter((p) => !p.bot); const first = pick(humans.length ? humans : lv, r);

@@ -4,7 +4,7 @@
   import { onDestroy, onMount, tick as svelteTick } from "svelte";
   import { call, fmt, sb, serverNow, shareLink, syncClock, timerLabel, FACTION_CLASS } from "./api";
   import { setRoles, type Role } from "./richtext";
-  import { PRIVATE_OPTIONS } from "../shared/engine";
+  import { timerOptions } from "../shared/engine";
   import RoleCard from "./RoleCard.svelte";
   import Game from "./Game.svelte";
   import NumberStrip from "./NumberStrip.svelte";
@@ -32,7 +32,7 @@
   // Create
   let size = 8, evil = "Random", inPerson = true, showCreateRoster = false;
   // In a room, phones are only for roles, votes and night choices, so the longer options give people time to talk and move.
-  const ROOM_TIMERS = { discussion: 420, vote: 60, defence: 60, verdict: 15, night: 120 }, ONLINE_TIMERS = { discussion: 240, vote: 30, defence: 30, verdict: 15, night: 60 };
+  const ROOM_TIMERS = { discussion: 420, vote: 60, defence: 60, verdict: 15, night: 30 }, ONLINE_TIMERS = { discussion: 240, vote: 30, defence: 30, verdict: 15, night: 60 };
   let timers: Record<string, number> = { ...ROOM_TIMERS };
   const setSetting = (v: boolean) => { inPerson = v; timers = { ...(v ? ROOM_TIMERS : ONLINE_TIMERS) }; };
   const SIZES = [8, 9, 10, 11, 12, 13, 14, 15];
@@ -259,7 +259,7 @@
     {/if}
     </div>
     <div class="lob-ctrl">
-    <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: only the evil side's night chat, roles hidden, pause on." : "Online: town chat on."}</p>
+    <p class="dim small">Discussion {timerLabel(party.timers.discussion)}, Vote {timerLabel(party.timers.vote)}, Defence {timerLabel(party.timers.defence)}, Verdict {timerLabel(party.timers.verdict)}, Night {party.in_person ? `${timerLabel(party.timers.night)} a player` : timerLabel(party.timers.night)}. Evil side: {party.mode}. {party.in_person ? "In person: only the evil side's night chat, roles hidden, pause on." : "Online: town chat on."}</p>
     {#if party.status === "starting"}
       <p class="big tc">Starting in {fmt(remaining)}</p>
       <button class="ghost wide" disabled={busy} on:click={() => partyAct("cancelStart")}>Cancel</button>
@@ -318,8 +318,9 @@
     {/if}
     <!-- Both private-party settings choose their timers; Online starts from 4 min, 30 s, 30 s, 15 s, 1 min (Nik, 12 Nov). -->
     {#each TIMER_ROWS as [k, label]}
-      <h3>{label}</h3>
-      <div class="seg">{#each PRIVATE_OPTIONS[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
+      <h3>{k === "night" && inPerson ? "Night turn, each player" : label}</h3>
+      {#if k === "night" && inPerson}<p class="dim small">Time to act, then 5 seconds to call the next name.</p>{/if}
+      <div class="seg">{#each timerOptions(inPerson)[k] as v}<button class:on={timers[k] === v} on:click={() => (timers[k] = v)}>{timerLabel(v)}</button>{/each}</div>
     {/each}
     <button class="go wide create-go" disabled={busy} on:click={create}>Create party</button>
     </div>

@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
 import { ROLES } from "../../../shared/roles.ts";
 import {
-  advance, canChat, cmdCondemn, cmdEyes, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, turnAlert, PRIVATE_OPTIONS, privateView, publicView,
+  advance, canChat, cmdCondemn, cmdEyes, cmdNight, cmdPause, cmdResume, isPaused, cmdReveal, cmdVerdict, cmdVote, createGame, forceAdvance, mathRng, turnAlert, timerOptions, actSeconds, privateView, publicView,
   type GameState, type Msg, type Timers,
 } from "../../../shared/engine.ts";
 
@@ -55,7 +55,7 @@ function phaseNotice(s: GameState, rows: { id: string; user_id: string | null }[
 // In-person nights (Nik, 26 Nov; 27 Nov): a push to the player who is up next, as their name is called, in case nobody calls it.
 function turnNotice(s: GameState, rows: { id: string; user_id: string | null }[], partyId: string) {
   const id = turnAlert(s); if (!id) return;
-  return notify(rows.filter((r) => r.id === id).map((r) => r.user_id), { title: "Your turn", body: "Open your eyes. You have 25 seconds.", url: `${SITE}#/party/${partyId}`, tag: "turn-" + partyId });
+  return notify(rows.filter((r) => r.id === id).map((r) => r.user_id), { title: "Your turn", body: `Open your eyes. You have ${actSeconds(s)} seconds.`, url: `${SITE}#/party/${partyId}`, tag: "turn-" + partyId });
 }
 const USERNAME = /^[a-z0-9_]{3,20}$/;
 async function freeUsername(name: string) {
@@ -117,9 +117,9 @@ async function beginGame(party: Record<string, any>) {
   const { data: ok } = await db.rpc("apply_turn", { p_party: party.id, p_version: party.version, p_patch: patch, p_state: s, p_secrets: secrets(s, rows), p_msgs: toRows(msgs), p_events: events });
   if (ok) { await db.from("invites").delete().eq("party_id", party.id); await notify(rows.map((r) => r.user_id), { title: "The game has started", body: "Read your role before Night 1.", url: `${SITE}#/party/${party.id}`, tag: "phase-" + party.id }); }
 }
-function validTimers(t: Record<string, number>): Timers {
-  const out = {} as Timers;
-  for (const k of Object.keys(PRIVATE_OPTIONS) as (keyof Timers)[]) { if (!PRIVATE_OPTIONS[k].includes(Number(t?.[k]))) throw new Oops("That timer is not available."); out[k] = Number(t[k]); }
+function validTimers(t: Record<string, number>, inPerson: boolean): Timers {
+  const out = {} as Timers; const opts = timerOptions(inPerson);
+  for (const k of Object.keys(opts) as (keyof Timers)[]) { if (!opts[k].includes(Number(t?.[k]))) throw new Oops("That timer is not available."); out[k] = Number(t[k]); }
   return out;
 }
 
@@ -155,7 +155,7 @@ const actions: Record<string, (b: any, req: Request) => Promise<unknown>> = {
     const { data: prof } = await db.from("profiles").select("display_name").eq("id", u.id).maybeSingle();
     const name = prof?.display_name ?? clean(u.user_metadata?.display_name, 20) ?? "Player";
     for (let i = 0; i < 6; i++) {
-      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: validTimers(b.timers), in_person: b.inPerson === true, town_chat: b.inPerson !== true }).select().single();
+      const { data, error } = await db.from("parties").insert({ code: newCode(), created_by: u.id, size, mode: b.mode, timers: validTimers(b.timers, b.inPerson === true), in_person: b.inPerson === true, town_chat: b.inPerson !== true }).select().single();
       if (error) continue;
       await db.from("party_players").insert({ party_id: data.id, user_id: u.id, name }); return { id: data.id, code: data.code };
     }
